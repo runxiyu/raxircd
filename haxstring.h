@@ -40,6 +40,6 @@ struct string {
 #define STRING(x) (struct string){x, sizeof(x)-1}
 #define NULSTR(x) (struct string){x, strlen(x)}
 
-#define STRING_EQ(x, y) (x.len == y.len && memcmp(x.data, y.data, x.len) == 0)
+#define STRING_EQ(x, y) ((x).len == (y).len && memcmp((x).data, (y).data, (x).len) == 0)
 
-#define WRITES(x, y) write(x, y.data, y.len)
+#define WRITES(x, y) write((x), (y).data, (y).len)
