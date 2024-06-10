@@ -27,6 +27,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "haxstring.h"
 #include "haxstring_utils.h"

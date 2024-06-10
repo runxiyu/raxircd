@@ -48,12 +48,14 @@ int init_inspircd2_protocol(void) {
 
 	set_table_index(&inspircd2_protocol_init_commands, STRING("CAPAB"), &inspircd2_protocol_init_handle_capab);
 	set_table_index(&inspircd2_protocol_init_commands, STRING("SERVER"), &inspircd2_protocol_init_handle_server);
+
 	set_table_index(&inspircd2_protocol_commands, STRING("PING"), &inspircd2_protocol_handle_ping);
+	set_table_index(&inspircd2_protocol_commands, STRING("SERVER"), &inspircd2_protocol_handle_server);
 
 	return 0;
 }
 
-void * inspircd2_protocol_handle_connection(void *type) {
+void * inspircd2_protocol_connection(void *type) {
 	struct string address;
 	size_t net;
 	char is_incoming;
@@ -246,6 +248,8 @@ void * inspircd2_protocol_handle_connection(void *type) {
 				i++;
 			}
 
+			pthread_mutex_lock(&state_lock);
+
 			WRITES(2, STRING("Source: `"));
 			WRITES(2, source);
 			WRITES(2, STRING("'\r\nCommand: `"));
@@ -260,13 +264,11 @@ void * inspircd2_protocol_handle_connection(void *type) {
 				}
 			}
 
-			pthread_mutex_lock(&state_lock);
-
 			if (!ready) {
 				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming);
 				func = get_table_index(inspircd2_protocol_init_commands, command);
 				if (!func) {
-					WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n\n"));
+					WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n"));
 					goto inspircd2_protocol_handle_connection_unlock_next;
 				}
 
@@ -279,7 +281,7 @@ void * inspircd2_protocol_handle_connection(void *type) {
 				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 				func = get_table_index(inspircd2_protocol_commands, command);
 				if (!func) {
-					WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n\n"));
+					WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n"));
 					goto inspircd2_protocol_handle_connection_unlock_next;
 				}
 
@@ -289,8 +291,9 @@ void * inspircd2_protocol_handle_connection(void *type) {
 			}
 
 			inspircd2_protocol_handle_connection_unlock_next:
+			WRITES(2, STRING("\n"));
+
 			pthread_mutex_unlock(&state_lock);
-			inspircd2_protocol_handle_connection_next:
 			memmove(full_msg.data, full_msg.data + msg_len + 1, full_msg.len - msg_len - 1);
 			full_msg.len -= msg_len + 1;
 			void *tmp = realloc(full_msg.data, full_msg.len);
@@ -303,6 +306,9 @@ void * inspircd2_protocol_handle_connection(void *type) {
 	pthread_mutex_unlock(&state_lock);
 	inspircd2_protocol_handle_connection_close:
 	free(full_msg.data);
+
+	if (ready)
+		unlink_server(get_table_index(server_list, config->sid), get_table_index(server_list, SID), INSPIRCD2_PROTOCOL);
 
 	networks[net].close(fd, handle);
 	free(address.data);
@@ -333,15 +339,71 @@ void * inspircd2_protocol_autoconnect(void *tmp) {
 
 	time_t last_time = 0;
 	while (1) {
-		for (time_t current = time(NULL); current < last_time + 60; current = time(NULL))
-			sleep(60 - (current - last_time));
+		for (time_t current = time(NULL); current < last_time + 10; current = time(NULL))
+			sleep(10 - (current - last_time));
 		last_time = time(NULL);
 
 		info->fd = networks[type->net_type].connect(&(info->handle), config->address, config->port, &(info->address));
 		if (info->fd == -1)
 			continue;
 
-		inspircd2_protocol_handle_connection(info);
+		inspircd2_protocol_connection(info);
+	}
+}
+
+void inspircd2_protocol_update_propagations_inner(struct server_info *source) {
+	for (size_t i = 0; i < source->connected_to.len; i++) {
+		struct server_info *adjacent = source->connected_to.array[i].ptr;
+		if (adjacent->distance == 0 && !STRING_EQ(adjacent->sid, SID)) {
+			adjacent->distance = source->distance + 1;
+			if (adjacent->distance == 1) {
+				adjacent->next = adjacent->sid;
+			} else {
+				adjacent->next = source->next;
+			}
+			inspircd2_protocol_update_propagations_inner(adjacent);
+		}
+	}
+}
+
+void inspircd2_protocol_update_propagations(void) {
+	struct server_info *self = get_table_index(server_list, SID);
+	for (size_t i = 0; i < server_list.len; i++) {
+		struct server_info *other = server_list.array[i].ptr;
+		if (other->protocol == INSPIRCD2_PROTOCOL) {
+			other->distance = 0;
+		}
+	}
+
+	inspircd2_protocol_update_propagations_inner(self);
+}
+
+void inspircd2_protocol_do_unlink_inner(struct server_info *target) {
+	unsigned char i = 0;
+	while (target->connected_to.len > 1) {
+		struct server_info *adjacent = target->connected_to.array[i].ptr;
+		if (adjacent->distance < target->distance) {
+			i = 1;
+			continue;
+		}
+		inspircd2_protocol_do_unlink_inner(adjacent);
+		remove_table_index(&(target->connected_to), adjacent->sid);
+		remove_table_index(&(server_list), adjacent->sid);
+		free_server(adjacent);
+	}
+}
+
+void inspircd2_protocol_do_unlink(struct server_info *a, struct server_info *b) {
+	if (a->distance > b->distance) {
+		inspircd2_protocol_do_unlink_inner(a);
+		remove_table_index(&(b->connected_to), a->sid);
+		remove_table_index(&(server_list), a->sid);
+		free_server(a);
+	} else {
+		inspircd2_protocol_do_unlink_inner(b);
+		remove_table_index(&(a->connected_to), b->sid);
+		remove_table_index(&(server_list), b->sid);
+		free_server(b);
 	}
 }
 
@@ -372,11 +434,11 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 	}
 
 	if (is_incoming) {
-		if (!has_table_index(server_config, argv[3])) {
+		*config = get_table_index(server_config, argv[3]);
+		if (!(*config)) {
 			WRITES(2, STRING("[InspIRCd v2] Unknown SID attempted to connect.\r\n"));
 			return -1;
 		}
-		*config = get_table_index(server_config, argv[3]);
 	} else {
 		if (!STRING_EQ(argv[3], (*config)->sid)) {
 			WRITES(2, STRING("[InspIRCd v2] Wrong SID given in SERVER!\r\n"));
@@ -421,6 +483,13 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 	networks[net].send(handle, SID);
 	networks[net].send(handle, STRING(" ENDBURST\n"));
 
+	free(time.data);
+
+	if (add_server(SID, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net) != 0) {
+		WRITES(2, STRING("ERROR: Unable to add server!\r\n"));
+		return -1;
+	}
+
 	return 1;
 }
 
@@ -438,6 +507,24 @@ int inspircd2_protocol_handle_ping(struct string source, size_t argc, struct str
 	networks[net].send(handle, STRING(" :"));
 	networks[net].send(handle, argv[0]);
 	networks[net].send(handle, STRING("\n"));
+
+	return 0;
+}
+
+// [:source] SERVER <address> <password> <always 0> <SID> <name>
+int inspircd2_protocol_handle_server(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 5) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid SERVER recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	if (source.len == 0)
+		source = config->sid;
+
+	if (add_server(source, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net) != 0) {
+		WRITES(2, STRING("ERROR: Unable to add server!\r\n"));
+		return -1;
+	}
 
 	return 0;
 }

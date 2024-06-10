@@ -35,8 +35,11 @@
 struct protocol protocols[NUM_PROTOCOLS] = {
 #ifdef USE_INSPIRCD2_PROTOCOL
 	[INSPIRCD2_PROTOCOL] = {
-		.handle_connection = inspircd2_protocol_handle_connection,
+		.handle_connection = inspircd2_protocol_connection,
 		.autoconnect = inspircd2_protocol_autoconnect,
+		.update_propagations = inspircd2_protocol_update_propagations,
+
+		.do_unlink = inspircd2_protocol_do_unlink,
 	},
 #endif
 };

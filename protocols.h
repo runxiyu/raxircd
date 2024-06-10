@@ -26,9 +26,14 @@
 
 #pragma once
 
+#include "server_network.h"
+
 struct protocol {
 	void * (*handle_connection)(void *info);
 	void * (*autoconnect)(void *config);
+	void (*update_propagations)(void);
+
+	void (*do_unlink)(struct server_info *a, struct server_info *b);
 };
 
 #ifdef USE_HAXIRCD_PROTOCOL

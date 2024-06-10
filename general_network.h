@@ -45,12 +45,6 @@ struct network {
 	void (*close)(int fd, void *handle);
 };
 
-struct server_info {
-	struct string sid;
-
-	struct table user_list;
-};
-
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr);
 
 int init_general_network(void);

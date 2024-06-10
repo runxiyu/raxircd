@@ -29,6 +29,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "config.h"
@@ -51,6 +52,25 @@ int init_server_network(void) {
 			return 1;
 		}
 	}
+
+	server_list.array = malloc(0);
+
+	struct server_info *own_info;
+	own_info = malloc(sizeof(*own_info));
+	own_info->sid.data = malloc(SID.len);
+	if (!own_info->sid.data)
+		return 1;
+	memcpy(own_info->sid.data, SID.data, SID.len);
+	own_info->sid.len = SID.len;
+
+	own_info->next = SID;
+	own_info->connected_to = (struct table){.array = malloc(0), .len = 0};
+	own_info->user_list = (struct table){.array = malloc(0), .len = 0};
+	own_info->distance = 0;
+	own_info->net = 0;
+	own_info->protocol = 0;
+	if (set_table_index(&server_list, SID, own_info) != 0)
+		return 1;
 
 	return 0;
 }
@@ -167,4 +187,82 @@ void * server_accept_thread(void *type) {
 			networks[net].close(con_fd, con_handle);
 		}
 	}
+}
+
+int add_server(struct string attached_to, struct string sid, struct string name, struct string fullname, size_t protocol, size_t net) {
+	struct server_info *attached = get_table_index(server_list, attached_to);
+	if (!attached)
+		return 1;
+
+	if (has_table_index(server_list, sid))
+		return 1;
+
+	struct server_info *new_info;
+	new_info = malloc(sizeof(*new_info));
+	if (!new_info)
+		return 1;
+
+	new_info->protocol = protocol;
+	new_info->net = net;
+
+	new_info->sid.data = malloc(sid.len);
+	if (!new_info->sid.data)
+		goto add_server_free_new_info;
+	memcpy(new_info->sid.data, sid.data, sid.len);
+	new_info->sid.len = sid.len;
+
+	// new_info->next shares string with sid of the server it points to
+
+	new_info->connected_to = (struct table){.array = malloc(0), .len = 0};
+	if (set_table_index(&(new_info->connected_to), attached_to, attached) != 0)
+		goto add_server_free_connected_to;
+
+	if (set_table_index(&(attached->connected_to), sid, new_info) != 0)
+		goto add_server_clear_connected_to;
+
+	new_info->user_list = (struct table){.array = malloc(0), .len = 0};
+
+	protocols[protocol].update_propagations();
+
+	if (set_table_index(&(server_list), sid, new_info) != 0)
+		goto add_server_remove_attached_connected_to;
+
+	return 0;
+
+	add_server_remove_attached_connected_to:
+	remove_table_index(&(attached->connected_to), sid);
+	add_server_clear_connected_to:
+	clear_table(&(new_info->connected_to));
+	add_server_free_connected_to:
+	free(new_info->connected_to.array);
+	free(new_info->sid.data);
+	add_server_free_new_info:
+	free(new_info);
+	return 1;
+}
+
+void free_server(struct server_info *server) {
+	free(server->sid.data);
+	clear_table(&(server->connected_to));
+	free(server->connected_to.array);
+	clear_table(&(server->user_list));
+	free(server->user_list.array);
+
+	free(server);
+}
+
+void update_all_propagations(void) {
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].update_propagations();
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].update_propagations();
+#endif
+}
+
+void unlink_server(struct server_info *a, struct server_info *b, size_t protocol) {
+	if (!has_table_index(a->connected_to, b->sid))
+		return;
+
+	protocols[protocol].do_unlink(a, b);
 }

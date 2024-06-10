@@ -31,6 +31,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include "config.h"
 #include "general_network.h"
 
 #ifdef USE_PLAINTEXT
@@ -106,6 +107,8 @@ struct network networks[NUM_NET_TYPES] = {
 #endif
 };
 
+struct table server_list = {0};
+
 // TODO: Proper string handling
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr) {
 	int success;
@@ -127,6 +130,7 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 	return success;
 }
 
+// TODO: May leak memory on failure, not currently an issue since this failing currently just results in program exit anyways
 int init_general_network(void) {
 	for (size_t i = 1; i < UCHAR_MAX + 1; i++) {
 		if (casemap[i] == 0) {
