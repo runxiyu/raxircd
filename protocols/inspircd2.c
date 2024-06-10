@@ -51,6 +51,7 @@ int init_inspircd2_protocol(void) {
 
 	set_table_index(&inspircd2_protocol_commands, STRING("PING"), &inspircd2_protocol_handle_ping);
 	set_table_index(&inspircd2_protocol_commands, STRING("SERVER"), &inspircd2_protocol_handle_server);
+	set_table_index(&inspircd2_protocol_commands, STRING("SQUIT"), &inspircd2_protocol_handle_squit);
 
 	return 0;
 }
@@ -187,7 +188,10 @@ void * inspircd2_protocol_connection(void *type) {
 					goto inspircd2_protocol_handle_connection_close;
 				}
 			} else {
-				source = (struct string){0};
+				if (ready)
+					source = config->sid;
+				else
+					source = (struct string){0};
 			}
 
 			struct string command;
@@ -249,20 +253,6 @@ void * inspircd2_protocol_connection(void *type) {
 			}
 
 			pthread_mutex_lock(&state_lock);
-
-			WRITES(2, STRING("Source: `"));
-			WRITES(2, source);
-			WRITES(2, STRING("'\r\nCommand: `"));
-			WRITES(2, command);
-			WRITES(2, STRING("'\r\n"));
-			if (argc > 0) {
-				WRITES(2, STRING("Args:\r\n"));
-				for (size_t i = 0; i < argc; i++) {
-					WRITES(2, STRING("\t`"));
-					WRITES(2, argv[i]);
-					WRITES(2, STRING("'\r\n"));
-				}
-			}
 
 			if (!ready) {
 				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming);
@@ -518,13 +508,37 @@ int inspircd2_protocol_handle_server(struct string source, size_t argc, struct s
 		return -1;
 	}
 
-	if (source.len == 0)
-		source = config->sid;
-
 	if (add_server(source, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net) != 0) {
 		WRITES(2, STRING("ERROR: Unable to add server!\r\n"));
 		return -1;
 	}
+
+	return 0;
+}
+
+// [:source] SQUIT <SID> [<reason>?]
+int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 1) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	if (STRING_EQ(argv[0], SID)) { // Not an error, this server is trying to split from us
+		return -1;
+	}
+
+	struct server_info *a = get_table_index(server_list, source);
+	struct server_info *b = get_table_index(server_list, argv[0]);
+	if (!a || !b) { // Maybe we already RSQUIT it or smth
+		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT recieved! (Unknown source or target)\r\n"));
+		return -1;
+	}
+	if (a->protocol != INSPIRCD2_PROTOCOL || b->protocol != INSPIRCD2_PROTOCOL) { // They're trying to use SQUIT for some unrelated server...
+		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT recieved! (Bad SID or source)\r\n"));
+		return -1;
+	}
+
+	unlink_server(a, b, INSPIRCD2_PROTOCOL);
 
 	return 0;
 }
