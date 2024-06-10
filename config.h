@@ -50,8 +50,8 @@ struct server_config {
 	struct string address; // = "haxnet.org",
 	struct string port; // = "4321",
 };
-extern struct server_config server_config[]; // = {{...}, ...};
-extern size_t server_config_len; // = sizeof(server_config)/sizeof(*server_config);
+extern struct server_config SERVER_CONFIG[]; // = {{...}, ...};
+extern size_t SERVER_CONFIG_LEN; // = sizeof(server_config)/sizeof(*server_config);
 #endif
 
 extern struct string SID; // = STRING("200");

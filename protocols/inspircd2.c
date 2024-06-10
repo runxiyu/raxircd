@@ -46,6 +46,7 @@ struct table inspircd2_protocol_commands = {0};
 int init_inspircd2_protocol(void) {
 	inspircd2_protocol_commands.array = malloc(0);
 
+	set_table_index(&inspircd2_protocol_init_commands, STRING("CAPAB"), &inspircd2_protocol_init_handle_capab);
 	set_table_index(&inspircd2_protocol_init_commands, STRING("SERVER"), &inspircd2_protocol_init_handle_server);
 	set_table_index(&inspircd2_protocol_commands, STRING("PING"), &inspircd2_protocol_handle_ping);
 
@@ -76,10 +77,7 @@ void * inspircd2_protocol_handle_connection(void *type) {
 
 	struct string full_msg = {.data = malloc(0), .len = 0}; // TODO: move this down below after incoming connections are handled
 
-	if (is_incoming) {
-		WRITES(2, STRING("InspIRCd v2 protocol handling does not yet support incoming connections!\r\n"));
-		goto inspircd2_protocol_handle_connection_close;
-	} else {
+	if (!is_incoming) {
 		networks[net].send(handle, STRING("CAPAB START 1202\nCAPAB END\n"));
 
 		networks[net].send(handle, STRING("SERVER "));
@@ -149,7 +147,7 @@ void * inspircd2_protocol_handle_connection(void *type) {
 
 			struct string line = {.data = full_msg.data, .len = msg_len};
 
-			WRITES(2, STRING("[inspircd2] [server -> us] Got `"));
+			WRITES(2, STRING("[InspIRCd v2] [server -> us] Got `"));
 			WRITES(2, line);
 			WRITES(2, STRING("'\r\n"));
 
@@ -347,6 +345,20 @@ void * inspircd2_protocol_autoconnect(void *tmp) {
 	}
 }
 
+// CAPAB <type> [<args> [, ...]]
+int inspircd2_protocol_init_handle_capab(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming) {
+	if (argc < 1) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid CAPAB recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	if (is_incoming && STRING_EQ(argv[0], STRING("START"))) { // This seems to be a proper server connection by now, can start sending stuff
+		networks[net].send(handle, STRING("CAPAB START 1202\nCAPAB END\n"));
+	}
+
+	return 0;
+}
+
 // SERVER <address> <password> <always 0> <SID> <name>
 int inspircd2_protocol_init_handle_server(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming) {
 	if (argc < 5) {
@@ -360,7 +372,11 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 	}
 
 	if (is_incoming) {
-		// TODO: select config
+		if (!has_table_index(server_config, argv[3])) {
+			WRITES(2, STRING("[InspIRCd v2] Unknown SID attempted to connect.\r\n"));
+			return -1;
+		}
+		*config = get_table_index(server_config, argv[3]);
 	} else {
 		if (!STRING_EQ(argv[3], (*config)->sid)) {
 			WRITES(2, STRING("[InspIRCd v2] Wrong SID given in SERVER!\r\n"));
@@ -374,7 +390,15 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 	}
 
 	if (is_incoming) {
-		// TODO: Send password
+		networks[net].send(handle, STRING("SERVER "));
+		networks[net].send(handle, SERVER_NAME);
+		networks[net].send(handle, STRING(" "));
+		networks[net].send(handle, (*config)->out_pass);
+		networks[net].send(handle, STRING(" 0 "));
+		networks[net].send(handle, SID);
+		networks[net].send(handle, STRING(" :"));
+		networks[net].send(handle, SERVER_FULLNAME);
+		networks[net].send(handle, STRING("\n"));
 	}
 
 	time_t now = time(0);

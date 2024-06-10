@@ -49,3 +49,5 @@ int start_server_network_threads(size_t net);
 void * server_accept_thread(void *type);
 
 void * handle_server_thread(void *type);
+
+extern struct table server_config;

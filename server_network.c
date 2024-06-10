@@ -43,7 +43,15 @@
 #include "gnutls_network.h"
 #endif
 
+struct table server_config = {0};
+
 int init_server_network(void) {
+	for (size_t i = 0; i < SERVER_CONFIG_LEN; i++) {
+		if (set_table_index(&server_config, SERVER_CONFIG[i].sid, &(SERVER_CONFIG[i])) != 0) {
+			return 1;
+		}
+	}
+
 	return 0;
 }
 
@@ -62,9 +70,9 @@ int start_server_network(void) {
 #endif
 
 	pthread_t trash;
-	for (size_t i = 0; i < server_config_len; i++) {
-		if (server_config[i].autoconnect) {
-			if (pthread_create(&trash, &pthread_attr, protocols[server_config[i].protocol].autoconnect, &(server_config[i])) != 0) {
+	for (size_t i = 0; i < SERVER_CONFIG_LEN; i++) {
+		if (SERVER_CONFIG[i].autoconnect) {
+			if (pthread_create(&trash, &pthread_attr, protocols[SERVER_CONFIG[i].protocol].autoconnect, &(SERVER_CONFIG[i])) != 0) {
 				return 1;
 			}
 		}
@@ -103,8 +111,8 @@ void * server_accept_thread(void *type) {
 	// Check if there is actually an incoming server connection configured using this net+protocol, and if not just return from this thread; some excess may have been spawned
 	{
 		char found = 0;
-		for (size_t i = 0; i < server_config_len; i++) {
-			if (server_config[i].protocol == protocol && !(server_config[i].autoconnect)) { // TODO: Don't make autoconnect conflict with incoming connections
+		for (size_t i = 0; i < SERVER_CONFIG_LEN; i++) {
+			if (SERVER_CONFIG[i].protocol == protocol && !(SERVER_CONFIG[i].autoconnect)) { // TODO: Don't make autoconnect conflict with incoming connections
 				found = 1;
 				break;
 			}
