@@ -39,6 +39,9 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.autoconnect = inspircd2_protocol_autoconnect,
 		.update_propagations = inspircd2_protocol_update_propagations,
 
+		.propagate_new_server = inspircd2_protocol_propagate_new_server,
+		.propagate_unlink = inspircd2_protocol_propagate_unlink,
+
 		.do_unlink = inspircd2_protocol_do_unlink,
 	},
 #endif

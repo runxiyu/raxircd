@@ -189,7 +189,7 @@ void * server_accept_thread(void *type) {
 	}
 }
 
-int add_server(struct string attached_to, struct string sid, struct string name, struct string fullname, size_t protocol, size_t net) {
+int add_server(struct string from, struct string attached_to, struct string sid, struct string name, struct string fullname, size_t protocol, size_t net, void *handle) {
 	struct server_info *attached = get_table_index(server_list, attached_to);
 	if (!attached)
 		return 1;
@@ -204,12 +204,25 @@ int add_server(struct string attached_to, struct string sid, struct string name,
 
 	new_info->protocol = protocol;
 	new_info->net = net;
+	new_info->handle = handle;
 
 	new_info->sid.data = malloc(sid.len);
 	if (!new_info->sid.data)
 		goto add_server_free_new_info;
 	memcpy(new_info->sid.data, sid.data, sid.len);
 	new_info->sid.len = sid.len;
+
+	new_info->name.data = malloc(name.len);
+	if (!new_info->name.data)
+		goto add_server_free_sid;
+	memcpy(new_info->name.data, name.data, name.len);
+	new_info->name.len = name.len;
+
+	new_info->fullname.data = malloc(fullname.len);
+	if (!new_info->fullname.data)
+		goto add_server_free_name;
+	memcpy(new_info->fullname.data, fullname.data, fullname.len);
+	new_info->fullname.len = fullname.len;
 
 	// new_info->next shares string with sid of the server it points to
 
@@ -222,10 +235,17 @@ int add_server(struct string attached_to, struct string sid, struct string name,
 
 	new_info->user_list = (struct table){.array = malloc(0), .len = 0};
 
-	protocols[protocol].update_propagations();
-
 	if (set_table_index(&(server_list), sid, new_info) != 0)
 		goto add_server_remove_attached_connected_to;
+
+	protocols[protocol].update_propagations();
+
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_new_server(from, attached_to, sid, new_info);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_new_server(from, attached_to, sid, new_info);
+#endif
 
 	return 0;
 
@@ -235,6 +255,10 @@ int add_server(struct string attached_to, struct string sid, struct string name,
 	clear_table(&(new_info->connected_to));
 	add_server_free_connected_to:
 	free(new_info->connected_to.array);
+	free(new_info->fullname.data);
+	add_server_free_name:
+	free(new_info->name.data);
+	add_server_free_sid:
 	free(new_info->sid.data);
 	add_server_free_new_info:
 	free(new_info);
@@ -260,9 +284,21 @@ void update_all_propagations(void) {
 #endif
 }
 
-void unlink_server(struct server_info *a, struct server_info *b, size_t protocol) {
+void unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
 	if (!has_table_index(a->connected_to, b->sid))
 		return;
+
+	remove_table_index(&(a->connected_to), b->sid);
+	remove_table_index(&(b->connected_to), a->sid);
+
+	protocols[protocol].update_propagations();
+
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_unlink(from, a, b, protocol);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_unlink(from, a, b, protocol);
+#endif
 
 	protocols[protocol].do_unlink(a, b);
 }

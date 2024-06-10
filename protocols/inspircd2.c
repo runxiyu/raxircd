@@ -78,8 +78,6 @@ void * inspircd2_protocol_connection(void *type) {
 			free(type);
 	}
 
-	struct string full_msg = {.data = malloc(0), .len = 0}; // TODO: move this down below after incoming connections are handled
-
 	if (!is_incoming) {
 		networks[net].send(handle, STRING("CAPAB START 1202\nCAPAB END\n"));
 
@@ -93,6 +91,8 @@ void * inspircd2_protocol_connection(void *type) {
 		networks[net].send(handle, SERVER_FULLNAME);
 		networks[net].send(handle, STRING("\n"));
 	}
+
+	struct string full_msg = {.data = malloc(0), .len = 0};
 
 	while (1) {
 		size_t msg_len;
@@ -297,8 +297,11 @@ void * inspircd2_protocol_connection(void *type) {
 	inspircd2_protocol_handle_connection_close:
 	free(full_msg.data);
 
-	if (ready)
-		unlink_server(get_table_index(server_list, config->sid), get_table_index(server_list, SID), INSPIRCD2_PROTOCOL);
+	if (ready) {
+		pthread_mutex_lock(&(state_lock));
+		unlink_server(config->sid, get_table_index(server_list, config->sid), get_table_index(server_list, SID), INSPIRCD2_PROTOCOL);
+		pthread_mutex_unlock(&(state_lock));
+	}
 
 	networks[net].close(fd, handle);
 	free(address.data);
@@ -350,6 +353,7 @@ void inspircd2_protocol_update_propagations_inner(struct server_info *source) {
 				adjacent->next = adjacent->sid;
 			} else {
 				adjacent->next = source->next;
+				adjacent->handle = source->handle;
 			}
 			inspircd2_protocol_update_propagations_inner(adjacent);
 		}
@@ -368,11 +372,87 @@ void inspircd2_protocol_update_propagations(void) {
 	inspircd2_protocol_update_propagations_inner(self);
 }
 
+void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct string sid, struct server_info *info) {
+	struct server_info *self = get_table_index(server_list, SID);
+
+	for (size_t i = 0; i < self->connected_to.len; i++) {
+		struct server_info *adjacent = self->connected_to.array[i].ptr;
+		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
+			continue; // Not ours or it's the source of this message
+
+		networks[adjacent->net].send(adjacent->handle, STRING(":"));
+
+		if (info->protocol == INSPIRCD2_PROTOCOL)
+			networks[adjacent->net].send(adjacent->handle, attached_to);
+		else // Just pretend servers connected via a different protocol are connected directly to us
+			networks[adjacent->net].send(adjacent->handle, SID);
+
+		networks[adjacent->net].send(adjacent->handle, STRING(" SERVER "));
+		networks[adjacent->net].send(adjacent->handle, info->name);
+		networks[adjacent->net].send(adjacent->handle, STRING(" * 0 "));
+		networks[adjacent->net].send(adjacent->handle, sid);
+		networks[adjacent->net].send(adjacent->handle, STRING(" :"));
+		networks[adjacent->net].send(adjacent->handle, info->fullname);
+		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
+
+		networks[adjacent->net].send(adjacent->handle, STRING(":"));
+		networks[adjacent->net].send(adjacent->handle, sid);
+		networks[adjacent->net].send(adjacent->handle, STRING(" BURST "));
+
+		time_t current = time(0);
+		struct string current_time;
+		char err = unsigned_to_str((size_t)current, &current_time);
+
+		if (current < 0 || err) {
+			networks[adjacent->net].send(adjacent->handle, STRING("0"));
+		} else {
+			networks[adjacent->net].send(adjacent->handle, current_time);
+			free(current_time.data);
+		}
+
+		networks[adjacent->net].send(adjacent->handle, STRING("\n:"));
+		networks[adjacent->net].send(adjacent->handle, sid);
+		networks[adjacent->net].send(adjacent->handle, STRING(" ENDBURST\n"));
+	}
+}
+
+void inspircd2_protocol_propagate_unlink(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
+	struct server_info *source;
+	struct server_info *target;
+	if (a->distance == 0 && !STRING_EQ(a->sid, SID)) {
+		source = b;
+		target = a;
+	} else if (b->distance == 0 && !STRING_EQ(b->sid, SID)) {
+		source = a;
+		target = b;
+	} else {
+		return;
+	}
+
+	struct server_info *self = get_table_index(server_list, SID);
+	for (size_t i = 0; i < self->connected_to.len; i++) {
+		struct server_info *adjacent = self->connected_to.array[i].ptr;
+		if (STRING_EQ(from, adjacent->next) || adjacent->protocol != INSPIRCD2_PROTOCOL)
+			continue;
+
+		networks[adjacent->net].send(adjacent->handle, STRING(":"));
+		if (protocol == INSPIRCD2_PROTOCOL)
+			networks[adjacent->net].send(adjacent->handle, source->sid);
+		else
+			networks[adjacent->net].send(adjacent->handle, SID);
+		networks[adjacent->net].send(adjacent->handle, STRING(" SQUIT "));
+		networks[adjacent->net].send(adjacent->handle, target->sid);
+		networks[adjacent->net].send(adjacent->handle, STRING(" :\n"));
+	}
+}
+
 void inspircd2_protocol_do_unlink_inner(struct server_info *target) {
+	target->distance = 1; // Reusing distance for `have passed`, since its set to 0 bc severed anyways
+
 	unsigned char i = 0;
-	while (target->connected_to.len > 1) {
+	while (target->connected_to.len > i) {
 		struct server_info *adjacent = target->connected_to.array[i].ptr;
-		if (adjacent->distance < target->distance) {
+		if (adjacent->distance != 0) {
 			i = 1;
 			continue;
 		}
@@ -384,7 +464,7 @@ void inspircd2_protocol_do_unlink_inner(struct server_info *target) {
 }
 
 void inspircd2_protocol_do_unlink(struct server_info *a, struct server_info *b) {
-	if (a->distance > b->distance) {
+	if (a->distance == 0 && !STRING_EQ(a->sid, SID)) {
 		inspircd2_protocol_do_unlink_inner(a);
 		remove_table_index(&(b->connected_to), a->sid);
 		remove_table_index(&(server_list), a->sid);
@@ -394,6 +474,35 @@ void inspircd2_protocol_do_unlink(struct server_info *a, struct server_info *b) 
 		remove_table_index(&(a->connected_to), b->sid);
 		remove_table_index(&(server_list), b->sid);
 		free_server(b);
+	}
+}
+
+void inspircd2_protocol_introduce_servers_to_inner(size_t net, void *handle, struct string source, struct server_info *target) {
+	networks[net].send(handle, STRING(":"));
+	networks[net].send(handle, source);
+	networks[net].send(handle, STRING(" SERVER "));
+	networks[net].send(handle, target->name);
+	networks[net].send(handle, STRING(" * 0 "));
+	networks[net].send(handle, target->sid);
+	networks[net].send(handle, STRING(" :"));
+	networks[net].send(handle, target->fullname);
+	networks[net].send(handle, STRING("\n"));
+
+	for (size_t i = 0; i < target->connected_to.len; i++) {
+		struct server_info *adjacent = target->connected_to.array[i].ptr;
+		if (adjacent->distance > target->distance) {
+			inspircd2_protocol_introduce_servers_to_inner(net, handle, target->sid, adjacent);
+		}
+	}
+}
+
+void inspircd2_protocol_introduce_servers_to(size_t net, void *handle) {
+	struct server_info *self = get_table_index(server_list, SID);
+	for (size_t i = 0; i < self->connected_to.len; i++) {
+		struct server_info *info = self->connected_to.array[i].ptr;
+		if (info->protocol == INSPIRCD2_PROTOCOL) { // This server hasn't been added to the list yet, so no need to check for that
+			inspircd2_protocol_introduce_servers_to_inner(net, handle, SID, info);
+		}
 	}
 }
 
@@ -469,13 +578,17 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 	networks[net].send(handle, SID);
 	networks[net].send(handle, STRING(" BURST "));
 	networks[net].send(handle, time);
-	networks[net].send(handle, STRING("\n:"));
+	networks[net].send(handle, STRING("\n"));
+
+	inspircd2_protocol_introduce_servers_to(net, handle);
+
+	networks[net].send(handle, STRING(":"));
 	networks[net].send(handle, SID);
 	networks[net].send(handle, STRING(" ENDBURST\n"));
 
 	free(time.data);
 
-	if (add_server(SID, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net) != 0) {
+	if (add_server((*config)->sid, SID, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net, handle) != 0) {
 		WRITES(2, STRING("ERROR: Unable to add server!\r\n"));
 		return -1;
 	}
@@ -508,7 +621,7 @@ int inspircd2_protocol_handle_server(struct string source, size_t argc, struct s
 		return -1;
 	}
 
-	if (add_server(source, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net) != 0) {
+	if (add_server(config->sid, source, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net, handle) != 0) {
 		WRITES(2, STRING("ERROR: Unable to add server!\r\n"));
 		return -1;
 	}
@@ -538,7 +651,7 @@ int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct st
 		return -1;
 	}
 
-	unlink_server(a, b, INSPIRCD2_PROTOCOL);
+	unlink_server(config->sid, a, b, INSPIRCD2_PROTOCOL);
 
 	return 0;
 }

@@ -61,15 +61,14 @@ int gnutls_send(void *session, struct string msg) {
 		ssize_t res;
 		do {
 			res = gnutls_record_send(*((gnutls_session_t*)session), msg.data, msg.len);
-		} while (res == -GNUTLS_E_INTERRUPTED || res == -GNUTLS_E_AGAIN);
+		} while (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN);
 
 		if (res < 0 || (size_t)res > msg.len) { // res > len shouldn't be possible, but is still an error
 			return 1;
-		} else if (res > 0) {
-			msg.len -= (size_t)res;
-			msg.data += (size_t)res;
+		} else if ((size_t)res == msg.len) {
+			break;
 		}
-	} while (msg.len > 0);
+	} while (1);
 
 	return 0;
 }
@@ -78,10 +77,10 @@ size_t gnutls_recv(void *session, char *data, size_t len, char *err) {
 	ssize_t res;
 	do {
 		res = gnutls_record_recv(*((gnutls_session_t*)session), data, len);
-	} while (res < 0 && (res == -GNUTLS_E_INTERRUPTED || res == -GNUTLS_E_AGAIN));
+	} while (res < 0 && (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN));
 
 	if (res < 0) {
-		if (res == -GNUTLS_E_TIMEDOUT) {
+		if (res == GNUTLS_E_TIMEDOUT) {
 			*err = 1;
 		} else {
 			*err = 3;
@@ -146,7 +145,7 @@ int gnutls_connect(void **handle, struct string address, struct string port, str
 
 	do {
 		res = gnutls_handshake(*session);
-	} while (res == -GNUTLS_E_INTERRUPTED || res == -GNUTLS_E_AGAIN);
+	} while (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN);
 	if (res < 0)
 		goto gnutls_connect_deinit_session;
 
@@ -210,7 +209,7 @@ int gnutls_accept(int listen_fd, void **handle, struct string *addr) {
 	int res;
 	do {
 		res = gnutls_handshake(*session);
-	} while (res == -GNUTLS_E_INTERRUPTED || res == -GNUTLS_E_AGAIN);
+	} while (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN);
 	if (res != GNUTLS_E_SUCCESS)
 		goto gnutls_accept_deinit_session;
 
