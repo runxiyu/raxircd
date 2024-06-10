@@ -35,6 +35,7 @@
 #include "../config.h"
 #include "../general_network.h"
 #include "../haxstring.h"
+#include "../haxstring_utils.h"
 #include "../main.h"
 #include "../server_network.h"
 #include "inspircd2.h"
@@ -46,7 +47,7 @@ int init_inspircd2_protocol(void) {
 	inspircd2_protocol_commands.array = malloc(0);
 
 	set_table_index(&inspircd2_protocol_init_commands, STRING("SERVER"), &inspircd2_protocol_init_handle_server);
-//	set_table_index(&inspircd2_protocol_commands, STRING("PING"), &inspircd2_protocol_handle_ping);
+	set_table_index(&inspircd2_protocol_commands, STRING("PING"), &inspircd2_protocol_handle_ping);
 
 	return 0;
 }
@@ -105,10 +106,21 @@ void * inspircd2_protocol_handle_connection(void *type) {
 				if (err >= 2) { // Connection closed, or some uncorrected error
 					goto inspircd2_protocol_handle_connection_close;
 				} else if (err == 1) { // Timed out
-					if (timeout > 0)
+					if (ready) {
+						if (timeout > 0)
+							goto inspircd2_protocol_handle_connection_close;
+						timeout++;
+
+						networks[net].send(handle, STRING(":"));
+						networks[net].send(handle, SID);
+						networks[net].send(handle, STRING(" PING "));
+						networks[net].send(handle, SID);
+						networks[net].send(handle, STRING(" :"));
+						networks[net].send(handle, config->sid);
+						networks[net].send(handle, STRING("\n"));
+					} else {
 						goto inspircd2_protocol_handle_connection_close;
-					timeout++;
-					// TODO: Ping the server
+					}
 				} else {
 					break;
 				}
@@ -252,22 +264,31 @@ void * inspircd2_protocol_handle_connection(void *type) {
 
 			pthread_mutex_lock(&state_lock);
 
-			int (*func)(struct string source, size_t argc, struct string *argv, void *handle, char is_incoming);
-			if (!ready)
+			if (!ready) {
+				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming);
 				func = get_table_index(inspircd2_protocol_init_commands, command);
-			else
+				if (!func) {
+					WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n\n"));
+					goto inspircd2_protocol_handle_connection_unlock_next;
+				}
+
+				int res = func(source, argc, argv, net, handle, &config, is_incoming);
+				if (res < 0) // Disconnect
+					goto inspircd2_protocol_handle_connection_unlock_close;
+				else if (res > 0) // Connection is now "ready"
+					ready = 1;
+			} else {
+				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 				func = get_table_index(inspircd2_protocol_commands, command);
+				if (!func) {
+					WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n\n"));
+					goto inspircd2_protocol_handle_connection_unlock_next;
+				}
 
-			if (!func) {
-				WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n\n"));
-				goto inspircd2_protocol_handle_connection_unlock_next;
+				int res = func(source, argc, argv, net, handle, config, is_incoming);
+				if (res < 0) // Disconnect
+					goto inspircd2_protocol_handle_connection_unlock_close;
 			}
-
-			int res = func(source, argc, argv, handle, is_incoming);
-			if (res < 0) // Disconnect
-				goto inspircd2_protocol_handle_connection_unlock_close;
-			else if (res > 0) // Connection is now "ready"
-				ready = 1;
 
 			inspircd2_protocol_handle_connection_unlock_next:
 			pthread_mutex_unlock(&state_lock);
@@ -326,16 +347,73 @@ void * inspircd2_protocol_autoconnect(void *tmp) {
 	}
 }
 
-int inspircd2_protocol_init_handle_server(struct string source, size_t argc, struct string *argv, void *handle, char is_incoming) {
+// SERVER <address> <password> <always 0> <SID> <name>
+int inspircd2_protocol_init_handle_server(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming) {
 	if (argc < 5) {
-		WRITES(2, STRING("Invalid SERVER recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid SERVER recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	if (source.len != 0) {
+		WRITES(2, STRING("[InspIRCd v2] Server attempting to use a source without having introduced itself!\r\n"));
 		return -1;
 	}
 
 	if (is_incoming) {
-		// TODO: set SID
+		// TODO: select config
 	} else {
+		if (!STRING_EQ(argv[3], (*config)->sid)) {
+			WRITES(2, STRING("[InspIRCd v2] Wrong SID given in SERVER!\r\n"));
+			return -1;
+		}
 	}
+
+	if (!STRING_EQ(argv[1], (*config)->in_pass)) {
+		WRITES(2, STRING("[InspIRCd v2] WARNING: Server supplied the wrong password!\r\n"));
+		return -1;
+	}
+
+	if (is_incoming) {
+		// TODO: Send password
+	}
+
+	time_t now = time(0);
+	if (now < 0) {
+		WRITES(2, STRING("ERROR: Negative clock!\r\n"));
+		return -1;
+	}
+	struct string time;
+	int res = unsigned_to_str((size_t)now, &time);
+	if (res != 0) {
+		WRITES(2, STRING("[InspIRCd v2] ERROR: OOM, severing link.\r\n"));
+		return -1;
+	}
+
+	networks[net].send(handle, STRING(":"));
+	networks[net].send(handle, SID);
+	networks[net].send(handle, STRING(" BURST "));
+	networks[net].send(handle, time);
+	networks[net].send(handle, STRING("\n:"));
+	networks[net].send(handle, SID);
+	networks[net].send(handle, STRING(" ENDBURST\n"));
+
+	return 1;
+}
+
+// [:source] PING <reply_to> <target>
+int inspircd2_protocol_handle_ping(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 2) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid PING recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	networks[net].send(handle, STRING(":"));
+	networks[net].send(handle, argv[1]);
+	networks[net].send(handle, STRING(" PONG "));
+	networks[net].send(handle, argv[1]);
+	networks[net].send(handle, STRING(" :"));
+	networks[net].send(handle, argv[0]);
+	networks[net].send(handle, STRING("\n"));
 
 	return 0;
 }

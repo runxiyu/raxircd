@@ -73,3 +73,27 @@ size_t str_to_unsigned(struct string str, char *err) {
 	*err = 0;
 	return val;
 }
+
+int unsigned_to_str(size_t number, struct string *str) {
+	size_t len = 0;
+	{
+		size_t tmp = number;
+		do {
+			len++;
+		} while ((tmp = tmp / 10) != 0);
+	}
+
+	void *tmp = malloc(len);
+	if (!tmp)
+		return 1;
+
+	str->data = tmp;
+	str->len = len;
+
+	for (size_t i = len; i > 0; i--) {
+		str->data[i - 1] = (char)((number % 10) + 0x30);
+		number = number / 10;
+	}
+
+	return 0;
+}
