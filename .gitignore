@@ -1,0 +1,7 @@
+config.c
+*.o
+.*.swp
+haxserv
+core
+.makeopts
+output
