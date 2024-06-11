@@ -53,25 +53,6 @@ int init_server_network(void) {
 		}
 	}
 
-	server_list.array = malloc(0);
-
-	struct server_info *own_info;
-	own_info = malloc(sizeof(*own_info));
-	own_info->sid.data = malloc(SID.len);
-	if (!own_info->sid.data)
-		return 1;
-	memcpy(own_info->sid.data, SID.data, SID.len);
-	own_info->sid.len = SID.len;
-
-	own_info->next = SID;
-	own_info->connected_to = (struct table){.array = malloc(0), .len = 0};
-	own_info->user_list = (struct table){.array = malloc(0), .len = 0};
-	own_info->distance = 0;
-	own_info->net = 0;
-	own_info->protocol = 0;
-	if (set_table_index(&server_list, SID, own_info) != 0)
-		return 1;
-
 	return 0;
 }
 
@@ -241,10 +222,10 @@ int add_server(struct string from, struct string attached_to, struct string sid,
 	protocols[protocol].update_propagations();
 
 #ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_new_server(from, attached_to, sid, new_info);
+	protocols[HAXIRCD_PROTOCOL].propagate_new_server(from, attached_to, new_info);
 #endif
 #ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_new_server(from, attached_to, sid, new_info);
+	protocols[INSPIRCD2_PROTOCOL].propagate_new_server(from, attached_to, new_info);
 #endif
 
 	return 0;
@@ -267,12 +248,29 @@ int add_server(struct string from, struct string attached_to, struct string sid,
 
 void free_server(struct server_info *server) {
 	free(server->sid.data);
+	free(server->name.data);
+	free(server->fullname.data);
 	clear_table(&(server->connected_to));
 	free(server->connected_to.array);
 	clear_table(&(server->user_list));
 	free(server->user_list.array);
 
 	free(server);
+}
+
+void remove_server(struct string from, struct server_info *server, struct string reason) {
+	while (server->user_list.len != 0) {
+		remove_user(from, server->user_list.array[0].ptr, reason, 0);
+	}
+
+	for (size_t i = 0; i < server->connected_to.len; i++) {
+		struct server_info *adjacent = server->connected_to.array[i].ptr;
+		remove_table_index(&(adjacent->connected_to), server->sid);
+	}
+
+	remove_table_index(&(server_list), server->sid);
+
+	free_server(server);
 }
 
 void update_all_propagations(void) {
@@ -300,5 +298,5 @@ void unlink_server(struct string from, struct server_info *a, struct server_info
 	protocols[INSPIRCD2_PROTOCOL].propagate_unlink(from, a, b, protocol);
 #endif
 
-	protocols[protocol].do_unlink(a, b);
+	protocols[protocol].do_unlink(from, a, b);
 }

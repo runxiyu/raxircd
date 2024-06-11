@@ -41,14 +41,16 @@ void * inspircd2_protocol_connection(void *type);
 void * inspircd2_protocol_autoconnect(void *type);
 void inspircd2_protocol_update_propagations(void);
 
-void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct string sid, struct server_info *info);
+void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct server_info *info);
 void inspircd2_protocol_propagate_unlink(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
+void inspircd2_protocol_propagate_new_user(struct string from, struct user_info *info);
+void inspircd2_protocol_propagate_remove_user(struct string from, struct user_info *info, struct string reason);
 
-void inspircd2_protocol_do_unlink(struct server_info *a, struct server_info *b);
+void inspircd2_protocol_do_unlink(struct string from, struct server_info *a, struct server_info *b);
 
 void inspircd2_protocol_update_propagations_inner(struct server_info *source);
 
-void inspircd2_protocol_do_unlink_inner(struct server_info *source);
+void inspircd2_protocol_do_unlink_inner(struct string from, struct server_info *source, struct string reason);
 
 int inspircd2_protocol_init_handle_server(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming);
 int inspircd2_protocol_init_handle_capab(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming);
@@ -56,3 +58,18 @@ int inspircd2_protocol_init_handle_capab(struct string source, size_t argc, stru
 int inspircd2_protocol_handle_ping(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd2_protocol_handle_server(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd2_protocol_handle_quit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+
+#define MODE_TYPE_UNKNOWN 0
+#define MODE_TYPE_NOARGS 1
+#define MODE_TYPE_REPLACE 2
+#define MODE_TYPE_MULTIPLE 3
+
+// Channel modes only, goes away when the related user leaves
+#define MODE_TYPE_USERS 4
+
+// Used for e.g. snomasks
+#define MODE_TYPE_MODE 5
+extern char inspircd2_protocol_user_mode_types[UCHAR_MAX+1];
+extern char inspircd2_protocol_channel_mode_types[UCHAR_MAX+1];

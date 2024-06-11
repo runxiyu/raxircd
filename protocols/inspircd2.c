@@ -43,6 +43,81 @@
 struct table inspircd2_protocol_init_commands = {0};
 struct table inspircd2_protocol_commands = {0};
 
+char inspircd2_protocol_user_mode_types[UCHAR_MAX+1] = {
+	['c'] = MODE_TYPE_NOARGS,
+	['d'] = MODE_TYPE_NOARGS,
+	['g'] = MODE_TYPE_NOARGS,
+	['h'] = MODE_TYPE_NOARGS,
+	['i'] = MODE_TYPE_NOARGS,
+	['k'] = MODE_TYPE_NOARGS,
+	['o'] = MODE_TYPE_NOARGS,
+	['r'] = MODE_TYPE_NOARGS,
+	['s'] = MODE_TYPE_MODE,
+	['w'] = MODE_TYPE_NOARGS,
+	['x'] = MODE_TYPE_NOARGS,
+	['z'] = MODE_TYPE_NOARGS,
+	['B'] = MODE_TYPE_NOARGS,
+	['D'] = MODE_TYPE_NOARGS,
+	['G'] = MODE_TYPE_NOARGS,
+	['H'] = MODE_TYPE_NOARGS,
+	['I'] = MODE_TYPE_NOARGS,
+	['L'] = MODE_TYPE_NOARGS,
+	['N'] = MODE_TYPE_NOARGS,
+	['O'] = MODE_TYPE_NOARGS,
+	['R'] = MODE_TYPE_NOARGS,
+	['S'] = MODE_TYPE_NOARGS,
+	['T'] = MODE_TYPE_NOARGS,
+	['W'] = MODE_TYPE_NOARGS,
+};
+
+char inspircd2_protocol_channel_mode_types[UCHAR_MAX+1] = {
+	['a'] = MODE_TYPE_USERS,
+	['b'] = MODE_TYPE_MULTIPLE,
+	['c'] = MODE_TYPE_NOARGS,
+	['d'] = MODE_TYPE_REPLACE,
+	['e'] = MODE_TYPE_MULTIPLE,
+	['f'] = MODE_TYPE_REPLACE,
+	['g'] = MODE_TYPE_REPLACE,
+	['h'] = MODE_TYPE_USERS,
+	['i'] = MODE_TYPE_NOARGS,
+	['j'] = MODE_TYPE_REPLACE,
+	['k'] = MODE_TYPE_REPLACE,
+	['l'] = MODE_TYPE_REPLACE,
+	['m'] = MODE_TYPE_NOARGS,
+	['n'] = MODE_TYPE_NOARGS,
+	['o'] = MODE_TYPE_USERS,
+	['p'] = MODE_TYPE_NOARGS,
+	['q'] = MODE_TYPE_USERS,
+	['r'] = MODE_TYPE_NOARGS,
+	['s'] = MODE_TYPE_NOARGS,
+	['t'] = MODE_TYPE_NOARGS,
+	['u'] = MODE_TYPE_NOARGS,
+	['v'] = MODE_TYPE_USERS,
+	['w'] = MODE_TYPE_MULTIPLE,
+	['z'] = MODE_TYPE_NOARGS,
+	['A'] = MODE_TYPE_NOARGS,
+	['B'] = MODE_TYPE_NOARGS,
+	['C'] = MODE_TYPE_NOARGS,
+	['D'] = MODE_TYPE_NOARGS,
+	['E'] = MODE_TYPE_REPLACE,
+	['F'] = MODE_TYPE_REPLACE,
+	['G'] = MODE_TYPE_NOARGS,
+	['H'] = MODE_TYPE_REPLACE,
+	['I'] = MODE_TYPE_MULTIPLE,
+	['J'] = MODE_TYPE_REPLACE,
+	['K'] = MODE_TYPE_NOARGS,
+	['L'] = MODE_TYPE_REPLACE,
+	['M'] = MODE_TYPE_NOARGS,
+	['N'] = MODE_TYPE_NOARGS,
+	['O'] = MODE_TYPE_NOARGS,
+	['P'] = MODE_TYPE_NOARGS,
+	['Q'] = MODE_TYPE_NOARGS,
+	['R'] = MODE_TYPE_NOARGS,
+	['S'] = MODE_TYPE_NOARGS,
+	['T'] = MODE_TYPE_NOARGS,
+	['X'] = MODE_TYPE_MULTIPLE,
+};
+
 int init_inspircd2_protocol(void) {
 	inspircd2_protocol_commands.array = malloc(0);
 
@@ -52,6 +127,8 @@ int init_inspircd2_protocol(void) {
 	set_table_index(&inspircd2_protocol_commands, STRING("PING"), &inspircd2_protocol_handle_ping);
 	set_table_index(&inspircd2_protocol_commands, STRING("SERVER"), &inspircd2_protocol_handle_server);
 	set_table_index(&inspircd2_protocol_commands, STRING("SQUIT"), &inspircd2_protocol_handle_squit);
+	set_table_index(&inspircd2_protocol_commands, STRING("UID"), &inspircd2_protocol_handle_uid);
+	set_table_index(&inspircd2_protocol_commands, STRING("QUIT"), &inspircd2_protocol_handle_quit);
 
 	return 0;
 }
@@ -159,7 +236,7 @@ void * inspircd2_protocol_connection(void *type) {
 				offset++;
 
 			if (msg_len == offset) {
-				WRITES(2, STRING("Protocol violation: empty message.\r\n\n"));
+				WRITES(2, STRING("[InspIRCd v2] Protocol violation: empty message.\r\n\n"));
 				goto inspircd2_protocol_handle_connection_close;
 			}
 
@@ -180,11 +257,16 @@ void * inspircd2_protocol_connection(void *type) {
 					source.len++;
 				}
 				if (source.len == 0) {
-					WRITES(2, STRING("Protocol violation: source prefix but no source.\r\n\n"));
+					WRITES(2, STRING("[InspIRCd v2] Protocol violation: source prefix but no source.\r\n\n"));
 					goto inspircd2_protocol_handle_connection_close;
 				}
 				if (!found || offset >= msg_len) {
-					WRITES(2, STRING("Protocol violation: source but no command.\r\n\n"));
+					WRITES(2, STRING("[InspIRCd v2] Protocol violation: source but no command.\r\n\n"));
+					goto inspircd2_protocol_handle_connection_close;
+				}
+
+				if (STRING_EQ(source, SID)) {
+					WRITES(2, STRING("[InspIRCd v2] Protocol violation: other server sent us as source!\r\n\n"));
 					goto inspircd2_protocol_handle_connection_close;
 				}
 			} else {
@@ -372,7 +454,7 @@ void inspircd2_protocol_update_propagations(void) {
 	inspircd2_protocol_update_propagations_inner(self);
 }
 
-void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct string sid, struct server_info *info) {
+void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct server_info *info) {
 	struct server_info *self = get_table_index(server_list, SID);
 
 	for (size_t i = 0; i < self->connected_to.len; i++) {
@@ -390,13 +472,13 @@ void inspircd2_protocol_propagate_new_server(struct string from, struct string a
 		networks[adjacent->net].send(adjacent->handle, STRING(" SERVER "));
 		networks[adjacent->net].send(adjacent->handle, info->name);
 		networks[adjacent->net].send(adjacent->handle, STRING(" * 0 "));
-		networks[adjacent->net].send(adjacent->handle, sid);
+		networks[adjacent->net].send(adjacent->handle, info->sid);
 		networks[adjacent->net].send(adjacent->handle, STRING(" :"));
 		networks[adjacent->net].send(adjacent->handle, info->fullname);
 		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
 
 		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, sid);
+		networks[adjacent->net].send(adjacent->handle, info->sid);
 		networks[adjacent->net].send(adjacent->handle, STRING(" BURST "));
 
 		time_t current = time(0);
@@ -404,14 +486,14 @@ void inspircd2_protocol_propagate_new_server(struct string from, struct string a
 		char err = unsigned_to_str((size_t)current, &current_time);
 
 		if (current < 0 || err) {
-			networks[adjacent->net].send(adjacent->handle, STRING("0"));
+			networks[adjacent->net].send(adjacent->handle, STRING("1"));
 		} else {
 			networks[adjacent->net].send(adjacent->handle, current_time);
 			free(current_time.data);
 		}
 
 		networks[adjacent->net].send(adjacent->handle, STRING("\n:"));
-		networks[adjacent->net].send(adjacent->handle, sid);
+		networks[adjacent->net].send(adjacent->handle, info->sid);
 		networks[adjacent->net].send(adjacent->handle, STRING(" ENDBURST\n"));
 	}
 }
@@ -446,7 +528,74 @@ void inspircd2_protocol_propagate_unlink(struct string from, struct server_info 
 	}
 }
 
-void inspircd2_protocol_do_unlink_inner(struct server_info *target) {
+void inspircd2_protocol_propagate_new_user(struct string from, struct user_info *info) {
+	struct server_info *self = get_table_index(server_list, SID);
+
+	for (size_t i = 0; i < self->connected_to.len; i++) {
+		struct server_info *adjacent = self->connected_to.array[i].ptr;
+		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
+			continue;
+
+		networks[adjacent->net].send(adjacent->handle, STRING(":"));
+		networks[adjacent->net].send(adjacent->handle, info->server);
+		networks[adjacent->net].send(adjacent->handle, STRING(" UID "));
+		networks[adjacent->net].send(adjacent->handle, info->uid);
+		networks[adjacent->net].send(adjacent->handle, STRING(" "));
+
+		struct string timestamp;
+		char err = unsigned_to_str(info->nick_ts, &timestamp);
+
+		if (err) {
+			networks[adjacent->net].send(adjacent->handle, STRING("1")); // TODO: Better fallback
+		} else {
+			networks[adjacent->net].send(adjacent->handle, timestamp);
+			free(timestamp.data);
+		}
+
+		networks[adjacent->net].send(adjacent->handle, STRING(" "));
+		networks[adjacent->net].send(adjacent->handle, info->nick);
+		networks[adjacent->net].send(adjacent->handle, STRING(" "));
+		networks[adjacent->net].send(adjacent->handle, info->host);
+		networks[adjacent->net].send(adjacent->handle, STRING(" "));
+		networks[adjacent->net].send(adjacent->handle, info->vhost);
+		networks[adjacent->net].send(adjacent->handle, STRING(" "));
+		networks[adjacent->net].send(adjacent->handle, info->ident);
+		networks[adjacent->net].send(adjacent->handle, STRING(" "));
+		networks[adjacent->net].send(adjacent->handle, info->address);
+		networks[adjacent->net].send(adjacent->handle, STRING(" "));
+
+		err = unsigned_to_str(info->user_ts, &timestamp);
+
+		if (err) {
+			networks[adjacent->net].send(adjacent->handle, STRING("1"));
+		} else {
+			networks[adjacent->net].send(adjacent->handle, timestamp);
+			free(timestamp.data);
+		}
+
+		networks[adjacent->net].send(adjacent->handle, STRING(" + :"));
+		networks[adjacent->net].send(adjacent->handle, info->fullname);
+		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
+	}
+}
+
+void inspircd2_protocol_propagate_remove_user(struct string from, struct user_info *info, struct string reason) {
+	struct server_info *self = get_table_index(server_list, SID);
+
+	for (size_t i = 0; i < self->connected_to.len; i++) {
+		struct server_info *adjacent = self->connected_to.array[i].ptr;
+		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
+			continue;
+
+		networks[adjacent->net].send(adjacent->handle, STRING(":"));
+		networks[adjacent->net].send(adjacent->handle, info->uid);
+		networks[adjacent->net].send(adjacent->handle, STRING(" QUIT :"));
+		networks[adjacent->net].send(adjacent->handle, reason);
+		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
+	}
+}
+
+void inspircd2_protocol_do_unlink_inner(struct string from, struct server_info *target, struct string reason) {
 	target->distance = 1; // Reusing distance for `have passed`, since its set to 0 bc severed anyways
 
 	unsigned char i = 0;
@@ -456,25 +605,36 @@ void inspircd2_protocol_do_unlink_inner(struct server_info *target) {
 			i = 1;
 			continue;
 		}
-		inspircd2_protocol_do_unlink_inner(adjacent);
-		remove_table_index(&(target->connected_to), adjacent->sid);
-		remove_table_index(&(server_list), adjacent->sid);
-		free_server(adjacent);
+		inspircd2_protocol_do_unlink_inner(from, adjacent, reason);
+		remove_server(from, adjacent, reason);
 	}
 }
 
-void inspircd2_protocol_do_unlink(struct server_info *a, struct server_info *b) {
-	if (a->distance == 0 && !STRING_EQ(a->sid, SID)) {
-		inspircd2_protocol_do_unlink_inner(a);
-		remove_table_index(&(b->connected_to), a->sid);
-		remove_table_index(&(server_list), a->sid);
-		free_server(a);
+void inspircd2_protocol_do_unlink(struct string from, struct server_info *a, struct server_info *b) {
+	char valid;
+	struct string reason;
+	reason.data = malloc(a->name.len + 1 + b->name.len);
+	if (!reason.data) {
+		valid = 0;
+		reason = STRING("*.net *.split");
 	} else {
-		inspircd2_protocol_do_unlink_inner(b);
-		remove_table_index(&(a->connected_to), b->sid);
-		remove_table_index(&(server_list), b->sid);
-		free_server(b);
+		valid = 1;
+		memcpy(reason.data, a->name.data, a->name.len);
+		reason.data[a->name.len] = ' ';
+		memcpy(&(reason.data[a->name.len + 1]), b->name.data, b->name.len);
+		reason.len = a->name.len + 1 + b->name.len;
 	}
+
+	if (a->distance == 0 && !STRING_EQ(a->sid, SID)) {
+		inspircd2_protocol_do_unlink_inner(from, a, reason);
+		remove_server(from, a, reason);
+	} else {
+		inspircd2_protocol_do_unlink_inner(from, b, reason);
+		remove_server(from, b, reason);
+	}
+
+	if (valid)
+		free(reason.data);
 }
 
 void inspircd2_protocol_introduce_servers_to_inner(size_t net, void *handle, struct string source, struct server_info *target) {
@@ -582,6 +742,49 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 
 	inspircd2_protocol_introduce_servers_to(net, handle);
 
+	for (size_t i = 0; i < user_list.len; i++) {
+		struct user_info *user = user_list.array[i].ptr;
+
+		networks[net].send(handle, STRING(":"));
+		networks[net].send(handle, user->server);
+		networks[net].send(handle, STRING(" UID "));
+		networks[net].send(handle, user->uid);
+		networks[net].send(handle, STRING(" "));
+
+		struct string timestamp;
+		char err = unsigned_to_str(user->nick_ts, &timestamp);
+
+		if (err) {
+			return -1;
+		}
+		networks[net].send(handle, timestamp);
+		free(timestamp.data);
+
+		networks[net].send(handle, STRING(" "));
+		networks[net].send(handle, user->nick);
+		networks[net].send(handle, STRING(" "));
+		networks[net].send(handle, user->host);
+		networks[net].send(handle, STRING(" "));
+		networks[net].send(handle, user->vhost);
+		networks[net].send(handle, STRING(" "));
+		networks[net].send(handle, user->ident);
+		networks[net].send(handle, STRING(" "));
+		networks[net].send(handle, user->address);
+		networks[net].send(handle, STRING(" "));
+
+		err = unsigned_to_str(user->nick_ts, &timestamp);
+
+		if (err) {
+			return -1;
+		}
+		networks[net].send(handle, timestamp);
+		free(timestamp.data);
+
+		networks[net].send(handle, STRING(" + :"));
+		networks[net].send(handle, user->fullname);
+		networks[net].send(handle, STRING("\n"));
+	}
+
 	networks[net].send(handle, STRING(":"));
 	networks[net].send(handle, SID);
 	networks[net].send(handle, STRING(" ENDBURST\n"));
@@ -621,6 +824,11 @@ int inspircd2_protocol_handle_server(struct string source, size_t argc, struct s
 		return -1;
 	}
 
+	if (has_table_index(server_list, argv[3])) {
+		WRITES(2, STRING("[InspIRCd v2] Duplicate SERVER attempted to be created!\r\n"));
+		return -1;
+	}
+
 	if (add_server(config->sid, source, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net, handle) != 0) {
 		WRITES(2, STRING("ERROR: Unable to add server!\r\n"));
 		return -1;
@@ -652,6 +860,103 @@ int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct st
 	}
 
 	unlink_server(config->sid, a, b, INSPIRCD2_PROTOCOL);
+
+	return 0;
+}
+
+// [:source] UID <UID> <nick_ts> <nick> <host> <vhost> <ident> <address> <user_ts> <modes> [<mode args>] <fullname>
+int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 10) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	if (has_table_index(user_list, argv[0])) {
+		WRITES(2, STRING("[InspIRCd v2] Duplicate UID attempted to be created!\r\n"));
+		return -1;
+	}
+
+	char dir = '?';
+	size_t arg_i = 9;
+	size_t mode_i = 0;
+
+	while (1) {
+		if (argv[8].len <= mode_i)
+			break;
+		switch(argv[8].data[mode_i]) {
+			case '+':
+			case '-':
+				dir = argv[8].data[mode_i];
+				break;
+			default:
+				if (dir == '?') {
+					WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Mode direction not set)\r\n"));
+					return -1;
+				}
+
+				switch(inspircd2_protocol_user_mode_types[(unsigned char)argv[8].data[mode_i]]) {
+					case MODE_TYPE_NOARGS:
+						break;
+					case MODE_TYPE_REPLACE:
+					case MODE_TYPE_MODE:
+						if (dir == '-') // Shouldn't actually happen here, but whatever
+							break;
+					case MODE_TYPE_MULTIPLE:
+						arg_i++;
+						break;
+					default:
+						WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Unknown mode given)\r\n"));
+						return -1;
+				}
+		}
+
+		mode_i++;
+	}
+
+	if (arg_i >= argc) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Missing mode arguments)\r\n"));
+		return -1;
+	}
+
+	char err;
+	size_t nick_ts = str_to_unsigned(argv[1], &err);
+	if (err) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Invalid nick timestamp)\r\n"));
+		return -1;
+	}
+
+	size_t user_ts = str_to_unsigned(argv[7], &err);
+	if (err) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Invalid user timestamp)\r\n"));
+		return -1;
+	}
+
+	if (add_user(config->sid, source, argv[0], argv[2], argv[arg_i], argv[5], argv[4], argv[3], argv[6], user_ts, nick_ts, 0, 0, 0) != 0) {
+		WRITES(2, STRING("ERROR: Unable to add user!\r\n"));
+		return -1;
+	}
+
+	return 0;
+}
+
+// :source QUIT <reason>
+int inspircd2_protocol_handle_quit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	struct string reason;
+	if (argc < 1)
+		reason = STRING("");
+	else
+		reason = argv[0];
+
+	struct user_info *user = get_table_index(user_list, source);
+	if (!user)
+		return 0; // Maybe KILLed or something
+
+	if (STRING_EQ(user->server, SID)) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid QUIT recieved! (Attempting to quit a local user)\r\n"));
+		return -1;
+	}
+
+	remove_user(config->sid, user, reason, 1);
 
 	return 0;
 }

@@ -45,9 +45,56 @@ struct network {
 	void (*close)(int fd, void *handle);
 };
 
+struct server_info {
+	struct string sid;
+	struct string name;
+	struct string fullname;
+
+	struct string next; // Self for self, else which server we should send a message to to get to this server
+
+	struct table connected_to; // List of servers that this server is connected to
+
+	struct table user_list;
+
+	void *handle;
+
+	size_t protocol;
+	size_t net;
+
+	size_t distance;
+};
+
+struct user_info {
+	struct string uid;
+	struct string nick;
+	struct string fullname;
+
+	struct string ident;
+
+	struct string vhost;
+	struct string host;
+	struct string address;
+
+	size_t user_ts;
+	size_t nick_ts;
+
+	struct string server;
+
+	struct table channel_list;
+
+	void *handle;
+
+	size_t protocol;
+	size_t net;
+};
+
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr);
 
 int init_general_network(void);
+
+int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net);
+// Does not propagate, but will inform local clients about it
+void remove_user(struct string from, struct user_info *user, struct string reason, char propagate);
 
 extern char casemap[UCHAR_MAX+1];
 #define CASEMAP(x) (casemap[(unsigned char)x])
@@ -64,3 +111,6 @@ extern char casemap[UCHAR_MAX+1];
 
 #define NUM_NET_TYPES 3
 extern struct network networks[NUM_NET_TYPES];
+
+extern struct table server_list;
+extern struct table user_list;

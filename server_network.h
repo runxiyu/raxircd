@@ -28,6 +28,7 @@
 
 #include <stddef.h>
 
+#include "general_network.h"
 #include "haxstring.h"
 #include "table.h"
 
@@ -45,25 +46,6 @@ struct server_connection_info {
 	void *handle;
 };
 
-struct server_info {
-	struct string sid;
-	struct string name;
-	struct string fullname;
-
-	struct string next; // Self for self, else which server we should send a message to to get to this server
-
-	struct table connected_to; // List of servers that this server is connected to
-
-	struct table user_list;
-
-	void *handle;
-
-	size_t protocol;
-	size_t net;
-
-	size_t distance;
-};
-
 int init_server_network(void);
 int start_server_network(void);
 int start_server_network_threads(size_t net);
@@ -74,10 +56,9 @@ void * handle_server_thread(void *type);
 
 int add_server(struct string from, struct string attached_to, struct string sid, struct string name, struct string fullname, size_t protocol, size_t net, void *handle);
 void free_server(struct server_info *server);
+void remove_server(struct string from, struct server_info *server, struct string reason);
 
 void update_all_propagations(void);
 void unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 extern struct table server_config;
-
-extern struct table server_list;

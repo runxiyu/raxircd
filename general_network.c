@@ -27,6 +27,8 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include <arpa/inet.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -108,6 +110,7 @@ struct network networks[NUM_NET_TYPES] = {
 };
 
 struct table server_list = {0};
+struct table user_list = {0};
 
 // TODO: Proper string handling
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr) {
@@ -130,7 +133,6 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 	return success;
 }
 
-// TODO: May leak memory on failure, not currently an issue since this failing currently just results in program exit anyways
 int init_general_network(void) {
 	for (size_t i = 1; i < UCHAR_MAX + 1; i++) {
 		if (casemap[i] == 0) {
@@ -138,5 +140,201 @@ int init_general_network(void) {
 		}
 	}
 
+	server_list.array = malloc(0);
+
+	struct server_info *own_info;
+	own_info = malloc(sizeof(*own_info));
+	if (!own_info) {
+		free(server_list.array);
+		return 1;
+	}
+
+	own_info->sid.data = malloc(SID.len);
+	if (!own_info->sid.data) {
+		free(server_list.array);
+		free(own_info);
+		return 1;
+	}
+	memcpy(own_info->sid.data, SID.data, SID.len);
+	own_info->sid.len = SID.len;
+
+	own_info->name.data = malloc(SERVER_NAME.len);
+	if (!own_info->name.data) {
+		free(server_list.array);
+		free(own_info->sid.data);
+		free(own_info);
+		return 1;
+	}
+	memcpy(own_info->name.data, SERVER_NAME.data, SERVER_NAME.len);
+	own_info->name.len = SERVER_NAME.len;
+
+	own_info->fullname.data = malloc(SERVER_FULLNAME.len);
+	if (!own_info->fullname.data) {
+		free(server_list.array);
+		free(own_info->name.data);
+		free(own_info->sid.data);
+		free(own_info);
+		return 1;
+	}
+	memcpy(own_info->fullname.data, SERVER_FULLNAME.data, SERVER_FULLNAME.len);
+	own_info->fullname.len = SERVER_FULLNAME.len;
+
+	if (set_table_index(&server_list, SID, own_info) != 0) {
+		free(server_list.array);
+		free(own_info->fullname.data);
+		free(own_info->name.data);
+		free(own_info->sid.data);
+		free(own_info);
+		return 1;
+	}
+
+	own_info->next = SID;
+	own_info->connected_to = (struct table){.array = malloc(0), .len = 0};
+	own_info->user_list = (struct table){.array = malloc(0), .len = 0};
+	own_info->distance = 0;
+	own_info->net = 0;
+	own_info->protocol = 0;
+
+	user_list.array = malloc(0);
+
 	return 0;
+}
+
+int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net) {
+	struct server_info *attached = get_table_index(server_list, attached_to);
+	if (!attached)
+		return 1;
+
+	if (has_table_index(user_list, uid))
+		return 1;
+
+	struct user_info *new_info;
+	new_info = malloc(sizeof(*new_info));
+	if (!new_info)
+		return 1;
+
+	new_info->user_ts = user_ts;
+	new_info->nick_ts = nick_ts;
+
+	new_info->protocol = protocol;
+	new_info->net = net;
+	new_info->handle = handle;
+
+	new_info->server = attached->sid;
+
+	new_info->uid.data = malloc(uid.len);
+	if (!new_info->uid.data)
+		goto add_user_free_info;
+	memcpy(new_info->uid.data, uid.data, uid.len);
+	new_info->uid.len = uid.len;
+
+	new_info->nick.data = malloc(nick.len);
+	if (!new_info->nick.data)
+		goto add_user_free_uid;
+	memcpy(new_info->nick.data, nick.data, nick.len);
+	new_info->nick.len = nick.len;
+
+	new_info->fullname.data = malloc(fullname.len);
+	if (!new_info->fullname.data && fullname.len != 0)
+		goto add_user_free_nick;
+	memcpy(new_info->fullname.data, fullname.data, fullname.len);
+	new_info->fullname.len = fullname.len;
+
+	new_info->ident.data = malloc(ident.len);
+	if (!new_info->ident.data)
+		goto add_user_free_fullname;
+	memcpy(new_info->ident.data, ident.data, ident.len);
+	new_info->ident.len = ident.len;
+
+	new_info->vhost.data = malloc(vhost.len);
+	if (!new_info->vhost.data)
+		goto add_user_free_ident;
+	memcpy(new_info->vhost.data, vhost.data, vhost.len);
+	new_info->vhost.len = vhost.len;
+
+	new_info->host.data = malloc(host.len);
+	if (!new_info->host.data)
+		goto add_user_free_vhost;
+	memcpy(new_info->host.data, host.data, host.len);
+	new_info->host.len = host.len;
+
+	new_info->address.data = malloc(address.len);
+	if (!new_info->address.data)
+		goto add_user_free_host;
+	memcpy(new_info->address.data, address.data, address.len);
+	new_info->address.len = address.len;
+
+	if (set_table_index(&user_list, uid, new_info) != 0)
+		goto add_user_free_address;
+
+	if (set_table_index(&(attached->user_list), uid, new_info) != 0)
+		goto add_user_remove_user_list;
+
+	new_info->channel_list.array = malloc(0);
+	new_info->channel_list.len = 0;
+
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_new_user(from, new_info);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_new_user(from, new_info);
+#endif
+#endif
+
+	return 0;
+
+	add_user_remove_user_list:
+	remove_table_index(&user_list, uid);
+	add_user_free_address:
+	free(new_info->address.data);
+	add_user_free_host:
+	free(new_info->host.data);
+	add_user_free_vhost:
+	free(new_info->vhost.data);
+	add_user_free_ident:
+	free(new_info->ident.data);
+	add_user_free_fullname:
+	free(new_info->fullname.data);
+	add_user_free_nick:
+	free(new_info->nick.data);
+	add_user_free_uid:
+	free(new_info->uid.data);
+	add_user_free_info:
+	free(new_info);
+
+	return 1;
+}
+
+void remove_user(struct string from, struct user_info *user, struct string reason, char propagate) {
+#ifdef USE_SERVER
+	if (propagate) {
+#ifdef USE_HAXIRCD_PROTOCOL
+		protocols[HAXIRCD_PROTOCOL].propagate_remove_user(from, user, reason);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+		protocols[INSPIRCD2_PROTOCOL].propagate_remove_user(from, user, reason);
+#endif
+	}
+#endif
+
+	remove_table_index(&user_list, user->uid);
+
+	struct server_info *server = get_table_index(server_list, user->server);
+	if (server) {
+		remove_table_index(&(server->user_list), user->uid);
+	}
+
+	// TODO: Channel cleanup code hereish
+	clear_table(&(user->channel_list));
+	free(user->channel_list.array);
+
+	free(user->uid.data);
+	free(user->nick.data);
+	free(user->fullname.data);
+	free(user->ident.data);
+	free(user->vhost.data);
+	free(user->host.data);
+	free(user->address.data);
+	free(user);
 }

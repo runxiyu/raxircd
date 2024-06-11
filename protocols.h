@@ -33,10 +33,12 @@ struct protocol {
 	void * (*autoconnect)(void *config);
 	void (*update_propagations)(void);
 
-	void (*propagate_new_server)(struct string from, struct string attached_to, struct string sid, struct server_info *info);
+	void (*propagate_new_server)(struct string from, struct string attached_to, struct server_info *info);
 	void (*propagate_unlink)(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
+	void (*propagate_new_user)(struct string from, struct user_info *info);
+	void (*propagate_remove_user)(struct string from, struct user_info *info, struct string reason);
 
-	void (*do_unlink)(struct server_info *a, struct server_info *b);
+	void (*do_unlink)(struct string from, struct server_info *a, struct server_info *b);
 };
 
 #ifdef USE_HAXIRCD_PROTOCOL

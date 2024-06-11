@@ -41,6 +41,8 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 
 		.propagate_new_server = inspircd2_protocol_propagate_new_server,
 		.propagate_unlink = inspircd2_protocol_propagate_unlink,
+		.propagate_new_user = inspircd2_protocol_propagate_new_user,
+		.propagate_remove_user = inspircd2_protocol_propagate_remove_user,
 
 		.do_unlink = inspircd2_protocol_do_unlink,
 	},
