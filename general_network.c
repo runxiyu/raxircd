@@ -35,6 +35,8 @@
 
 #include "config.h"
 #include "general_network.h"
+#include "haxstring.h"
+#include "haxstring_utils.h"
 
 #ifdef USE_PLAINTEXT
 #include "plaintext_network.h"
@@ -144,49 +146,20 @@ int init_general_network(void) {
 
 	struct server_info *own_info;
 	own_info = malloc(sizeof(*own_info));
-	if (!own_info) {
-		free(server_list.array);
-		return 1;
-	}
+	if (!own_info)
+		goto init_general_network_free_server_list;
 
-	own_info->sid.data = malloc(SID.len);
-	if (!own_info->sid.data) {
-		free(server_list.array);
-		free(own_info);
-		return 1;
-	}
-	memcpy(own_info->sid.data, SID.data, SID.len);
-	own_info->sid.len = SID.len;
+	if (str_clone(&(own_info->sid), SID) != 0)
+		goto init_general_network_free_own_info;
 
-	own_info->name.data = malloc(SERVER_NAME.len);
-	if (!own_info->name.data) {
-		free(server_list.array);
-		free(own_info->sid.data);
-		free(own_info);
-		return 1;
-	}
-	memcpy(own_info->name.data, SERVER_NAME.data, SERVER_NAME.len);
-	own_info->name.len = SERVER_NAME.len;
+	if (str_clone(&(own_info->name), SERVER_NAME) != 0)
+		goto init_general_network_free_sid;
 
-	own_info->fullname.data = malloc(SERVER_FULLNAME.len);
-	if (!own_info->fullname.data) {
-		free(server_list.array);
-		free(own_info->name.data);
-		free(own_info->sid.data);
-		free(own_info);
-		return 1;
-	}
-	memcpy(own_info->fullname.data, SERVER_FULLNAME.data, SERVER_FULLNAME.len);
-	own_info->fullname.len = SERVER_FULLNAME.len;
+	if (str_clone(&(own_info->fullname), SERVER_FULLNAME) != 0)
+		goto init_general_network_free_name;
 
-	if (set_table_index(&server_list, SID, own_info) != 0) {
-		free(server_list.array);
-		free(own_info->fullname.data);
-		free(own_info->name.data);
-		free(own_info->sid.data);
-		free(own_info);
-		return 1;
-	}
+	if (set_table_index(&server_list, SID, own_info) != 0)
+		goto init_general_network_free_fullname;
 
 	own_info->next = SID;
 	own_info->connected_to = (struct table){.array = malloc(0), .len = 0};
@@ -198,6 +171,19 @@ int init_general_network(void) {
 	user_list.array = malloc(0);
 
 	return 0;
+
+	init_general_network_free_fullname:
+	free(own_info->fullname.data);
+	init_general_network_free_name:
+	free(own_info->name.data);
+	init_general_network_free_sid:
+	free(own_info->sid.data);
+	init_general_network_free_own_info:
+	free(own_info);
+	init_general_network_free_server_list:
+	free(server_list.array);
+
+	return 1;
 }
 
 int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net) {
@@ -222,47 +208,32 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 
 	new_info->server = attached->sid;
 
-	new_info->uid.data = malloc(uid.len);
-	if (!new_info->uid.data)
+	if (unsigned_to_str(user_ts, &(new_info->user_ts_str)) != 0)
 		goto add_user_free_info;
-	memcpy(new_info->uid.data, uid.data, uid.len);
-	new_info->uid.len = uid.len;
 
-	new_info->nick.data = malloc(nick.len);
-	if (!new_info->nick.data)
+	if (unsigned_to_str(nick_ts, &(new_info->nick_ts_str)) != 0)
+		goto add_user_free_user_ts;
+
+	if (str_clone(&(new_info->uid), uid) != 0)
+		goto add_user_free_nick_ts;
+
+	if (str_clone(&(new_info->nick), nick) != 0)
 		goto add_user_free_uid;
-	memcpy(new_info->nick.data, nick.data, nick.len);
-	new_info->nick.len = nick.len;
 
-	new_info->fullname.data = malloc(fullname.len);
-	if (!new_info->fullname.data && fullname.len != 0)
+	if (str_clone(&(new_info->fullname), fullname) != 0)
 		goto add_user_free_nick;
-	memcpy(new_info->fullname.data, fullname.data, fullname.len);
-	new_info->fullname.len = fullname.len;
 
-	new_info->ident.data = malloc(ident.len);
-	if (!new_info->ident.data)
+	if (str_clone(&(new_info->ident), ident) != 0)
 		goto add_user_free_fullname;
-	memcpy(new_info->ident.data, ident.data, ident.len);
-	new_info->ident.len = ident.len;
 
-	new_info->vhost.data = malloc(vhost.len);
-	if (!new_info->vhost.data)
+	if (str_clone(&(new_info->vhost), vhost) != 0)
 		goto add_user_free_ident;
-	memcpy(new_info->vhost.data, vhost.data, vhost.len);
-	new_info->vhost.len = vhost.len;
 
-	new_info->host.data = malloc(host.len);
-	if (!new_info->host.data)
+	if (str_clone(&(new_info->host), host) != 0)
 		goto add_user_free_vhost;
-	memcpy(new_info->host.data, host.data, host.len);
-	new_info->host.len = host.len;
 
-	new_info->address.data = malloc(address.len);
-	if (!new_info->address.data)
+	if (str_clone(&(new_info->address), address) != 0)
 		goto add_user_free_host;
-	memcpy(new_info->address.data, address.data, address.len);
-	new_info->address.len = address.len;
 
 	if (set_table_index(&user_list, uid, new_info) != 0)
 		goto add_user_free_address;
@@ -300,6 +271,10 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	free(new_info->nick.data);
 	add_user_free_uid:
 	free(new_info->uid.data);
+	add_user_free_nick_ts:
+	free(new_info->nick_ts_str.data);
+	add_user_free_user_ts:
+	free(new_info->user_ts_str.data);
 	add_user_free_info:
 	free(new_info);
 
@@ -329,6 +304,8 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 	clear_table(&(user->channel_list));
 	free(user->channel_list.array);
 
+	free(user->user_ts_str.data);
+	free(user->nick_ts_str.data);
 	free(user->uid.data);
 	free(user->nick.data);
 	free(user->fullname.data);

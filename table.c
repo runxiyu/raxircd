@@ -102,15 +102,7 @@ int set_table_index(struct table *tbl, struct string name, void *ptr) {
 	char exists;
 	size_t index = search(*tbl, name, &exists);
 
-	if (index == tbl->len) {
-		void *tmp = realloc(tbl->array, sizeof(*(tbl->array)) * (tbl->len+1));
-		if (tmp == 0)
-			return 1;
-
-		tbl->array = tmp;
-
-		tbl->len++;
-	} else if (!exists) {
+	if (!exists) {
 		void *tmp = realloc(tbl->array, sizeof(*(tbl->array)) * (tbl->len+1));
 		if (tmp == 0)
 			return 1;

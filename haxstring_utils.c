@@ -28,6 +28,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "haxstring.h"
 #include "haxstring_utils.h"
@@ -95,6 +96,16 @@ int unsigned_to_str(size_t number, struct string *str) {
 		str->data[i - 1] = (char)((number % 10) + 0x30);
 		number = number / 10;
 	}
+
+	return 0;
+}
+
+int str_clone(struct string *dest, struct string source) {
+	dest->data = malloc(source.len);
+	if (!dest->data)
+		return 1;
+	memcpy(dest->data, source.data, source.len);
+	dest->len = source.len;
 
 	return 0;
 }

@@ -33,6 +33,8 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "haxstring.h"
+#include "haxstring_utils.h"
 #include "main.h"
 #include "protocols.h"
 #include "server_network.h"
@@ -187,23 +189,14 @@ int add_server(struct string from, struct string attached_to, struct string sid,
 	new_info->net = net;
 	new_info->handle = handle;
 
-	new_info->sid.data = malloc(sid.len);
-	if (!new_info->sid.data)
+	if (str_clone(&(new_info->sid), sid) != 0)
 		goto add_server_free_new_info;
-	memcpy(new_info->sid.data, sid.data, sid.len);
-	new_info->sid.len = sid.len;
 
-	new_info->name.data = malloc(name.len);
-	if (!new_info->name.data)
+	if (str_clone(&(new_info->name), name) != 0)
 		goto add_server_free_sid;
-	memcpy(new_info->name.data, name.data, name.len);
-	new_info->name.len = name.len;
 
-	new_info->fullname.data = malloc(fullname.len);
-	if (!new_info->fullname.data)
+	if (str_clone(&(new_info->fullname), fullname) != 0)
 		goto add_server_free_name;
-	memcpy(new_info->fullname.data, fullname.data, fullname.len);
-	new_info->fullname.len = fullname.len;
 
 	// new_info->next shares string with sid of the server it points to
 

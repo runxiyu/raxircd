@@ -541,17 +541,7 @@ void inspircd2_protocol_propagate_new_user(struct string from, struct user_info 
 		networks[adjacent->net].send(adjacent->handle, STRING(" UID "));
 		networks[adjacent->net].send(adjacent->handle, info->uid);
 		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-
-		struct string timestamp;
-		char err = unsigned_to_str(info->nick_ts, &timestamp);
-
-		if (err) {
-			networks[adjacent->net].send(adjacent->handle, STRING("1")); // TODO: Better fallback
-		} else {
-			networks[adjacent->net].send(adjacent->handle, timestamp);
-			free(timestamp.data);
-		}
-
+		networks[adjacent->net].send(adjacent->handle, info->nick_ts_str);
 		networks[adjacent->net].send(adjacent->handle, STRING(" "));
 		networks[adjacent->net].send(adjacent->handle, info->nick);
 		networks[adjacent->net].send(adjacent->handle, STRING(" "));
@@ -563,16 +553,7 @@ void inspircd2_protocol_propagate_new_user(struct string from, struct user_info 
 		networks[adjacent->net].send(adjacent->handle, STRING(" "));
 		networks[adjacent->net].send(adjacent->handle, info->address);
 		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-
-		err = unsigned_to_str(info->user_ts, &timestamp);
-
-		if (err) {
-			networks[adjacent->net].send(adjacent->handle, STRING("1"));
-		} else {
-			networks[adjacent->net].send(adjacent->handle, timestamp);
-			free(timestamp.data);
-		}
-
+		networks[adjacent->net].send(adjacent->handle, info->user_ts_str);
 		networks[adjacent->net].send(adjacent->handle, STRING(" + :"));
 		networks[adjacent->net].send(adjacent->handle, info->fullname);
 		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
