@@ -41,4 +41,5 @@ size_t plaintext_recv(void *fd, char *data, size_t len, char *err);
 int plaintext_connect(void **handle, struct string address, struct string port, struct string *addr_out);
 int plaintext_accept(int listen_fd, void **handle, struct string *addr);
 
+void plaintext_shutdown(void *handle);
 void plaintext_close(int fd, void *handle);

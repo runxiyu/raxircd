@@ -43,6 +43,7 @@ struct openssl_handle {
 	SSL *ssl;
 	pthread_mutex_t mutex;
 	int fd;
+	char valid;
 };
 
 SSL_CTX *openssl_ctx;
@@ -70,6 +71,9 @@ int openssl_send(void *handle, struct string msg) {
 
 	pthread_mutex_lock(&(openssl_handle->mutex));
 
+	if (!openssl_handle->valid)
+		goto openssl_send_error_unlock;
+
 	struct pollfd pollfd = {
 		.fd = openssl_handle->fd,
 	};
@@ -91,15 +95,12 @@ int openssl_send(void *handle, struct string msg) {
 			break;
 		}
 
-		res = poll(&pollfd, 1, -1); // TODO: What if the buffer is never ready? But openssl demands that the send buffer remain unchanged...
-		if (res < 0) {
-			if (errno == EINTR) {
-				continue;
-			} else {
-				goto openssl_send_error_unlock;
-			}
-		}
-		if (res == 0) // Shouldn't actually happen, but checking anyways
+		do {
+			res = poll(&pollfd, 1, PING_INTERVAL*1000);
+		} while (res < 0 && errno == EINTR);
+		if (res < 0)
+			goto openssl_send_error_unlock;
+		if (res == 0) // Timed out... maybe handle differently later
 			goto openssl_send_error_unlock;
 		if ((pollfd.revents & (POLLIN | POLLOUT)) == 0) // Only errors returned
 			goto openssl_send_error_unlock;
@@ -109,6 +110,7 @@ int openssl_send(void *handle, struct string msg) {
 	return 0;
 
 	openssl_send_error_unlock:
+	openssl_handle->valid = 0;
 	pthread_mutex_unlock(&(openssl_handle->mutex));
 	return 1;
 }
@@ -122,6 +124,11 @@ size_t openssl_recv(void *handle, char *data, size_t len, char *err) {
 	int res;
 	do {
 		pthread_mutex_lock(&(openssl_handle->mutex));
+		if (!openssl_handle->valid) {
+			pthread_mutex_unlock(&(openssl_handle->mutex));
+			*err = 3;
+			return 0;
+		}
 		res = SSL_read(openssl_handle->ssl, data, len);
 		pthread_mutex_unlock(&(openssl_handle->mutex));
 		if (res <= 0) {
@@ -258,6 +265,8 @@ int openssl_connect(void **handle, struct string address, struct string port, st
 			goto openssl_connect_destroy_mutex;
 	} while (1);
 
+	openssl_handle->valid = 1;
+
 	return fd;
 
 	openssl_connect_destroy_mutex:
@@ -354,6 +363,8 @@ int openssl_accept(int listen_fd, void **handle, struct string *addr) {
 			goto openssl_accept_destroy_mutex;
 	} while (1);
 
+	openssl_handle->valid = 1;
+
 	return con_fd;
 
 	openssl_accept_destroy_mutex:
@@ -368,6 +379,14 @@ int openssl_accept(int listen_fd, void **handle, struct string *addr) {
 	close(con_fd);
 
 	return -1;
+}
+
+void openssl_shutdown(void *handle) {
+	struct openssl_handle *openssl_handle = handle;
+	pthread_mutex_lock(&(openssl_handle->mutex));
+	shutdown(openssl_handle->fd, SHUT_RDWR);
+	openssl_handle->valid = 0;
+	pthread_mutex_unlock(&(openssl_handle->mutex));
 }
 
 void openssl_close(int fd, void *handle) {

@@ -42,6 +42,7 @@ struct network {
 	int (*connect)(void **handle, struct string address, struct string port, struct string *addr_out);
 	int (*accept)(int listen_fd, void **handle, struct string *addr);
 
+	void (*shutdown)(void *handle);
 	void (*close)(int fd, void *handle);
 };
 

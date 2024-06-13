@@ -29,6 +29,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <gnutls/gnutls.h>
+#include <poll.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -37,6 +39,13 @@
 #include "config.h"
 #include "general_network.h"
 #include "gnutls_network.h"
+
+struct gnutls_handle {
+	gnutls_session_t session;
+	pthread_mutex_t mutex;
+	int fd;
+	char valid;
+};
 
 gnutls_certificate_credentials_t gnutls_cert_creds;
 
@@ -56,21 +65,61 @@ int init_gnutls_network(void) {
 	return 0;
 }
 
-int gnutls_send(void *session, struct string msg) {
-	do {
-		ssize_t res;
-		do {
-			res = gnutls_record_send(*((gnutls_session_t*)session), msg.data, msg.len);
-		} while (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN);
+int gnutls_send(void *handle, struct string msg) {
+	struct gnutls_handle *gnutls_handle = handle;
 
-		if (res < 0 || (size_t)res > msg.len) { // res > len shouldn't be possible, but is still an error
-			return 1;
-		} else if ((size_t)res == msg.len) {
+	pthread_mutex_lock(&(gnutls_handle->mutex));
+
+	if (!gnutls_handle->valid)
+		goto gnutls_send_error_unlock;
+
+	struct pollfd pollfd = {
+		.fd = gnutls_handle->fd,
+	};
+	do {
+		ssize_t gnutls_res;
+		int poll_res;
+		gnutls_res = gnutls_record_send(gnutls_handle->session, msg.data, msg.len);
+		if (gnutls_res <= 0) {
+			if (gnutls_res == GNUTLS_E_INTERRUPTED) {
+				continue;
+			} else if (gnutls_res == GNUTLS_E_AGAIN) {
+				pollfd.events = POLLIN | POLLOUT;
+				do {
+					poll_res = poll(&pollfd, 1, 0);
+				} while (poll_res < 0 && errno == EINTR);
+				if (poll_res < 0)
+					goto gnutls_send_error_unlock;
+
+				if ((pollfd.revents & (POLLIN | POLLOUT)) == (POLLIN | POLLOUT) || (pollfd.revents & (POLLIN | POLLOUT)) == 0)
+					continue;
+				else if (pollfd.revents & POLLIN)
+					pollfd.events = POLLOUT;
+				else
+					pollfd.events = POLLIN;
+			}
+		} else {
 			break;
 		}
+
+		do {
+			poll_res = poll(&pollfd, 1, PING_INTERVAL*1000);
+		} while (poll_res < 0 && errno == EINTR);
+		if (poll_res < 0)
+			goto gnutls_send_error_unlock;
+		if (poll_res == 0) // Timed out
+			goto gnutls_send_error_unlock;
+		if ((pollfd.revents & (POLLIN | POLLOUT)) == 0)
+			goto gnutls_send_error_unlock;
 	} while (1);
 
+	pthread_mutex_unlock(&(gnutls_handle->mutex));
 	return 0;
+
+	gnutls_send_error_unlock:
+	gnutls_handle->valid = 0;
+	pthread_mutex_unlock(&(gnutls_handle->mutex));
+	return 1;
 }
 
 size_t gnutls_recv(void *session, char *data, size_t len, char *err) {
@@ -126,7 +175,7 @@ int gnutls_connect(void **handle, struct string address, struct string port, str
 		goto gnutls_connect_close;
 	*handle = session;
 
-	if (gnutls_init(session, GNUTLS_CLIENT) != GNUTLS_E_SUCCESS)
+	if (gnutls_init(session, GNUTLS_CLIENT | GNUTLS_NONBLOCK) != GNUTLS_E_SUCCESS)
 		goto gnutls_connect_free_session;
 
 	if (gnutls_server_name_set(*session, GNUTLS_NAME_DNS, address.data, address.len) != GNUTLS_E_SUCCESS)
@@ -192,7 +241,7 @@ int gnutls_accept(int listen_fd, void **handle, struct string *addr) {
 		goto gnutls_accept_free_addr_data;
 	*handle = session;
 
-	if (gnutls_init(session, GNUTLS_SERVER) != GNUTLS_E_SUCCESS)
+	if (gnutls_init(session, GNUTLS_SERVER | GNUTLS_NONBLOCK) != GNUTLS_E_SUCCESS)
 		goto gnutls_accept_free_session;
 
 	if (gnutls_credentials_set(*session, GNUTLS_CRD_CERTIFICATE, gnutls_cert_creds) != GNUTLS_E_SUCCESS)

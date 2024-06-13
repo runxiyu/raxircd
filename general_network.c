@@ -88,6 +88,7 @@ struct network networks[NUM_NET_TYPES] = {
 		.recv = plaintext_recv,
 		.connect = plaintext_connect,
 		.accept = plaintext_accept,
+		.shutdown = plaintext_shutdown,
 		.close = plaintext_close,
 	},
 #endif
@@ -97,6 +98,7 @@ struct network networks[NUM_NET_TYPES] = {
 		.recv = gnutls_recv,
 		.connect = gnutls_connect,
 		.accept = gnutls_accept,
+		.shutdown = gnutls_shutdown,
 		.close = gnutls_close,
 	},
 #endif
@@ -106,6 +108,7 @@ struct network networks[NUM_NET_TYPES] = {
 		.recv = openssl_recv,
 		.connect = openssl_connect,
 		.accept = openssl_accept,
+		.shutdown = openssl_shutdown,
 		.close = openssl_close,
 	},
 #endif

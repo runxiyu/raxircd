@@ -46,6 +46,10 @@ struct server_config {
 	char autoconnect; // = 1;
 	size_t autoconnect_type; // = NET_TYPE_GNUTLS,
 
+	char ignore_remote_unlinks;
+	char ignore_remote_kills;
+	char ignore_local_kills;
+
 	// autoconnect only
 	struct string address; // = "haxnet.org",
 	struct string port; // = "4321",

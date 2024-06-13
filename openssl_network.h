@@ -41,4 +41,5 @@ size_t openssl_recv(void *handle, char *data, size_t len, char *err);
 int openssl_connect(void **handle, struct string address, struct string port, struct string *addr_out);
 int openssl_accept(int listen_fd, void **handle, struct string *addr);
 
+void openssl_shutdown(void *handle);
 void openssl_close(int fd, void *handle);

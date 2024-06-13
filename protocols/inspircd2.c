@@ -124,11 +124,16 @@ int init_inspircd2_protocol(void) {
 	set_table_index(&inspircd2_protocol_init_commands, STRING("CAPAB"), &inspircd2_protocol_init_handle_capab);
 	set_table_index(&inspircd2_protocol_init_commands, STRING("SERVER"), &inspircd2_protocol_init_handle_server);
 
+
+
 	set_table_index(&inspircd2_protocol_commands, STRING("PING"), &inspircd2_protocol_handle_ping);
 	set_table_index(&inspircd2_protocol_commands, STRING("SERVER"), &inspircd2_protocol_handle_server);
 	set_table_index(&inspircd2_protocol_commands, STRING("SQUIT"), &inspircd2_protocol_handle_squit);
+	set_table_index(&inspircd2_protocol_commands, STRING("RSQUIT"), &inspircd2_protocol_handle_rsquit);
+
 	set_table_index(&inspircd2_protocol_commands, STRING("UID"), &inspircd2_protocol_handle_uid);
 	set_table_index(&inspircd2_protocol_commands, STRING("QUIT"), &inspircd2_protocol_handle_quit);
+//	set_table_index(&inspircd2_protocol_commands, STRING("KILL"), &inspircd2_protocol_handle_kill);
 
 	return 0;
 }
@@ -189,6 +194,7 @@ void * inspircd2_protocol_connection(void *type) {
 							goto inspircd2_protocol_handle_connection_close;
 						timeout++;
 
+						pthread_mutex_lock(&(state_lock));
 						networks[net].send(handle, STRING(":"));
 						networks[net].send(handle, SID);
 						networks[net].send(handle, STRING(" PING "));
@@ -196,6 +202,7 @@ void * inspircd2_protocol_connection(void *type) {
 						networks[net].send(handle, STRING(" :"));
 						networks[net].send(handle, config->sid);
 						networks[net].send(handle, STRING("\n"));
+						pthread_mutex_unlock(&(state_lock));
 					} else {
 						goto inspircd2_protocol_handle_connection_close;
 					}
@@ -841,6 +848,44 @@ int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct st
 	}
 
 	unlink_server(config->sid, a, b, INSPIRCD2_PROTOCOL);
+
+	return 0;
+}
+
+// [:source] RSQUIT <server name> [<reason>?]
+int inspircd2_protocol_handle_rsquit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 1) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid RSQUIT recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	if (config->ignore_remote_unlinks)
+		return 0;
+
+	for (size_t i = 0; i < server_list.len; i++) {
+		struct server_info *target = server_list.array[i].ptr;
+		if (target->protocol != INSPIRCD2_PROTOCOL)
+			continue; // TODO: Maybe actually unlink this somehow
+		if (!STRING_EQ(target->name, argv[0]))
+			continue;
+
+		if (has_table_index(target->connected_to, SID)) {
+			networks[target->net].shutdown(target->handle);
+		} else {
+			struct server_info *next = get_table_index(server_list, target->next);
+			networks[next->net].send(next->handle, STRING(":"));
+			networks[next->net].send(next->handle, source);
+			networks[next->net].send(next->handle, STRING(" RSQUIT "));
+			networks[next->net].send(next->handle, argv[0]);
+			if (argc > 1) {
+				networks[next->net].send(next->handle, STRING(" :"));
+				networks[next->net].send(next->handle, argv[1]);
+				networks[next->net].send(next->handle, STRING("\n"));
+			} else {
+				networks[next->net].send(next->handle, STRING(":\n"));
+			}
+		}
+	}
 
 	return 0;
 }

@@ -162,6 +162,10 @@ int plaintext_accept(int listen_fd, void **handle, struct string *addr) {
 	return con_fd;
 }
 
+void plaintext_shutdown(void *handle) {
+	shutdown(*((int*)handle), SHUT_RDWR);
+}
+
 void plaintext_close(int fd, void *handle) {
 	free(handle);
 	close(fd);

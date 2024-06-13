@@ -41,4 +41,5 @@ size_t gnutls_recv(void *fd, char *data, size_t len, char *err);
 int gnutls_connect(void **handle, struct string address, struct string port, struct string *addr_out);
 int gnutls_accept(int listen_fd, void **handle, struct string *addr);
 
+void gnutls_shutdown(void *handle);
 void gnutls_close(int fd, void *handle);
