@@ -284,6 +284,34 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	return 1;
 }
 
+int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+	struct string timestamp_str;
+	if (unsigned_to_str(timestamp, &timestamp_str) != 0)
+		return 1;
+
+	void *tmp = malloc(nick.len);
+	if (!tmp) {
+		free(timestamp_str.data);
+		return 1;
+	}
+
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_rename_user(from, user, nick, timestamp, timestamp_str);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_rename_user(from, user, nick, timestamp, timestamp_str);
+#endif
+#endif
+
+	free(user->nick.data);
+	user->nick.data = tmp;
+	memcpy(user->nick.data, nick.data, nick.len);
+	user->nick.len = nick.len;
+
+	return 0;
+}
+
 void remove_user(struct string from, struct user_info *user, struct string reason, char propagate) {
 #ifdef USE_SERVER
 	if (propagate) {
@@ -317,4 +345,17 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 	free(user->host.data);
 	free(user->address.data);
 	free(user);
+}
+
+void kill_user(struct string from, struct string source, struct user_info *user, struct string reason) {
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_kill_user(from, source, user, reason);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_kill_user(from, source, user, reason);
+#endif
+#endif
+
+	remove_user(from, user, reason, 0);
 }

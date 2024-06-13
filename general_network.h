@@ -96,7 +96,9 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 int init_general_network(void);
 
 int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net);
+int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp);
 void remove_user(struct string from, struct user_info *user, struct string reason, char propagate);
+void kill_user(struct string from, struct string source, struct user_info *user, struct string reason);
 
 extern char casemap[UCHAR_MAX+1];
 #define CASEMAP(x) (casemap[(unsigned char)x])

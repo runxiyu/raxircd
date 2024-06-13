@@ -42,9 +42,12 @@ void * inspircd2_protocol_autoconnect(void *type);
 void inspircd2_protocol_update_propagations(void);
 
 void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct server_info *info);
-void inspircd2_protocol_propagate_unlink(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
+void inspircd2_protocol_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
+
 void inspircd2_protocol_propagate_new_user(struct string from, struct user_info *info);
+void inspircd2_protocol_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
 void inspircd2_protocol_propagate_remove_user(struct string from, struct user_info *info, struct string reason);
+void inspircd2_protocol_propagate_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 
 void inspircd2_protocol_do_unlink(struct string from, struct server_info *a, struct server_info *b);
 
@@ -61,6 +64,7 @@ int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct st
 int inspircd2_protocol_handle_rsquit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 
 int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd2_protocol_handle_nick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd2_protocol_handle_quit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 

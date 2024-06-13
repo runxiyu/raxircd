@@ -285,10 +285,10 @@ void unlink_server(struct string from, struct server_info *a, struct server_info
 	protocols[protocol].update_propagations();
 
 #ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_unlink(from, a, b, protocol);
+	protocols[HAXIRCD_PROTOCOL].propagate_unlink_server(from, a, b, protocol);
 #endif
 #ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_unlink(from, a, b, protocol);
+	protocols[INSPIRCD2_PROTOCOL].propagate_unlink_server(from, a, b, protocol);
 #endif
 
 	protocols[protocol].do_unlink(from, a, b);
