@@ -46,10 +46,14 @@ static inline int compare(struct string a, struct string b) {
 
 	int val = memcmp(a.data, b.data, len);
 
-	if (val == 0 && a.len != b.len)
-		return 1;
-	else
-		return val;
+	if (val == 0) {
+		if (a.len < b.len)
+			return 1;
+		else if (a.len > b.len)
+			return -1;
+	}
+
+	return val;
 }
 
 static inline size_t search(struct table tbl, struct string name, char *exists) {

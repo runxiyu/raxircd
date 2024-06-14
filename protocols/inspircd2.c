@@ -475,48 +475,52 @@ void inspircd2_protocol_update_propagations(void) {
 	inspircd2_protocol_update_propagations_inner(self);
 }
 
-void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct server_info *info) {
-	struct server_info *self = get_table_index(server_list, SID);
-
+void inspircd2_protocol_propagate(struct string from, struct server_info *self, struct string msg) {
 	for (size_t i = 0; i < self->connected_to.len; i++) {
 		struct server_info *adjacent = self->connected_to.array[i].ptr;
 		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
 			continue; // Not ours or it's the source of this message
 
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-
-		if (info->protocol == INSPIRCD2_PROTOCOL)
-			networks[adjacent->net].send(adjacent->handle, attached_to);
-		else // Just pretend servers connected via a different protocol are connected directly to us
-			networks[adjacent->net].send(adjacent->handle, SID);
-
-		networks[adjacent->net].send(adjacent->handle, STRING(" SERVER "));
-		networks[adjacent->net].send(adjacent->handle, info->name);
-		networks[adjacent->net].send(adjacent->handle, STRING(" * 0 "));
-		networks[adjacent->net].send(adjacent->handle, info->sid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" :"));
-		networks[adjacent->net].send(adjacent->handle, info->fullname);
-		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
-
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, info->sid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" BURST "));
-
-		time_t current = time(0);
-		struct string current_time;
-		char err = unsigned_to_str((size_t)current, &current_time);
-
-		if (current < 0 || err) {
-			networks[adjacent->net].send(adjacent->handle, STRING("1"));
-		} else {
-			networks[adjacent->net].send(adjacent->handle, current_time);
-			free(current_time.data);
-		}
-
-		networks[adjacent->net].send(adjacent->handle, STRING("\n:"));
-		networks[adjacent->net].send(adjacent->handle, info->sid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" ENDBURST\n"));
+		networks[adjacent->net].send(adjacent->handle, msg);
 	}
+}
+
+void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct server_info *info) {
+	struct server_info *self = get_table_index(server_list, SID);
+
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+
+	if (info->protocol == INSPIRCD2_PROTOCOL)
+		inspircd2_protocol_propagate(from, self, attached_to);
+	else // Just pretend servers connected via a different protocol are connected directly to us
+		inspircd2_protocol_propagate(from, self, SID);
+
+	inspircd2_protocol_propagate(from, self, STRING(" SERVER "));
+	inspircd2_protocol_propagate(from, self, info->name);
+	inspircd2_protocol_propagate(from, self, STRING(" * 0 "));
+	inspircd2_protocol_propagate(from, self, info->sid);
+	inspircd2_protocol_propagate(from, self, STRING(" :"));
+	inspircd2_protocol_propagate(from, self, info->fullname);
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
+
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, info->sid);
+	inspircd2_protocol_propagate(from, self, STRING(" BURST "));
+
+	time_t current = time(0);
+	struct string current_time;
+	char err = unsigned_to_str((size_t)current, &current_time);
+
+	if (current < 0 || err) {
+		inspircd2_protocol_propagate(from, self, STRING("1"));
+	} else {
+		inspircd2_protocol_propagate(from, self, current_time);
+		free(current_time.data);
+	}
+
+	inspircd2_protocol_propagate(from, self, STRING("\n:"));
+	inspircd2_protocol_propagate(from, self, info->sid);
+	inspircd2_protocol_propagate(from, self, STRING(" ENDBURST\n"));
 }
 
 void inspircd2_protocol_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
@@ -533,172 +537,132 @@ void inspircd2_protocol_propagate_unlink_server(struct string from, struct serve
 	}
 
 	struct server_info *self = get_table_index(server_list, SID);
-	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
-		if (STRING_EQ(from, adjacent->next) || adjacent->protocol != INSPIRCD2_PROTOCOL)
-			continue;
 
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		if (protocol == INSPIRCD2_PROTOCOL)
-			networks[adjacent->net].send(adjacent->handle, source->sid);
-		else
-			networks[adjacent->net].send(adjacent->handle, SID);
-		networks[adjacent->net].send(adjacent->handle, STRING(" SQUIT "));
-		networks[adjacent->net].send(adjacent->handle, target->sid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" :\n"));
-	}
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	if (protocol == INSPIRCD2_PROTOCOL)
+		inspircd2_protocol_propagate(from, self, source->sid);
+	else
+		inspircd2_protocol_propagate(from, self, SID);
+	inspircd2_protocol_propagate(from, self, STRING(" SQUIT "));
+	inspircd2_protocol_propagate(from, self, target->sid);
+	inspircd2_protocol_propagate(from, self, STRING(" :\n"));
 }
 
+// [:source] UID <UID> <nick_ts> <nick> <host> <vhost> <ident> <address> <user_ts> <modes> [<mode args>] <fullname>
 void inspircd2_protocol_propagate_new_user(struct string from, struct user_info *info) {
 	struct server_info *self = get_table_index(server_list, SID);
 
-	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
-		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
-			continue;
-
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, info->server);
-		networks[adjacent->net].send(adjacent->handle, STRING(" UID "));
-		networks[adjacent->net].send(adjacent->handle, info->uid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, info->nick_ts_str);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, info->nick);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, info->host);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, info->vhost);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, info->ident);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, info->address);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, info->user_ts_str);
-		networks[adjacent->net].send(adjacent->handle, STRING(" + :"));
-		networks[adjacent->net].send(adjacent->handle, info->fullname);
-		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
-	}
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, info->server);
+	inspircd2_protocol_propagate(from, self, STRING(" UID "));
+	inspircd2_protocol_propagate(from, self, info->uid);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, info->nick_ts_str);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, info->nick);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, info->host);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, info->vhost);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, info->ident);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, info->address);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, info->user_ts_str);
+	inspircd2_protocol_propagate(from, self, STRING(" + :"));
+	inspircd2_protocol_propagate(from, self, info->fullname);
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
+// :source NICK <nick> <timestamp>
 void inspircd2_protocol_propagate_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, struct string timestamp_str) {
 	struct server_info *self = get_table_index(server_list, SID);
 
-	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
-		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
-			continue;
-
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, user->uid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" NICK "));
-		networks[adjacent->net].send(adjacent->handle, nick);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, timestamp_str);
-		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
-	}
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, user->uid);
+	inspircd2_protocol_propagate(from, self, STRING(" NICK "));
+	inspircd2_protocol_propagate(from, self, nick);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, timestamp_str);
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
+// :source QUIT [<reason>?]
 void inspircd2_protocol_propagate_remove_user(struct string from, struct user_info *info, struct string reason) {
 	struct server_info *self = get_table_index(server_list, SID);
 
-	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
-		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
-			continue;
-
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, info->uid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" QUIT :"));
-		networks[adjacent->net].send(adjacent->handle, reason);
-		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
-	}
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, info->uid);
+	inspircd2_protocol_propagate(from, self, STRING(" QUIT :"));
+	inspircd2_protocol_propagate(from, self, reason);
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
+// [:source] KILL <target> [<reason>?]
 void inspircd2_protocol_propagate_kill_user(struct string from, struct string source, struct user_info *info, struct string reason) {
 	struct server_info *self = get_table_index(server_list, SID);
 
-	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
-		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
-			continue;
-
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, source);
-		networks[adjacent->net].send(adjacent->handle, STRING(" KILL "));
-		networks[adjacent->net].send(adjacent->handle, info->uid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" :"));
-		networks[adjacent->net].send(adjacent->handle, reason);
-		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
-	}
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, source);
+	inspircd2_protocol_propagate(from, self, STRING(" KILL "));
+	inspircd2_protocol_propagate(from, self, info->uid);
+	inspircd2_protocol_propagate(from, self, STRING(" :"));
+	inspircd2_protocol_propagate(from, self, reason);
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
+// [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
 void inspircd2_protocol_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_server, size_t user_count, struct user_info **users) {
 	struct server_info *self = get_table_index(server_list, SID);
 
-	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
-		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
-			continue;
-
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, SID);
-		networks[adjacent->net].send(adjacent->handle, STRING(" FJOIN "));
-		networks[adjacent->net].send(adjacent->handle, channel->name);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, channel->channel_ts_str);
-		networks[adjacent->net].send(adjacent->handle, STRING(" + :"));
-		for (size_t x = 0; x < user_count; x++) {
-			networks[adjacent->net].send(adjacent->handle, STRING(","));
-			networks[adjacent->net].send(adjacent->handle, users[x]->uid);
-			if (x != channel->user_list.len - 1)
-				networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		}
-		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, SID);
+	inspircd2_protocol_propagate(from, self, STRING(" FJOIN "));
+	inspircd2_protocol_propagate(from, self, channel->name);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, channel->channel_ts_str);
+	inspircd2_protocol_propagate(from, self, STRING(" + :"));
+	for (size_t x = 0; x < user_count; x++) {
+		inspircd2_protocol_propagate(from, self, STRING(","));
+		inspircd2_protocol_propagate(from, self, users[x]->uid);
+		if (x != channel->user_list.len - 1)
+			inspircd2_protocol_propagate(from, self, STRING(" "));
 	}
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
+// [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
 void inspircd2_protocol_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users) {
 	struct server_info *self = get_table_index(server_list, SID);
 
-	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
-		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
-			continue;
-
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, SID);
-		networks[adjacent->net].send(adjacent->handle, STRING(" FJOIN "));
-		networks[adjacent->net].send(adjacent->handle, channel->name);
-		networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		networks[adjacent->net].send(adjacent->handle, channel->channel_ts_str);
-		networks[adjacent->net].send(adjacent->handle, STRING(" + :"));
-		for (size_t x = 0; x < user_count; x++) {
-			networks[adjacent->net].send(adjacent->handle, STRING(","));
-			networks[adjacent->net].send(adjacent->handle, users[x]->uid);
-			if (x != channel->user_list.len - 1)
-				networks[adjacent->net].send(adjacent->handle, STRING(" "));
-		}
-		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, SID);
+	inspircd2_protocol_propagate(from, self, STRING(" FJOIN "));
+	inspircd2_protocol_propagate(from, self, channel->name);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, channel->channel_ts_str);
+	inspircd2_protocol_propagate(from, self, STRING(" + :"));
+	for (size_t x = 0; x < user_count; x++) {
+		inspircd2_protocol_propagate(from, self, STRING(","));
+		inspircd2_protocol_propagate(from, self, users[x]->uid);
+		if (x != channel->user_list.len - 1)
+			inspircd2_protocol_propagate(from, self, STRING(" "));
 	}
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
+// :source PART <channel> [<reason>]
 void inspircd2_protocol_propagate_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason) {
 	struct server_info *self = get_table_index(server_list, SID);
 
-	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
-		if (adjacent->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(from, adjacent->sid))
-			continue;
-
-		networks[adjacent->net].send(adjacent->handle, STRING(":"));
-		networks[adjacent->net].send(adjacent->handle, user->uid);
-		networks[adjacent->net].send(adjacent->handle, STRING(" PART "));
-		networks[adjacent->net].send(adjacent->handle, channel->name);
-		networks[adjacent->net].send(adjacent->handle, STRING(" :"));
-		networks[adjacent->net].send(adjacent->handle, reason);
-		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
-	}
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, user->uid);
+	inspircd2_protocol_propagate(from, self, STRING(" PART "));
+	inspircd2_protocol_propagate(from, self, channel->name);
+	inspircd2_protocol_propagate(from, self, STRING(" :"));
+	inspircd2_protocol_propagate(from, self, reason);
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
 void inspircd2_protocol_do_unlink_inner(struct string from, struct server_info *target, struct string reason) {
