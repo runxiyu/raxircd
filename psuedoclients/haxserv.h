@@ -33,6 +33,7 @@ struct command_def {
 	int (*func)(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv);
 	struct string privs;
 	struct string summary;
+	struct string name;
 };
 
 int haxserv_psuedoclient_init(void);

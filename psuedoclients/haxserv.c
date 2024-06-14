@@ -141,15 +141,18 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 	msg.data += prefix.len;
 	msg.len -= prefix.len;
 	struct string command_str = {.len = argv[0].len};
+	struct command_def *cmd;
 	command_str.data = malloc(command_str.len);
-	if (!command_str.data)
-		return;
-	for (size_t i = 0; i < command_str.len; i++)
-		command_str.data[i] = CASEMAP(argv[0].data[i]);
+	if (command_str.data) {
+		for (size_t i = 0; i < command_str.len; i++)
+			command_str.data[i] = CASEMAP(argv[0].data[i]);
 
-	struct command_def *cmd = get_table_index(haxserv_psuedoclient_commands, command_str);
+		cmd = get_table_index(haxserv_psuedoclient_commands, command_str);
 
-	free(command_str.data);
+		free(command_str.data);
+	} else {
+		cmd = get_table_index(haxserv_psuedoclient_commands, command_str);
+	}
 
 	if (cmd) {
 		if (cmd->privs.len != 0 && !(!has_table_index(user_list, source) && has_table_index(server_list, source))) {
@@ -181,7 +184,7 @@ int haxserv_psuedoclient_help_command(struct string from, struct string sender, 
 
 		struct string msg_parts[] = {
 			HAXSERV_COMMAND_PREFIX,
-			haxserv_psuedoclient_commands.array[i].name,
+			cmd->name,
 			STRING("\x0F" " "),
 			cmd->summary,
 		};
@@ -201,6 +204,7 @@ struct command_def haxserv_psuedoclient_help_command_def = {
 	.func = haxserv_psuedoclient_help_command,
 	.privs = {0},
 	.summary = STRING("Shows a list of commands."),
+	.name = STRING("help"),
 };
 
 struct kill_or_msg {
@@ -239,6 +243,7 @@ struct command_def haxserv_psuedoclient_sus_command_def = {
 	.func = haxserv_psuedoclient_sus_command,
 	.privs = {0},
 	.summary = STRING("You seem a bit sus today."),
+	.name = STRING("sus"),
 };
 
 int haxserv_psuedoclient_cr_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
@@ -260,4 +265,5 @@ struct command_def haxserv_psuedoclient_cr_command_def = {
 	.func = haxserv_psuedoclient_cr_command,
 	.privs = {0},
 	.summary = STRING("Join the crux side."),
+	.name = STRING("cr"),
 };
