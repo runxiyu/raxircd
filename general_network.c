@@ -170,6 +170,9 @@ int init_general_network(void) {
 	own_info->distance = 0;
 	own_info->net = 0;
 	own_info->protocol = 0;
+	own_info->awaiting_pong = 0;
+	own_info->latency = (struct timeval){0};
+	own_info->latency_valid = 1;
 
 	user_list.array = malloc(0);
 

@@ -52,10 +52,12 @@ int init_openssl_network(void) {
 	SSL_library_init();
 
 	openssl_ctx = SSL_CTX_new(TLS_method());
-	if (SSL_CTX_use_certificate_file(openssl_ctx, OPENSSL_CERT_PATH, SSL_FILETYPE_PEM) != 1)
-		return 1;
-	if (SSL_CTX_use_PrivateKey_file(openssl_ctx, OPENSSL_KEY_PATH, SSL_FILETYPE_PEM) != 1)
-		return 1;
+	if (OPENSSL_CERT_PATH && OPENSSL_KEY_PATH) {
+		if (SSL_CTX_use_certificate_file(openssl_ctx, OPENSSL_CERT_PATH, SSL_FILETYPE_PEM) != 1)
+			return 1;
+		if (SSL_CTX_use_PrivateKey_file(openssl_ctx, OPENSSL_KEY_PATH, SSL_FILETYPE_PEM) != 1)
+			return 1;
+	}
 
 	if (OPENSSL_USE_SYSTEM_TRUST) {
 		if (SSL_CTX_set_default_verify_paths(openssl_ctx) != 1) {
@@ -284,6 +286,9 @@ int openssl_connect(void **handle, struct string address, struct string port, st
 }
 
 int openssl_accept(int listen_fd, void **handle, struct string *addr) {
+	if (!OPENSSL_CERT_PATH || !OPENSSL_KEY_PATH)
+		return -1;
+
 	struct sockaddr address;
 	socklen_t address_len = sizeof(address);
 

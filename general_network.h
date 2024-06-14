@@ -63,6 +63,11 @@ struct server_info {
 	size_t net;
 
 	size_t distance;
+
+	struct timeval latency;
+	struct timeval last_ping;
+	char awaiting_pong;
+	char latency_valid;
 };
 
 struct user_info {
@@ -89,6 +94,11 @@ struct user_info {
 
 	size_t protocol;
 	size_t net;
+
+	struct timeval latency;
+	struct timeval last_ping;
+	char awaiting_pong;
+	char latency_ready;
 };
 
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr);

@@ -30,6 +30,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include "../config.h"
@@ -127,6 +128,8 @@ int init_inspircd2_protocol(void) {
 
 
 	set_table_index(&inspircd2_protocol_commands, STRING("PING"), &inspircd2_protocol_handle_ping);
+	set_table_index(&inspircd2_protocol_commands, STRING("PONG"), &inspircd2_protocol_handle_pong);
+
 	set_table_index(&inspircd2_protocol_commands, STRING("SERVER"), &inspircd2_protocol_handle_server);
 	set_table_index(&inspircd2_protocol_commands, STRING("SQUIT"), &inspircd2_protocol_handle_squit);
 	set_table_index(&inspircd2_protocol_commands, STRING("RSQUIT"), &inspircd2_protocol_handle_rsquit);
@@ -135,6 +138,8 @@ int init_inspircd2_protocol(void) {
 	set_table_index(&inspircd2_protocol_commands, STRING("NICK"), &inspircd2_protocol_handle_nick);
 	set_table_index(&inspircd2_protocol_commands, STRING("QUIT"), &inspircd2_protocol_handle_quit);
 	set_table_index(&inspircd2_protocol_commands, STRING("KILL"), &inspircd2_protocol_handle_kill);
+
+	set_table_index(&inspircd2_protocol_commands, STRING("FJOIN"), &inspircd2_protocol_handle_fjoin);
 
 	return 0;
 }
@@ -203,6 +208,11 @@ void * inspircd2_protocol_connection(void *type) {
 						networks[net].send(handle, STRING(" :"));
 						networks[net].send(handle, config->sid);
 						networks[net].send(handle, STRING("\n"));
+
+						struct server_info *server = get_table_index(server_list, config->sid);
+						server->awaiting_pong = 1;
+						gettimeofday(&(server->last_ping), 0);
+
 						pthread_mutex_unlock(&(state_lock));
 					} else {
 						goto inspircd2_protocol_handle_connection_close;
@@ -805,6 +815,9 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 		return -1;
 	}
 
+	struct server_info *server = get_table_index(server_list, (*config)->sid);
+	server->awaiting_pong = 0;
+
 	return 1;
 }
 
@@ -815,6 +828,22 @@ int inspircd2_protocol_handle_ping(struct string source, size_t argc, struct str
 		return -1;
 	}
 
+	if (STRING_EQ(config->sid, source) && STRING_EQ(SID, argv[1])) {
+		struct server_info *server = get_table_index(server_list, config->sid);
+		if (!server->awaiting_pong) {
+			networks[net].send(handle, STRING(":"));
+			networks[net].send(handle, SID);
+			networks[net].send(handle, STRING(" PING "));
+			networks[net].send(handle, SID);
+			networks[net].send(handle, STRING(" :"));
+			networks[net].send(handle, config->sid);
+			networks[net].send(handle, STRING("\n"));
+
+			server->awaiting_pong = 1;
+			gettimeofday(&(server->last_ping), 0);
+		}
+	}
+
 	networks[net].send(handle, STRING(":"));
 	networks[net].send(handle, argv[1]);
 	networks[net].send(handle, STRING(" PONG "));
@@ -822,6 +851,28 @@ int inspircd2_protocol_handle_ping(struct string source, size_t argc, struct str
 	networks[net].send(handle, STRING(" :"));
 	networks[net].send(handle, argv[0]);
 	networks[net].send(handle, STRING("\n"));
+
+	return 0;
+}
+
+// [:source] PONG <target> <reply_to>
+int inspircd2_protocol_handle_pong(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	struct timeval now;
+	gettimeofday(&now, 0);
+	struct server_info *server = get_table_index(server_list, config->sid);
+
+	if (!server->awaiting_pong) // We don't relay PINGs, so PONGs also shouldn't need relayed
+		return 1;
+
+	if (now.tv_usec < server->last_ping.tv_usec) {
+		server->latency.tv_sec = now.tv_sec - server->last_ping.tv_sec - 1;
+		server->latency.tv_usec = (suseconds_t)((size_t)1000000 - (size_t)server->last_ping.tv_usec + (size_t)now.tv_usec); // >_>
+	} else {
+		server->latency.tv_sec = now.tv_sec - server->last_ping.tv_sec;
+		server->latency.tv_usec = now.tv_usec - server->last_ping.tv_usec;
+	}
+	server->latency_valid = 1;
+	server->awaiting_pong = 0;
 
 	return 0;
 }
@@ -1069,6 +1120,40 @@ int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct str
 			kill_user(config->sid, source, user, argv[1]);
 		else
 			kill_user(config->sid, source, user, STRING(""));
+	}
+
+	return 0;
+}
+
+int inspircd2_protocol_handle_dump(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	for (size_t arg = 0; arg < argc; arg++) {
+		if (STRING_EQ(argv[arg], STRING("LATENCIES"))) {
+			for (size_t i = 0; i < server_list.len; i++) {
+				struct server_info *server = server_list.array[i].ptr;
+				WRITES(2, STRING("Server `"));
+				WRITES(2, server->name);
+				if (server->latency_valid) {
+					WRITES(2, STRING("' has measured latency: "));
+					struct string timestamp;
+					if (unsigned_to_str((size_t)server->latency.tv_sec, &timestamp) == 0) {
+						WRITES(2, timestamp);
+						free(timestamp.data);
+					} else {
+						WRITES(2, STRING("<ERROR: Unable to convert timestamp to string>"));
+					}
+					WRITES(2, STRING("s, "));
+					if (unsigned_to_str((size_t)server->latency.tv_usec, &timestamp) == 0) {
+						WRITES(2, timestamp);
+						free(timestamp.data);
+					} else {
+						WRITES(2, STRING("<ERROR: Unable to convert timestamp to string>"));
+					}
+					WRITES(2, STRING("us\r\n"));
+				} else {
+					WRITES(2, STRING("' has no latency measurement\r\n"));
+				}
+			}
+		}
 	}
 
 	return 0;

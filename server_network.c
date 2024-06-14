@@ -64,12 +64,14 @@ int start_server_network(void) {
 		return 1;
 #endif
 #ifdef USE_GNUTLS_SERVER
-	if (start_server_network_threads(NET_TYPE_GNUTLS) != 0)
-		return 1;
+	if (GNUTLS_CERT_PATH && GNUTLS_KEY_PATH)
+		if (start_server_network_threads(NET_TYPE_GNUTLS) != 0)
+			return 1;
 #endif
 #ifdef USE_OPENSSL_SERVER
-	if (start_server_network_threads(NET_TYPE_OPENSSL) != 0)
-		return 1;
+	if (OPENSSL_CERT_PATH && OPENSSL_KEY_PATH)
+		if (start_server_network_threads(NET_TYPE_OPENSSL) != 0)
+			return 1;
 #endif
 
 	pthread_t trash;
@@ -188,6 +190,8 @@ int add_server(struct string from, struct string attached_to, struct string sid,
 	new_info->protocol = protocol;
 	new_info->net = net;
 	new_info->handle = handle;
+	new_info->latency_valid = 0;
+	new_info->awaiting_pong = 0;
 
 	if (str_clone(&(new_info->sid), sid) != 0)
 		goto add_server_free_new_info;
