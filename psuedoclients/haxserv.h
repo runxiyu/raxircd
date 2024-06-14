@@ -29,6 +29,12 @@
 #include "../haxstring.h"
 #include "../general_network.h"
 
+struct command_def {
+	int (*func)(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv);
+	struct string privs;
+	struct string summary;
+};
+
 int haxserv_psuedoclient_init(void);
 
 int haxserv_psuedoclient_allow_kill(struct string from, struct string source, struct user_info *user, struct string reason);
@@ -37,3 +43,7 @@ int haxserv_psuedoclient_allow_kick(struct string from, struct string source, st
 void haxserv_psuedoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);
 
 extern struct table haxserv_psuedoclient_commands;
+
+extern struct command_def haxserv_psuedoclient_help_command_def;
+extern struct command_def haxserv_psuedoclient_sus_command_def;
+extern struct command_def haxserv_psuedoclient_cr_command_def;

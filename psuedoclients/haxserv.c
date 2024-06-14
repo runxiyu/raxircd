@@ -36,6 +36,8 @@
 #include "../general_network.h"
 #include "../psuedoclients.h"
 
+#include "haxserv.h"
+
 struct table haxserv_psuedoclient_commands = {0};
 
 // TODO: Potentially leaky on failure
@@ -61,6 +63,13 @@ int haxserv_psuedoclient_init(void) {
 	}
 
 	haxserv_psuedoclient_commands.array = malloc(0);
+
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("HELP"), &haxserv_psuedoclient_help_command_def) != 0)
+		return 1;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("SUS"), &haxserv_psuedoclient_sus_command_def) != 0)
+		return 1;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("CR"), &haxserv_psuedoclient_cr_command_def) != 0)
+		return 1;
 
 	return 0;
 }
@@ -131,8 +140,24 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 
 	msg.data += prefix.len;
 	msg.len -= prefix.len;
-	struct command_def *cmd = get_table_index(haxserv_psuedoclient_commands, argv[0]);
+	struct string command_str = {.len = argv[0].len};
+	command_str.data = malloc(command_str.len);
+	if (!command_str.data)
+		return;
+	for (size_t i = 0; i < command_str.len; i++)
+		command_str.data[i] = CASEMAP(argv[0].data[i]);
+
+	struct command_def *cmd = get_table_index(haxserv_psuedoclient_commands, command_str);
+
+	free(command_str.data);
+
 	if (cmd) {
+		if (cmd->privs.len != 0 && !(!has_table_index(user_list, source) && has_table_index(server_list, source))) {
+			notice(SID, HAXSERV_UID, respond_to, STRING("You are not authorized to execute this command."));
+			return;
+		}
+
+		cmd->func(from, source, msg, respond_to, argc - 1, &(argv[1]));
 	} else {
 		struct string msg_parts[] = {
 			STRING("Unknown command: "),
@@ -149,3 +174,90 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 		free(full_msg.data);
 	}
 }
+
+int haxserv_psuedoclient_help_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	for (size_t i = 0; i < haxserv_psuedoclient_commands.len; i++) {
+		struct command_def *cmd = haxserv_psuedoclient_commands.array[i].ptr;
+
+		struct string msg_parts[] = {
+			HAXSERV_COMMAND_PREFIX,
+			haxserv_psuedoclient_commands.array[i].name,
+			STRING("\x0F" " "),
+			cmd->summary,
+		};
+
+		struct string full_msg;
+		if (str_combine(&full_msg, 4, msg_parts) != 0) {
+			notice(SID, HAXSERV_UID, respond_to, STRING("ERROR: Unable to create help message line."));
+		} else {
+			privmsg(SID, HAXSERV_UID, respond_to, full_msg);
+			free(full_msg.data);
+		}
+	}
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_help_command_def = {
+	.func = haxserv_psuedoclient_help_command,
+	.privs = {0},
+	.summary = STRING("Shows a list of commands."),
+};
+
+struct kill_or_msg {
+	char type;
+	struct string msg;
+} haxserv_psuedoclient_sus_actions[] = {
+	{0, STRING("DuckServ is very sus.")},
+	{0, STRING("I was the impostor, but you only know because I killed you.")},
+	{0, STRING("\\x1b(0")},
+	{1, STRING("Ejected (1 Impostor remains)")},
+	{1, STRING("Ejected, and the crewmates have won.")},
+}, haxserv_psuedoclient_cr_actions[] = {
+	{0, STRING("You are now a cruxian toxicpod, kill the sharded crewmates.")},
+	{0, STRING("You are now a cruxian omura, kill the sharded crewmates.")},
+	{0, STRING("You are now a cruxian oct, but you can out of reactors.")},
+	{1, STRING("Eliminated (You became a cruxian eclipse, but were drawn to my bait reactor)")},
+	{0, STRING("You attempted to change into a cruxian navanax, but were caught in the act.")},
+};
+
+int haxserv_psuedoclient_sus_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	size_t index = (size_t)random() % (sizeof(haxserv_psuedoclient_sus_actions) / sizeof(*haxserv_psuedoclient_sus_actions));
+
+	if (haxserv_psuedoclient_sus_actions[index].type) {
+		struct user_info *user = get_table_index(user_list, sender);
+		if (!user)
+			return 0;
+
+		kill_user(SID, HAXSERV_UID, user, haxserv_psuedoclient_sus_actions[index].msg);
+	} else {
+		privmsg(SID, HAXSERV_UID, respond_to, haxserv_psuedoclient_sus_actions[index].msg);
+	}
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_sus_command_def = {
+	.func = haxserv_psuedoclient_sus_command,
+	.privs = {0},
+	.summary = STRING("You seem a bit sus today."),
+};
+
+int haxserv_psuedoclient_cr_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	size_t index = (size_t)random() % (sizeof(haxserv_psuedoclient_cr_actions) / sizeof(*haxserv_psuedoclient_cr_actions));
+
+	if (haxserv_psuedoclient_cr_actions[index].type) {
+		struct user_info *user = get_table_index(user_list, sender);
+		if (!user)
+			return 0;
+
+		kill_user(SID, HAXSERV_UID, user, haxserv_psuedoclient_cr_actions[index].msg);
+	} else {
+		privmsg(SID, HAXSERV_UID, respond_to, haxserv_psuedoclient_cr_actions[index].msg);
+	}
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_cr_command_def = {
+	.func = haxserv_psuedoclient_cr_command,
+	.privs = {0},
+	.summary = STRING("Join the crux side."),
+};

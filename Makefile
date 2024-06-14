@@ -304,8 +304,20 @@ ifeq ($(USE_SERVER),1)
 $(call DEPS,server_network)
 endif
 
+ifeq ($(USE_PROTOCOLS),1)
+$(call DEPS,protocols)
+endif
+
 ifeq ($(INSPIRCD2_PROTOCOL),1)
 $(call DEPS,protocols/inspircd2)
+endif
+
+ifeq ($(USE_PSUEDOCLIENTS),1)
+$(call DEPS,psuedoclients)
+endif
+
+ifeq ($(HAXSERV_PSUEDOCLIENT),1)
+$(call DEPS,psuedoclients/haxserv)
 endif
 
 clean:
