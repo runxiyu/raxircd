@@ -53,6 +53,9 @@ void inspircd2_protocol_propagate_set_channel(struct string from, struct channel
 void inspircd2_protocol_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
 void inspircd2_protocol_propagate_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
 
+void inspircd2_protocol_propagate_privmsg(struct string from, struct string source, struct string target, struct string msg);
+void inspircd2_protocol_propagate_notice(struct string from, struct string source, struct string target, struct string msg);
+
 void inspircd2_protocol_do_unlink(struct string from, struct server_info *a, struct server_info *b);
 
 void inspircd2_protocol_update_propagations_inner(struct server_info *source);
@@ -76,6 +79,10 @@ int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct str
 
 int inspircd2_protocol_handle_fjoin(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd2_protocol_handle_part(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd2_protocol_handle_kick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+
+int inspircd2_protocol_handle_privmsg(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd2_protocol_handle_notice(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 
 int inspircd2_protocol_handle_dump(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 

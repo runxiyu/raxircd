@@ -46,6 +46,9 @@ struct protocol {
 	void (*propagate_join_channel)(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
 	void (*propagate_part_channel)(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
 
+	void (*propagate_privmsg)(struct string from, struct string source, struct string target, struct string msg);
+	void (*propagate_notice)(struct string from, struct string source, struct string target, struct string msg);
+
 	void (*do_unlink)(struct string from, struct server_info *a, struct server_info *b);
 };
 

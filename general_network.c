@@ -352,7 +352,7 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 	free(user);
 }
 
-void kill_user(struct string from, struct string source, struct user_info *user, struct string reason) {
+int kill_user(struct string from, struct string source, struct user_info *user, struct string reason) {
 #ifdef USE_SERVER
 #ifdef USE_HAXIRCD_PROTOCOL
 	protocols[HAXIRCD_PROTOCOL].propagate_kill_user(from, source, user, reason);
@@ -363,6 +363,8 @@ void kill_user(struct string from, struct string source, struct user_info *user,
 #endif
 
 	remove_user(from, user, reason, 0);
+
+	return 0;
 }
 
 int set_channel(struct string from, struct string name, size_t timestamp, size_t user_count, struct user_info **users) {
@@ -513,4 +515,88 @@ void part_channel(struct string from, struct channel_info *channel, struct user_
 		free(channel->user_list.array);
 		free(channel);
 	}
+}
+
+int kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason) {
+	return 1;
+}
+
+int privmsg(struct string from, struct string sender, struct string target, struct string msg) {
+	do {
+		struct user_info *user = get_table_index(user_list, target);
+		if (user)
+			break;
+		struct server_info *server = get_table_index(server_list, target);
+		if (server)
+			break;
+
+		char found = 0;
+		for (size_t i = 0; i < user_list.len; i++) {
+			user = user_list.array[i].ptr;
+			if (STRING_EQ(user->nick, target)) {
+				target = user->uid;
+				found = 1;
+				break;
+			}
+		}
+		if (found)
+			break;
+
+		struct channel_info *channel = get_table_index(channel_list, target);
+		if (channel)
+			break;
+
+		return 1; // Target not valid
+	} while (0);
+
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_privmsg(from, sender, target, msg);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_privmsg(from, sender, target, msg);
+#endif
+#endif
+
+	return 0;
+}
+
+int notice(struct string from, struct string sender, struct string target, struct string msg) {
+	do {
+		struct user_info *user = get_table_index(user_list, target);
+		if (user)
+			break;
+		struct server_info *server = get_table_index(server_list, target);
+		if (server)
+			break;
+
+		char found = 0;
+		for (size_t i = 0; i < user_list.len; i++) {
+			user = user_list.array[i].ptr;
+			if (STRING_EQ(user->nick, target)) {
+				target = user->uid;
+				found = 1;
+				break;
+			}
+		}
+		if (found)
+			break;
+
+		struct channel_info *channel = get_table_index(channel_list, target);
+		if (channel)
+			break;
+
+		return 1; // Target not valid
+	} while (0);
+
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_notice(from, sender, target, msg);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_notice(from, sender, target, msg);
+#endif
+#endif
+
+	return 0;
 }

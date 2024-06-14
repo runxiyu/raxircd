@@ -141,6 +141,10 @@ int init_inspircd2_protocol(void) {
 
 	set_table_index(&inspircd2_protocol_commands, STRING("FJOIN"), &inspircd2_protocol_handle_fjoin);
 	set_table_index(&inspircd2_protocol_commands, STRING("PART"), &inspircd2_protocol_handle_part);
+	set_table_index(&inspircd2_protocol_commands, STRING("KICK"), &inspircd2_protocol_handle_kick);
+
+	set_table_index(&inspircd2_protocol_commands, STRING("PRIVMSG"), &inspircd2_protocol_handle_privmsg);
+	set_table_index(&inspircd2_protocol_commands, STRING("NOTICE"), &inspircd2_protocol_handle_notice);
 
 	set_table_index(&inspircd2_protocol_commands, STRING("DUMP"), &inspircd2_protocol_handle_dump);
 
@@ -665,6 +669,86 @@ void inspircd2_protocol_propagate_part_channel(struct string from, struct channe
 	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
+// [:source] PRIVMSG <target> <message>
+void inspircd2_protocol_propagate_privmsg(struct string from, struct string source, struct string target, struct string msg) {
+	struct user_info *user = get_table_index(user_list, target);
+	struct server_info *server;
+	if (!user)
+		server = get_table_index(server_list, target);
+
+	if (user || server) {
+		struct server_info *target_server;
+		if (user) {
+			target_server = get_table_index(server_list, user->server);
+		} else {
+			target_server = server;
+		}
+
+		if (target_server->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(target_server->sid, SID))
+			return;
+
+		struct server_info *adjacent = get_table_index(server_list, target_server->next);
+		networks[adjacent->net].send(adjacent->handle, STRING(":"));
+		networks[adjacent->net].send(adjacent->handle, source);
+		networks[adjacent->net].send(adjacent->handle, STRING(" PRIVMSG "));
+		networks[adjacent->net].send(adjacent->handle, target);
+		networks[adjacent->net].send(adjacent->handle, STRING(" :"));
+		networks[adjacent->net].send(adjacent->handle, msg);
+		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
+	} else {
+		// TODO: Trim target list for channels as well
+		struct server_info *self = get_table_index(server_list, SID);
+
+		inspircd2_protocol_propagate(from, self, STRING(":"));
+		inspircd2_protocol_propagate(from, self, source);
+		inspircd2_protocol_propagate(from, self, STRING(" PRIVMSG "));
+		inspircd2_protocol_propagate(from, self, target);
+		inspircd2_protocol_propagate(from, self, STRING(" :"));
+		inspircd2_protocol_propagate(from, self, msg);
+		inspircd2_protocol_propagate(from, self, STRING("\n"));
+	}
+}
+
+// [:source] NOTICE <target> <message>
+void inspircd2_protocol_propagate_notice(struct string from, struct string source, struct string target, struct string msg) {
+	struct user_info *user = get_table_index(user_list, target);
+	struct server_info *server;
+	if (!user)
+		server = get_table_index(server_list, target);
+
+	if (user || server) {
+		struct server_info *target_server;
+		if (user) {
+			target_server = get_table_index(server_list, user->server);
+		} else {
+			target_server = server;
+		}
+
+		if (target_server->protocol != INSPIRCD2_PROTOCOL || STRING_EQ(target_server->sid, SID))
+			return;
+
+		struct server_info *adjacent = get_table_index(server_list, target_server->next);
+		networks[adjacent->net].send(adjacent->handle, STRING(":"));
+		networks[adjacent->net].send(adjacent->handle, source);
+		networks[adjacent->net].send(adjacent->handle, STRING(" NOTICE "));
+		networks[adjacent->net].send(adjacent->handle, target);
+		networks[adjacent->net].send(adjacent->handle, STRING(" :"));
+		networks[adjacent->net].send(adjacent->handle, msg);
+		networks[adjacent->net].send(adjacent->handle, STRING("\n"));
+	} else {
+		// TODO: Trim target list for channels as well
+		struct server_info *self = get_table_index(server_list, SID);
+
+		inspircd2_protocol_propagate(from, self, STRING(":"));
+		inspircd2_protocol_propagate(from, self, source);
+		inspircd2_protocol_propagate(from, self, STRING(" NOTICE "));
+		inspircd2_protocol_propagate(from, self, target);
+		inspircd2_protocol_propagate(from, self, STRING(" :"));
+		inspircd2_protocol_propagate(from, self, msg);
+		inspircd2_protocol_propagate(from, self, STRING("\n"));
+	}
+}
+
 void inspircd2_protocol_do_unlink_inner(struct string from, struct server_info *target, struct string reason) {
 	target->distance = 1; // Reusing distance for `have passed`, since its set to 0 bc severed anyways
 
@@ -1159,23 +1243,27 @@ int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct str
 			return 0;
 	}
 
+	int ignore;
 	if (STRING_EQ(user->server, SID)) {
 		if (config->ignore_local_kills) {
-			inspircd2_protocol_introduce_user_to(net, handle, user);
+			ignore = 1;
 		} else {
 			if (argc > 1)
-				kill_user(config->sid, source, user, argv[1]);
+				ignore = kill_user(config->sid, source, user, argv[1]);
 			else
-				kill_user(config->sid, source, user, STRING(""));
+				ignore = kill_user(config->sid, source, user, STRING(""));
 		}
-	} else if (config->ignore_remote_kills) {
-		inspircd2_protocol_introduce_user_to(net, handle, user);
-	} else {
+	} else if (!config->ignore_remote_kills) {
 		if (argc > 1)
-			kill_user(config->sid, source, user, argv[1]);
+			ignore = kill_user(config->sid, source, user, argv[1]);
 		else
-			kill_user(config->sid, source, user, STRING(""));
+			ignore = kill_user(config->sid, source, user, STRING(""));
+	} else {
+		ignore = 1;
 	}
+
+	if (ignore)
+		inspircd2_protocol_introduce_user_to(net, handle, user);
 
 	return 0;
 }
@@ -1307,6 +1395,76 @@ int inspircd2_protocol_handle_part(struct string source, size_t argc, struct str
 		return 0;
 
 	part_channel(config->sid, channel, user, reason, 1);
+
+	return 0;
+}
+
+// [:source] KICK <channel> <user> [<reason>?]
+int inspircd2_protocol_handle_kick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 2) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid KICK recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	struct channel_info *channel = get_table_index(channel_list, argv[0]);
+	if (!channel)
+		return 0;
+
+	struct user_info *user = get_table_index(user_list, argv[1]);
+	if (!user) {
+		char found = 0;
+		for (size_t i = 0; i < user_list.len; i++) {
+			user = user_list.array[i].ptr;
+			if (STRING_EQ(user->nick, argv[1])) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found)
+			return 0;
+	}
+
+	int rejoin;
+	if (argc > 2)
+		rejoin = kick_channel(config->sid, source, channel, user, argv[2]);
+	else
+		rejoin = kick_channel(config->sid, source, channel, user, STRING(""));
+
+	if (rejoin) {
+		networks[net].send(handle, STRING(":"));
+		networks[net].send(handle, SID);
+		networks[net].send(handle, STRING(" FJOIN "));
+		networks[net].send(handle, channel->name);
+		networks[net].send(handle, STRING(" "));
+		networks[net].send(handle, channel->channel_ts_str);
+		networks[net].send(handle, STRING(" + :,"));
+		networks[net].send(handle, user->uid);
+		networks[net].send(handle, STRING("\n"));
+	}
+
+	return 0;
+}
+
+// [:source] PRIVMSG <target> <message>
+int inspircd2_protocol_handle_privmsg(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 2) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid PRIVMSG recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	privmsg(config->sid, source, argv[0], argv[1]);
+
+	return 0;
+}
+
+// [:source] NOTICE <target> <message>
+int inspircd2_protocol_handle_notice(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 2) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid NOTICE recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	notice(config->sid, source, argv[0], argv[1]);
 
 	return 0;
 }
