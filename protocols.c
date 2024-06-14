@@ -47,6 +47,10 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate_remove_user = inspircd2_protocol_propagate_remove_user,
 		.propagate_kill_user = inspircd2_protocol_propagate_kill_user,
 
+		.propagate_set_channel = inspircd2_protocol_propagate_set_channel,
+		.propagate_join_channel = inspircd2_protocol_propagate_join_channel,
+		.propagate_part_channel = inspircd2_protocol_propagate_part_channel,
+
 		.do_unlink = inspircd2_protocol_do_unlink,
 	},
 #endif

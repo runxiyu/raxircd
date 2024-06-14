@@ -66,14 +66,14 @@ extern time_t PING_INTERVAL; // = 60;
 
 #ifdef USE_GNUTLS
 extern char GNUTLS_USE_SYSTEM_TRUST; // = 1;
-extern char *GNUTLS_CERT_PATH; // = "/etc/keys/crt.pem"
-extern char *GNUTLS_KEY_PATH; // = "/etc/keys/key.pem"
+extern char *GNUTLS_CERT_PATH; // = "/etc/keys/crt.pem", or 0
+extern char *GNUTLS_KEY_PATH; // = "/etc/keys/key.pem", or 0
 #endif
 
 #ifdef USE_OPENSSL
 extern char OPENSSL_USE_SYSTEM_TRUST; // = 1;
-extern char *OPENSSL_CERT_PATH; // = "/etc/keys/crt.pem"
-extern char *OPENSSL_KEY_PATH; // = "/etc/keys/key.pem"
+extern char *OPENSSL_CERT_PATH; // = "/etc/keys/crt.pem", or 0
+extern char *OPENSSL_KEY_PATH; // = "/etc/keys/key.pem", or 0
 #endif
 
 #ifdef USE_SERVER

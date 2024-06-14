@@ -45,7 +45,7 @@ int init_plaintext_network(void) {
 }
 
 int plaintext_send(void *fd, struct string msg) {
-	do {
+	while (msg.len > 0) {
 		ssize_t res;
 		do {
 			res = send(*((int*)fd), msg.data, msg.len, 0);
@@ -57,7 +57,7 @@ int plaintext_send(void *fd, struct string msg) {
 			msg.len -= (size_t)res;
 			msg.data += (size_t)res;
 		}
-	} while (msg.len > 0);
+	}
 
 	return 0;
 }

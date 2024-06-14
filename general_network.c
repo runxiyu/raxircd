@@ -116,6 +116,7 @@ struct network networks[NUM_NET_TYPES] = {
 
 struct table server_list = {0};
 struct table user_list = {0};
+struct table channel_list = {0};
 
 // TODO: Proper string handling
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr) {
@@ -175,6 +176,7 @@ int init_general_network(void) {
 	own_info->latency_valid = 1;
 
 	user_list.array = malloc(0);
+	channel_list.array = malloc(0);
 
 	return 0;
 
@@ -334,8 +336,8 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 		remove_table_index(&(server->user_list), user->uid);
 	}
 
-	// TODO: Channel cleanup code hereish
-	clear_table(&(user->channel_list));
+	while (user->channel_list.len != 0)
+		part_channel(from, user->channel_list.array[0].ptr, user, STRING(""), 0);
 	free(user->channel_list.array);
 
 	free(user->user_ts_str.data);
@@ -361,4 +363,154 @@ void kill_user(struct string from, struct string source, struct user_info *user,
 #endif
 
 	remove_user(from, user, reason, 0);
+}
+
+int set_channel(struct string from, struct string name, size_t timestamp, size_t user_count, struct user_info **users) {
+	char is_new_channel;
+	struct channel_info *channel = get_table_index(channel_list, name);
+	if (!channel) {
+		is_new_channel = 1;
+		channel = malloc(sizeof(*channel));
+		if (!channel)
+			return -1;
+
+		channel->channel_ts = timestamp;
+
+		if (set_table_index(&channel_list, name, channel) != 0)
+			goto set_channel_free_channel;
+
+		if (str_clone(&(channel->name), name) != 0)
+			goto set_channel_remove_channel;
+
+		channel->user_list.array = malloc(0);
+		channel->user_list.len = 0;
+	} else {
+		is_new_channel = 0;
+		size_t i = 0;
+		while (i < user_count) {
+			if (has_table_index(channel->user_list, users[i]->uid)) {
+				memcpy(&(users[i]), &(users[i+1]), sizeof(**users) * (user_count - i - 1));
+				user_count--;
+			} else {
+				i++;
+			}
+		}
+	}
+
+	if (join_channel(from, channel, user_count, users, 0) != 0)
+		goto set_channel_free_name;
+
+	{
+		struct string ts_str;
+		if (unsigned_to_str(timestamp, &ts_str) != 0)
+			goto set_channel_remove_users;
+
+		channel->channel_ts_str = ts_str;
+		channel->channel_ts = timestamp;
+	}
+
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_set_channel(from, channel, is_new_channel, user_count, users);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_set_channel(from, channel, is_new_channel, user_count, users);
+#endif
+#endif
+
+	return 0;
+
+	set_channel_remove_users:
+	for (size_t i = 0; i < user_count; i++) {
+		remove_table_index(&(channel->user_list), users[i]->uid);
+		remove_table_index(&(users[i]->channel_list), channel->name);
+	}
+
+	set_channel_free_name:
+	if (is_new_channel)
+		free(channel->name.data);
+	set_channel_remove_channel:
+	if (is_new_channel)
+		remove_table_index(&channel_list, name);
+	set_channel_free_channel:
+	if (is_new_channel)
+		free(channel);
+
+	return -1;
+}
+
+int join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate) {
+	size_t i = 0;
+	while (i < user_count) {
+		if (has_table_index(channel->user_list, users[i]->uid)) {
+			memcpy(&(users[i]), &(users[i+1]), sizeof(**users) * (user_count - i - 1));
+			user_count--;
+		} else {
+			i++;
+		}
+	}
+
+	i = 0;
+	while (i < user_count) {
+		if (set_table_index(&(channel->user_list), users[i]->uid, users[i]) != 0)
+			goto join_channel_remove_users;
+		i++;
+	}
+
+	i = 0;
+	while (i < user_count) {
+		if (set_table_index(&(users[i]->channel_list), channel->name, channel) != 0)
+			goto join_channel_remove_channels;
+		i++;
+	}
+
+	if (propagate) {
+#ifdef USE_CLIENT
+#endif
+
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+		protocols[HAXIRCD_PROTOCOL].propagate_join_channel(from, channel, user_count, users);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+		protocols[INSPIRCD2_PROTOCOL].propagate_join_channel(from, channel, user_count, users);
+#endif
+#endif
+	}
+
+	return 0;
+
+	join_channel_remove_channels:
+	for (size_t x = 0; x < i; x++)
+		remove_table_index(&(users[x]->channel_list), channel->name);
+	i = user_count;
+	join_channel_remove_users:
+	for (size_t x = 0; x < i; x++)
+		remove_table_index(&(channel->user_list), users[x]->uid);
+
+	return -1;
+}
+
+void part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason, char propagate) {
+	remove_table_index(&(channel->user_list), user->uid);
+	remove_table_index(&(user->channel_list), channel->name);
+
+	if (propagate) {
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+		protocols[HAXIRCD_PROTOCOL].propagate_part_channel(from, channel, user, reason);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+		protocols[INSPIRCD2_PROTOCOL].propagate_part_channel(from, channel, user, reason);
+#endif
+#endif
+	}
+
+	if (channel->user_list.len == 0) {
+		remove_table_index(&channel_list, channel->name);
+		free(channel->name.data);
+		free(channel->channel_ts_str.data);
+		free(channel->user_list.array);
+		free(channel);
+	}
 }

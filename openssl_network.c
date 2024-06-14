@@ -69,6 +69,9 @@ int init_openssl_network(void) {
 }
 
 int openssl_send(void *handle, struct string msg) {
+	if (msg.len == 0)
+		return 0;
+
 	struct openssl_handle *openssl_handle = handle;
 
 	pthread_mutex_lock(&(openssl_handle->mutex));
@@ -112,8 +115,12 @@ int openssl_send(void *handle, struct string msg) {
 	return 0;
 
 	openssl_send_error_unlock:
-	openssl_handle->valid = 0;
-	pthread_mutex_unlock(&(openssl_handle->mutex));
+	if (openssl_handle->valid) {
+		pthread_mutex_unlock(&(openssl_handle->mutex));
+		openssl_shutdown(handle);
+	} else {
+		pthread_mutex_unlock(&(openssl_handle->mutex));
+	}
 	return 1;
 }
 

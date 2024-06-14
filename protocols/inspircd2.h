@@ -49,6 +49,10 @@ void inspircd2_protocol_propagate_rename_user(struct string from, struct user_in
 void inspircd2_protocol_propagate_remove_user(struct string from, struct user_info *info, struct string reason);
 void inspircd2_protocol_propagate_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 
+void inspircd2_protocol_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+void inspircd2_protocol_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
+void inspircd2_protocol_propagate_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
+
 void inspircd2_protocol_do_unlink(struct string from, struct server_info *a, struct server_info *b);
 
 void inspircd2_protocol_update_propagations_inner(struct server_info *source);
@@ -69,6 +73,9 @@ int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct stri
 int inspircd2_protocol_handle_nick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd2_protocol_handle_quit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+
+int inspircd2_protocol_handle_fjoin(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd2_protocol_handle_part(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 
 int inspircd2_protocol_handle_dump(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 

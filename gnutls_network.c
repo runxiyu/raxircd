@@ -66,6 +66,9 @@ int init_gnutls_network(void) {
 }
 
 int gnutls_send(void *handle, struct string msg) {
+	if (msg.len == 0)
+		return 0;
+
 	struct gnutls_handle *gnutls_handle = handle;
 
 	pthread_mutex_lock(&(gnutls_handle->mutex));

@@ -101,6 +101,15 @@ struct user_info {
 	char latency_ready;
 };
 
+struct channel_info {
+	struct string name;
+
+	struct string channel_ts_str;
+	size_t channel_ts;
+
+	struct table user_list;
+};
+
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr);
 
 int init_general_network(void);
@@ -109,6 +118,10 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp);
 void remove_user(struct string from, struct user_info *user, struct string reason, char propagate);
 void kill_user(struct string from, struct string source, struct user_info *user, struct string reason);
+
+int set_channel(struct string from, struct string name, size_t timestamp, size_t user_count, struct user_info **users);
+int join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
+void part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason, char propagate);
 
 extern char casemap[UCHAR_MAX+1];
 #define CASEMAP(x) (casemap[(unsigned char)x])
@@ -128,3 +141,4 @@ extern struct network networks[NUM_NET_TYPES];
 
 extern struct table server_list;
 extern struct table user_list;
+extern struct table channel_list;

@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "general_network.h"
 #include "server_network.h"
 
 struct protocol {
@@ -40,6 +41,10 @@ struct protocol {
 	void (*propagate_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
 	void (*propagate_remove_user)(struct string from, struct user_info *info, struct string reason);
 	void (*propagate_kill_user)(struct string from, struct string source, struct user_info *info, struct string reason);
+
+	void (*propagate_set_channel)(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+	void (*propagate_join_channel)(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
+	void (*propagate_part_channel)(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
 
 	void (*do_unlink)(struct string from, struct server_info *a, struct server_info *b);
 };
