@@ -55,6 +55,11 @@ int init_server_network(void) {
 		}
 	}
 
+#ifdef USE_INSPIRCD2_PROTOCOL
+	if (protocols[INSPIRCD2_PROTOCOL].init() != 0)
+		return 1;
+#endif
+
 	return 0;
 }
 

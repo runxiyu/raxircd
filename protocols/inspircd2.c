@@ -820,7 +820,7 @@ void inspircd2_protocol_introduce_servers_to(size_t net, void *handle) {
 	}
 }
 
-void inspircd2_protocol_introduce_user_to(size_t net, void *handle, struct user_info *user) {
+void inspircd2_protocol_introduce_user_to(size_t net, void *handle, struct user_info *user, char join_channels) {
 	networks[net].send(handle, STRING(":"));
 	networks[net].send(handle, user->server);
 	networks[net].send(handle, STRING(" UID "));
@@ -842,6 +842,22 @@ void inspircd2_protocol_introduce_user_to(size_t net, void *handle, struct user_
 	networks[net].send(handle, STRING(" + :"));
 	networks[net].send(handle, user->fullname);
 	networks[net].send(handle, STRING("\n"));
+
+	if (join_channels) {
+		for (size_t i = 0; i < user->channel_list.len; i++) {
+			struct channel_info *channel = user->channel_list.array[i].ptr;
+
+			networks[net].send(handle, STRING(":"));
+			networks[net].send(handle, SID);
+			networks[net].send(handle, STRING(" FJOIN "));
+			networks[net].send(handle, channel->name);
+			networks[net].send(handle, STRING(" "));
+			networks[net].send(handle, channel->channel_ts_str);
+			networks[net].send(handle, STRING(" + :,"));
+			networks[net].send(handle, user->uid);
+			networks[net].send(handle, STRING("\n"));
+		}
+	}
 }
 
 void inspircd2_protocol_introduce_channel_to(size_t net, void *handle, struct channel_info *channel) {
@@ -938,7 +954,7 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 	inspircd2_protocol_introduce_servers_to(net, handle);
 
 	for (size_t i = 0; i < user_list.len; i++)
-		inspircd2_protocol_introduce_user_to(net, handle, user_list.array[i].ptr);
+		inspircd2_protocol_introduce_user_to(net, handle, user_list.array[i].ptr, 0);
 
 	for (size_t i = 0; i < channel_list.len; i++)
 		inspircd2_protocol_introduce_channel_to(net, handle, channel_list.array[i].ptr);
@@ -1168,7 +1184,7 @@ int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct stri
 		return -1;
 	}
 
-	if (add_user(config->sid, source, argv[0], argv[2], argv[arg_i], argv[5], argv[4], argv[3], argv[6], user_ts, nick_ts, 0, 0, 0) != 0) {
+	if (add_user(config->sid, source, argv[0], argv[2], argv[arg_i], argv[5], argv[4], argv[3], argv[6], user_ts, nick_ts, 0, 0, 0, 0, 0) != 0) {
 		WRITES(2, STRING("ERROR: Unable to add user!\r\n"));
 		return -1;
 	}
@@ -1263,7 +1279,7 @@ int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct str
 	}
 
 	if (ignore)
-		inspircd2_protocol_introduce_user_to(net, handle, user);
+		inspircd2_protocol_introduce_user_to(net, handle, user, 1);
 
 	return 0;
 }

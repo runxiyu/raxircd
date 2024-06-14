@@ -35,3 +35,4 @@ size_t str_to_unsigned(struct string str, char *err);
 int unsigned_to_str(size_t number, struct string *str);
 
 int str_clone(struct string *dest, struct string source);
+int str_combine(struct string *dest, size_t count, struct string *sources);

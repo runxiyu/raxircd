@@ -80,3 +80,18 @@ extern char *OPENSSL_KEY_PATH; // = "/etc/keys/key.pem", or 0
 extern unsigned short SERVER_PORTS[NUM_NET_TYPES][NUM_PROTOCOLS]; // = 7000
 extern size_t SERVER_LISTEN[NUM_NET_TYPES][NUM_PROTOCOLS]; // = 16
 #endif
+
+#ifdef USE_HAXSERV_PSUEDOCLIENT
+extern struct string HAXSERV_UID; // = STRING("200000000");
+extern struct string HAXSERV_NICK; // = STRING("HaxServ");
+extern struct string HAXSERV_FULLNAME; // = STRING("Hax Services");
+extern struct string HAXSERV_IDENT; // = STRING("HaxServ");
+extern struct string HAXSERV_VHOST; // = STRING("services/hax");
+extern struct string HAXSERV_HOST; // = STRING("localhost");
+extern struct string HAXSERV_ADDRESS; // = STRING("/dev/null");
+
+extern struct string HAXSERV_PREJOIN_CHANNELS[]; // = {STRING("#services"), ...};
+extern size_t HAXSERV_NUM_PREJOIN_CHANNELS; // = sizeof(HAXSERV_PREJOIN_CHANNELS) / sizeof(*HAXSERV_PREJOIN_CHANNELS);
+
+extern struct string HAXSERV_COMMAND_PREFIX; // = STRING("HaxServ: ");
+#endif

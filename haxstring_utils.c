@@ -109,3 +109,22 @@ int str_clone(struct string *dest, struct string source) {
 
 	return 0;
 }
+
+int str_combine(struct string *dest, size_t count, struct string *sources) {
+	size_t len = 0;
+	for (size_t i = 0; i < count; i++)
+		len += sources[i].len;
+
+	dest->data = malloc(len);
+	if (!dest->data && len != 0)
+		return 1;
+	dest->len = len;
+
+	size_t offset = 0;
+	for (size_t i = 0; i < count; i++) {
+		memcpy(&(dest->data[offset]), sources[i].data, sources[i].len);
+		offset += sources[i].len;
+	}
+
+	return 0;
+}

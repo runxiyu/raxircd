@@ -26,10 +26,14 @@
 
 #pragma once
 
+#include <stddef.h>
+
+#include "haxstring.h"
 #include "general_network.h"
 #include "server_network.h"
 
 struct protocol {
+	int (*init)(void);
 	void * (*handle_connection)(void *info);
 	void * (*autoconnect)(void *config);
 	void (*update_propagations)(void);

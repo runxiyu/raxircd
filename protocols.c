@@ -35,6 +35,8 @@
 struct protocol protocols[NUM_PROTOCOLS] = {
 #ifdef USE_INSPIRCD2_PROTOCOL
 	[INSPIRCD2_PROTOCOL] = {
+		.init = init_inspircd2_protocol,
+
 		.handle_connection = inspircd2_protocol_connection,
 		.autoconnect = inspircd2_protocol_autoconnect,
 		.update_propagations = inspircd2_protocol_update_propagations,

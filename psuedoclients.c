@@ -1,4 +1,4 @@
-// Hax's strings
+// One of the code files for HaxServ
 //
 // Written by: Test_User <hax@andrewyu.org>
 //
@@ -26,20 +26,31 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#pragma once
+#include "haxstring.h"
+#include "psuedoclients.h"
 
-#include <stddef.h>
-#include <string.h>
-#include <unistd.h>
+#ifdef USE_HAXSERV_PSUEDOCLIENT
+#include "psuedoclients/haxserv.h"
+#endif
 
-struct string {
-	char *data;
-	size_t len;
+struct psuedoclient psuedoclients[NUM_PSUEDOCLIENTS] = {
+#ifdef USE_HAXSERV_PSUEDOCLIENT
+	[HAXSERV_PSUEDOCLIENT] = {
+		.init = haxserv_psuedoclient_init,
+
+		.allow_kill = haxserv_psuedoclient_allow_kill,
+		.allow_kick = haxserv_psuedoclient_allow_kick,
+
+		.handle_privmsg = haxserv_psuedoclient_handle_privmsg,
+	},
+#endif
 };
 
-#define STRING(x) (struct string){x, sizeof(x)-1}
-#define NULSTR(x) (struct string){x, strlen(x)}
+int init_psuedoclients(void) {
+#ifdef USE_HAXSERV_PSUEDOCLIENT
+	if (psuedoclients[HAXSERV_PSUEDOCLIENT].init() != 0)
+		return 1;
+#endif
 
-#define STRING_EQ(x, y) (x.len == y.len && memcmp(x.data, y.data, x.len) == 0)
-
-#define WRITES(x, y) write(x, y.data, y.len)
+	return 0;
+}

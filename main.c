@@ -54,6 +54,14 @@
 #include "protocols/inspircd2.h"
 #endif
 
+#ifdef USE_PSUEDOCLIENTS
+#include "psuedoclients.h"
+#endif
+
+#ifdef USE_HAXSERV_PSUEDOCLIENT
+#include "psuedoclients/haxserv.h"
+#endif
+
 pthread_attr_t pthread_attr;
 pthread_mutexattr_t pthread_mutexattr;
 
@@ -63,18 +71,8 @@ int main(void) {
 	if (init_general_network() != 0)
 		return 1;
 
-#ifdef USE_SERVER
-	if (init_server_network() != 0)
-		return 1;
-#endif
-
-#ifdef USE_CLIENT
-	if (init_client_network() != 0)
-		return 1;
-#endif
-
 #ifdef USE_PLAINTEXT
-	if (init_plaintext_network() != 0) // there's not really anything to do ahead of time with plain tcp networking, this is just here for consistency (and will probably be optimized out by the compiler)
+	if (init_plaintext_network() != 0) // there's not really anything to do ahead of time with plain tcp networking, this is just here for consistency
 		return 1;
 #endif
 
@@ -88,8 +86,18 @@ int main(void) {
 		return 1;
 #endif
 
-#ifdef USE_INSPIRCD2_PROTOCOL
-	if (init_inspircd2_protocol() != 0)
+#ifdef USE_SERVER
+	if (init_server_network() != 0)
+		return 1;
+#endif
+
+#ifdef USE_CLIENT
+	if (init_client_network() != 0)
+		return 1;
+#endif
+
+#ifdef USE_PSUEDOCLIENTS
+	if (init_psuedoclients() != 0)
 		return 1;
 #endif
 

@@ -26,6 +26,8 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
+ORIGINAL_CFLAGS := $(CFLAGS)
+
 INCLUDEFLAGS =
 
 CFLAGS += $(INCLUDEFLAGS) -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -Wno-unused-parameter -Wno-implicit-fallthrough -std=gnu99
@@ -33,7 +35,17 @@ CFLAGS += $(INCLUDEFLAGS) -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -W
 LDFLAGS = -lpthread
 
 .makeopts:
-	> .makeopts
+	printf '%s\n' 'LAST_PLAINTEXT_CLIENT = $(PLAINTEXT_CLIENT)' > .makeopts
+	printf '%s\n' 'LAST_PLAINTEXT_SERVER = $(PLAINTEXT_SERVER)' >> .makeopts
+	printf '%s\n' 'LAST_GNUTLS_CLIENT = $(GNUTLS_CLIENT)' >> .makeopts
+	printf '%s\n' 'LAST_GNUTLS_SERVER = $(GNUTLS_SERVER)' >> .makeopts
+	printf '%s\n' 'LAST_OPENSSL_CLIENT = $(OPENSSL_CLIENT)' >> .makeopts
+	printf '%s\n' 'LAST_OPENSSL_SERVER = $(OPENSSL_SERVER)' >> .makeopts
+	printf '%s\n' 'LAST_INSPIRCD2_PROTOCOL = $(INSPIRCD2_PROTOCOL)' >> .makeopts
+	printf '%s\n' 'LAST_HAXSERV_PSUEDOCLIENT = $(HAXSERV_PSUEDOCLIENT)' >> .makeopts
+	printf '%s\n' 'LAST_SAFE_STACK = $(SAFE_STACK)' >> .makeopts
+	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
+	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
 
 include .makeopts
 
@@ -96,6 +108,14 @@ else
 INSPIRCD2_PROTOCOL = $(LAST_INSPIRCD2_PROTOCOL)
 endif
 
+ifneq ($(HAXSERV_PSUEDOCLIENT),)
+ifneq ($(HAXSERV_PSUEDOCLIENT),$(LAST_HAXSERV_PSUEDOCLIENT))
+rebuild = 1
+endif
+else
+HAXSERV_PSUEDOCLIENT = $(LAST_HAXSERV_PSUEDOCLIENT)
+endif
+
 ifneq ($(SAFE_STACK),)
 ifneq ($(SAFE_STACK),$(LAST_SAFE_STACK))
 rebuild = 1
@@ -104,11 +124,12 @@ else
 SAFE_STACK = $(LAST_SAFE_STACK)
 endif
 
-ifneq ($(CFLAGS),)
-ifneq ($(CFLAGS),$(LAST_CFLAGS))
+ifneq ($(ORIGINAL_CFLAGS),)
+ifneq ($(ORIGINAL_CFLAGS),$(LAST_CFLAGS))
 rebuild = 1
 endif
 else
+ORIGINAL_CFLAGS = $(LAST_CFLAGS)
 CFLAGS = $(LAST_CFLAGS)
 endif
 
@@ -121,22 +142,15 @@ CC = $(LAST_CC)
 endif
 
 ifeq ($(rebuild),1)
-$(shell printf '%s\n' 'LAST_PLAINTEXT_CLIENT = $(PLAINTEXT_CLIENT)' > .makeopts)
-$(shell printf '%s\n' 'LAST_PLAINTEXT_SERVER = $(PLAINTEXT_SERVER)' >> .makeopts)
-$(shell printf '%s\n' 'LAST_GNUTLS_CLIENT = $(GNUTLS_CLIENT)' >> .makeopts)
-$(shell printf '%s\n' 'LAST_GNUTLS_SERVER = $(GNUTLS_SERVER)' >> .makeopts)
-$(shell printf '%s\n' 'LAST_OPENSSL_CLIENT = $(OPENSSL_CLIENT)' >> .makeopts)
-$(shell printf '%s\n' 'LAST_OPENSSL_SERVER = $(OPENSSL_SERVER)' >> .makeopts)
-$(shell printf '%s\n' 'LAST_INSPIRCD2_PROTOCOL = $(INSPIRCD2_PROTOCOL)' >> .makeopts)
-$(shell printf '%s\n' 'LAST_SAFE_STACK = $(SAFE_STACK)' >> .makeopts)
-$(shell printf '%s\n' 'LAST_CFLAGS = $(CFLAGS)' >> .makeopts)
-$(shell printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts)
+.PHONY: .makeopts
 endif
 
 USE_PLAINTEXT = 0
 USE_CLIENT = 0
 USE_GNUTLS = 0
 USE_SERVER = 0
+
+OFILES = config.o general_network.o haxstring_utils.o main.o table.o
 
 ifeq ($(PLAINTEXT_CLIENT),1)
 CFLAGS += -DUSE_PLAINTEXT_CLIENT
@@ -175,7 +189,22 @@ USE_OPENSSL = 1
 endif
 
 
-OFILES = config.o general_network.o haxstring_utils.o main.o protocols.o table.o
+
+ifeq ($(INSPIRCD2_PROTOCOL),1)
+OFILES += protocols/inspircd2.o
+CFLAGS += -DUSE_INSPIRCD2_PROTOCOL
+USE_PROTOCOLS = 1
+endif
+
+
+
+ifeq ($(HAXSERV_PSUEDOCLIENT),1)
+OFILES += psuedoclients/haxserv.o
+CFLAGS += -DUSE_HAXSERV_PSUEDOCLIENT
+USE_PSUEDOCLIENTS = 1
+endif
+
+
 
 ifeq ($(USE_CLIENT),1)
 OFILES += client_network.o
@@ -183,6 +212,9 @@ CFLAGS += -DUSE_CLIENT
 endif
 
 ifeq ($(USE_SERVER),1)
+ifneq ($(USE_PROTOCOLS),1)
+$(error You must use some s2s protocol if you want to use a server transport layer)
+endif
 OFILES += server_network.o
 CFLAGS += -DUSE_SERVER
 endif
@@ -204,19 +236,28 @@ CFLAGS += -DUSE_OPENSSL $(shell pkg-config openssl --cflags)
 LDFLAGS += $(shell pkg-config openssl --libs)
 endif
 
+
+
+ifeq ($(USE_PROTOCOLS),1)
+ifneq ($(USE_SERVER),1)
+$(error You must have some form of server transport layer enabled if you hope to use an s2s protocol)
+endif
+OFILES += protocols.o
+endif
+
+
+
+ifeq ($(USE_PSUEDOCLIENTS),1)
+OFILES += psuedoclients.o
+CFLAGS += -DUSE_PSUEDOCLIENTS
+endif
+
+
+
 ifeq ($(SAFE_STACK),1)
 CFLAGS += -fstack-check
 endif
 
-
-
-ifeq ($(INSPIRCD2_PROTOCOL),1)
-ifneq ($(USE_SERVER),1)
-$(error You must have some form of server transport layer enabled if you hope to use the inspircd2 protocol)
-endif
-OFILES += protocols/inspircd2.o
-CFLAGS += -DUSE_INSPIRCD2_PROTOCOL
-endif
 
 
 DEPS = $(shell $(CC) $(CFLAGS) -M -MT $(1).o $(1).c | sed -z 's/\\\n //g') .makeopts Makefile
@@ -268,4 +309,4 @@ $(call DEPS,protocols/inspircd2)
 endif
 
 clean:
-	$(RM) -r haxserv *.o protocols/*.o
+	$(RM) -r haxserv *.o protocols/*.o psuedoclients/*.o

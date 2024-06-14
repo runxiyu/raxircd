@@ -48,6 +48,10 @@
 #include "openssl_network.h"
 #endif
 
+#ifdef USE_PSUEDOCLIENTS
+#include "psuedoclients.h"
+#endif
+
 char casemap[UCHAR_MAX+1] = {
 	['a'] = 'A',
 	['b'] = 'B',
@@ -194,7 +198,7 @@ int init_general_network(void) {
 	return 1;
 }
 
-int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net) {
+int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net, char is_psuedoclient, size_t psuedoclient) {
 	struct server_info *attached = get_table_index(server_list, attached_to);
 	if (!attached)
 		return 1;
@@ -213,6 +217,9 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	new_info->protocol = protocol;
 	new_info->net = net;
 	new_info->handle = handle;
+
+	new_info->is_psuedoclient = is_psuedoclient;
+	new_info->psuedoclient = psuedoclient;
 
 	new_info->server = attached->sid;
 
@@ -353,6 +360,21 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 }
 
 int kill_user(struct string from, struct string source, struct user_info *user, struct string reason) {
+#ifdef USE_PSUEDOCLIENTS
+	if (user->is_psuedoclient) {
+		switch (user->psuedoclient) {
+#ifdef USE_HAXSERV_PSUEDOCLIENT
+			case HAXSERV_PSUEDOCLIENT:
+				if (!psuedoclients[HAXSERV_PSUEDOCLIENT].allow_kill(from, source, user, reason))
+					return 1;
+				break;
+#endif
+			default:
+				break;
+		}
+	}
+#endif
+
 #ifdef USE_SERVER
 #ifdef USE_HAXIRCD_PROTOCOL
 	protocols[HAXIRCD_PROTOCOL].propagate_kill_user(from, source, user, reason);
@@ -518,16 +540,38 @@ void part_channel(struct string from, struct channel_info *channel, struct user_
 }
 
 int kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason) {
+#ifdef USE_PSUEDOCLIENTS
+	if (user->is_psuedoclient) {
+		switch (user->psuedoclient) {
+#ifdef USE_HAXSERV_PSUEDOCLIENT
+			case HAXSERV_PSUEDOCLIENT:
+				if (!psuedoclients[HAXSERV_PSUEDOCLIENT].allow_kick(from, source, channel, user, reason))
+					return 1;
+				break;
+#endif
+			default:
+				break;
+		}
+	}
+#endif
+
 	return 1;
 }
 
 int privmsg(struct string from, struct string sender, struct string target, struct string msg) {
+	struct user_info *user;
+	struct server_info *server;
+	struct channel_info *channel;
 	do {
-		struct user_info *user = get_table_index(user_list, target);
+		user = get_table_index(user_list, target);
 		if (user)
 			break;
-		struct server_info *server = get_table_index(server_list, target);
+		server = get_table_index(server_list, target);
 		if (server)
+			break;
+
+		channel = get_table_index(channel_list, target);
+		if (channel)
 			break;
 
 		char found = 0;
@@ -542,10 +586,6 @@ int privmsg(struct string from, struct string sender, struct string target, stru
 		if (found)
 			break;
 
-		struct channel_info *channel = get_table_index(channel_list, target);
-		if (channel)
-			break;
-
 		return 1; // Target not valid
 	} while (0);
 
@@ -556,6 +596,26 @@ int privmsg(struct string from, struct string sender, struct string target, stru
 #ifdef USE_INSPIRCD2_PROTOCOL
 	protocols[INSPIRCD2_PROTOCOL].propagate_privmsg(from, sender, target, msg);
 #endif
+#endif
+
+#ifdef USE_PSUEDOCLIENTS
+	if ((user && user->is_psuedoclient && user->psuedoclient == HAXSERV_PSUEDOCLIENT) || (!user && !server)) {
+		char send;
+		if (!user && !server) {
+			send = 0;
+			for (size_t i = 0; i < channel->user_list.len; i++) {
+				struct user_info *user = channel->user_list.array[i].ptr;
+				if (user->is_psuedoclient && user->psuedoclient == HAXSERV_PSUEDOCLIENT) {
+					send = 1;
+					break;
+				}
+			}
+		} else {
+			send = 1;
+		}
+		if (send)
+			psuedoclients[HAXSERV_PSUEDOCLIENT].handle_privmsg(from, sender, target, msg);
+	}
 #endif
 
 	return 0;

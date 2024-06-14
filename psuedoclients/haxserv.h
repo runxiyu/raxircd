@@ -1,5 +1,3 @@
-// Hax's strings
-//
 // Written by: Test_User <hax@andrewyu.org>
 //
 // This is free and unencumbered software released into the public
@@ -28,18 +26,14 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <string.h>
-#include <unistd.h>
+#include "../haxstring.h"
+#include "../general_network.h"
 
-struct string {
-	char *data;
-	size_t len;
-};
+int haxserv_psuedoclient_init(void);
 
-#define STRING(x) (struct string){x, sizeof(x)-1}
-#define NULSTR(x) (struct string){x, strlen(x)}
+int haxserv_psuedoclient_allow_kill(struct string from, struct string source, struct user_info *user, struct string reason);
+int haxserv_psuedoclient_allow_kick(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
 
-#define STRING_EQ(x, y) (x.len == y.len && memcmp(x.data, y.data, x.len) == 0)
+void haxserv_psuedoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);
 
-#define WRITES(x, y) write(x, y.data, y.len)
+extern struct table haxserv_psuedoclient_commands;
