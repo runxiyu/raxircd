@@ -52,6 +52,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate_set_channel = inspircd2_protocol_propagate_set_channel,
 		.propagate_join_channel = inspircd2_protocol_propagate_join_channel,
 		.propagate_part_channel = inspircd2_protocol_propagate_part_channel,
+		.propagate_kick_channel = inspircd2_protocol_propagate_kick_channel,
 
 		.propagate_privmsg = inspircd2_protocol_propagate_privmsg,
 		.propagate_notice = inspircd2_protocol_propagate_notice,

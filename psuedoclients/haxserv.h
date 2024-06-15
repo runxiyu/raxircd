@@ -48,3 +48,4 @@ extern struct table haxserv_psuedoclient_commands;
 extern struct command_def haxserv_psuedoclient_help_command_def;
 extern struct command_def haxserv_psuedoclient_sus_command_def;
 extern struct command_def haxserv_psuedoclient_cr_command_def;
+extern struct command_def haxserv_psuedoclient_clear_command_def;

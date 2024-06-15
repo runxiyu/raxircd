@@ -70,6 +70,9 @@ int haxserv_psuedoclient_init(void) {
 		return 1;
 	if (set_table_index(&haxserv_psuedoclient_commands, STRING("CR"), &haxserv_psuedoclient_cr_command_def) != 0)
 		return 1;
+	haxserv_psuedoclient_clear_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("CLEAR"), &haxserv_psuedoclient_clear_command_def) != 0)
+		return 1;
 
 	return 0;
 }
@@ -202,7 +205,6 @@ int haxserv_psuedoclient_help_command(struct string from, struct string sender, 
 }
 struct command_def haxserv_psuedoclient_help_command_def = {
 	.func = haxserv_psuedoclient_help_command,
-	.privs = {0},
 	.summary = STRING("Shows a list of commands."),
 	.name = STRING("help"),
 };
@@ -241,7 +243,6 @@ int haxserv_psuedoclient_sus_command(struct string from, struct string sender, s
 }
 struct command_def haxserv_psuedoclient_sus_command_def = {
 	.func = haxserv_psuedoclient_sus_command,
-	.privs = {0},
 	.summary = STRING("You seem a bit sus today."),
 	.name = STRING("sus"),
 };
@@ -263,7 +264,33 @@ int haxserv_psuedoclient_cr_command(struct string from, struct string sender, st
 }
 struct command_def haxserv_psuedoclient_cr_command_def = {
 	.func = haxserv_psuedoclient_cr_command,
-	.privs = {0},
 	.summary = STRING("Join the crux side."),
 	.name = STRING("cr"),
+};
+
+int haxserv_psuedoclient_clear_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	if (argc < 1) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Missing args!"));
+		return 0;
+	}
+
+	struct channel_info *channel = get_table_index(channel_list, argv[0]);
+	if (!channel) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("That channel doesn't seem to exist, so is thereby already cleared."));
+		return 0;
+	}
+
+	size_t i = 0;
+	while (channel->user_list.len > i) {
+		if (kick_channel(SID, HAXSERV_UID, channel, channel->user_list.array[i].ptr, STRING("(B")) != 0) {
+			i++;
+		}
+	}
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_clear_command_def = {
+	.func = haxserv_psuedoclient_clear_command,
+	.summary = STRING("Clears a channel."),
+	.name = STRING("clear"),
 };

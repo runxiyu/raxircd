@@ -669,6 +669,21 @@ void inspircd2_protocol_propagate_part_channel(struct string from, struct channe
 	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
+// [:source] KICK <channel> <user> [<reason>]
+void inspircd2_protocol_propagate_kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason) {
+	struct server_info *self = get_table_index(server_list, SID);
+
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, source);
+	inspircd2_protocol_propagate(from, self, STRING(" KICK "));
+	inspircd2_protocol_propagate(from, self, channel->name);
+	inspircd2_protocol_propagate(from, self, STRING(" "));
+	inspircd2_protocol_propagate(from, self, user->uid);
+	inspircd2_protocol_propagate(from, self, STRING(" :"));
+	inspircd2_protocol_propagate(from, self, reason);
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
+}
+
 // [:source] PRIVMSG <target> <message>
 void inspircd2_protocol_propagate_privmsg(struct string from, struct string source, struct string target, struct string msg) {
 	struct user_info *user = get_table_index(user_list, target);
@@ -1415,7 +1430,7 @@ int inspircd2_protocol_handle_part(struct string source, size_t argc, struct str
 	return 0;
 }
 
-// [:source] KICK <channel> <user> [<reason>?]
+// [:source] KICK <channel> <user> [<reason>]
 int inspircd2_protocol_handle_kick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 2) {
 		WRITES(2, STRING("[InspIRCd v2] Invalid KICK recieved! (Missing parameters)\r\n"));

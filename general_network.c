@@ -555,6 +555,15 @@ int kick_channel(struct string from, struct string source, struct channel_info *
 	}
 #endif
 
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_kick_channel(from, source, channel, user, reason);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_kick_channel(from, source, channel, user, reason);
+#endif
+#endif
+
 	return 1;
 }
 
