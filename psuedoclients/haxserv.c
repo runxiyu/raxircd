@@ -88,6 +88,9 @@ int haxserv_psuedoclient_init(void) {
 	haxserv_psuedoclient_kill_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
 	if (set_table_index(&haxserv_psuedoclient_commands, STRING("KILL"), &haxserv_psuedoclient_kill_command_def) != 0)
 		return 1;
+	haxserv_psuedoclient_spam_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("SPAM"), &haxserv_psuedoclient_spam_command_def) != 0)
+		return 1;
 
 	return 0;
 }
@@ -171,14 +174,11 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 		cmd = get_table_index(haxserv_psuedoclient_commands, argv[0]);
 	}
 
+	char trim;
 	if (cmd) {
-		msg.data += argv[0].len;
-		msg.len -= argv[0].len;
-		if (msg.len > 1) {
-			msg.data++;
-			msg.len--;
-		}
+		trim = 1;
 	} else {
+		trim = 0;
 		case_str.len = msg.len;
 		case_str.data = malloc(case_str.len);
 		if (case_str.data) {
@@ -208,9 +208,18 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 				STRING("User `"),
 				STRING(""),
 				STRING("' executes `"),
-				cmd->name,
+				msg,
 				STRING("'"),
 			};
+
+			if (trim) {
+				msg.data += argv[0].len;
+				msg.len -= argv[0].len;
+				if (msg.len > 1) {
+					msg.data++;
+					msg.len--;
+				}
+			}
 
 			struct user_info *user = get_table_index(user_list, source);
 			if (user) {
@@ -431,4 +440,100 @@ struct command_def haxserv_psuedoclient_kill_command_def = {
 	.summary = STRING("Kills a user."),
 	.aligned_name = STRING("kill    "),
 	.name = STRING("kill"),
+};
+
+int haxserv_psuedoclient_spam_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	if (argc < 2) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Insufficient parameters."));
+		return 0;
+	}
+
+	char err;
+	size_t count = str_to_unsigned(argv[0], &err);
+	if (err) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Unknown number."));
+	} else if (count > 5000) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Number exceeds the limit."));
+	}
+
+	size_t offset = (size_t)(argv[1].data - original_message.data);
+	original_message.data += offset;
+	original_message.len -= offset;
+
+	struct command_def *cmd;
+
+	struct string case_str = {.len = argv[1].len};
+	case_str.data = malloc(case_str.len);
+	if (case_str.data) {
+		for (size_t i = 0; i < case_str.len; i++)
+			case_str.data[i] = CASEMAP(argv[1].data[i]);
+
+		cmd = get_table_index(haxserv_psuedoclient_commands, case_str);
+
+		free(case_str.data);
+	} else {
+		cmd = get_table_index(haxserv_psuedoclient_commands, argv[1]);
+	}
+
+	if (cmd) {
+		original_message.data += argv[1].len;
+		original_message.len -= argv[1].len;
+		if (original_message.len > 1) {
+			original_message.data++;
+			original_message.len--;
+		}
+	} else {
+		case_str.len = original_message.len;
+		case_str.data = malloc(case_str.len);
+		if (case_str.data) {
+			for (size_t i = 0; i < case_str.len; i++)
+				case_str.data[i] = CASEMAP(original_message.data[i]);
+
+			cmd = get_table_prefix(haxserv_psuedoclient_prefixes, case_str);
+
+			free(case_str.data);
+		} else {
+			cmd = get_table_prefix(haxserv_psuedoclient_prefixes, original_message);
+		}
+	}
+
+	if (cmd) {
+		if (cmd->privs.len != 0 && !(!has_table_index(user_list, sender) && has_table_index(server_list, sender))) {
+			struct user_info *user = get_table_index(user_list, sender);
+			// TODO: Multiple privilege levels
+			if (!STRING_EQ(user->oper_type, cmd->privs)) {
+				notice(SID, HAXSERV_UID, respond_to, STRING("You are not authorized to execute this command."));
+				return 0;
+			}
+		}
+
+		if (cmd->func == haxserv_psuedoclient_spam_command) {
+			notice(SID, HAXSERV_UID, respond_to, STRING("Spam recursion is not allowed. The limit is for your own sake, please do not violate it."));
+			return 0;
+		}
+
+		for (size_t i = 0; i < count; i++)
+			cmd->func(from, sender, original_message, respond_to, argc - 2, &(argv[2]));
+	} else {
+		struct string msg_parts[] = {
+			STRING("Unknown command: "),
+			argv[1],
+		};
+
+		struct string full_msg;
+		if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) != 0)
+			return 0;
+
+		notice(SID, HAXSERV_UID, respond_to, full_msg);
+
+		free(full_msg.data);
+	}
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_spam_command_def = {
+	.func = haxserv_psuedoclient_spam_command,
+	.summary = STRING("Repeats a command a specified amount of times."),
+	.aligned_name = STRING("spam    "),
+	.name = STRING("spam"),
 };

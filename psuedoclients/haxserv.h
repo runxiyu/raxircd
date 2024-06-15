@@ -54,3 +54,4 @@ extern struct command_def haxserv_psuedoclient_clear_command_def;
 extern struct command_def haxserv_psuedoclient_raw_inspircd2_command_def;
 #endif
 extern struct command_def haxserv_psuedoclient_kill_command_def;
+extern struct command_def haxserv_psuedoclient_spam_command_def;
