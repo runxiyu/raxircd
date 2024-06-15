@@ -253,7 +253,13 @@ void * inspircd2_protocol_connection(void *type) {
 
 			struct string line = {.data = full_msg.data, .len = msg_len};
 
-			WRITES(2, STRING("[InspIRCd v2] [server -> us] Got `"));
+			if (ready) {
+				WRITES(2, STRING("[InspIRCd v2] ["));
+				WRITES(2, config->name);
+				WRITES(2, STRING(" -> us] Got `"));
+			} else {
+				WRITES(2, STRING("[InspIRCd v2] [unidentified server -> us] Got `"));
+			}
 			WRITES(2, line);
 			WRITES(2, STRING("'\r\n"));
 
@@ -361,6 +367,23 @@ void * inspircd2_protocol_connection(void *type) {
 			}
 
 			pthread_mutex_lock(&state_lock);
+
+			if (source.len != 0) {
+				struct server_info *server;
+				struct user_info *user = get_table_index(user_list, source);
+				if (user)
+					server = get_table_index(server_list, user->server);
+				else
+					server = get_table_index(server_list, source);
+
+				if (!server)
+					goto inspircd2_protocol_handle_connection_unlock_next;
+
+				if (STRING_EQ(server->sid, SID) || !STRING_EQ(server->next, config->sid)) {
+					WRITES(2, STRING("[InspIRCd v2] Protocol violation: sourge isn't on this link.\r\n\n"));
+					goto inspircd2_protocol_handle_connection_unlock_close;
+				}
+			}
 
 			if (!ready) {
 				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming);

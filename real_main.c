@@ -50,10 +50,6 @@
 #include "client_network.h"
 #endif
 
-#ifdef USE_INSPIRCD2_PROTOCOL
-#include "protocols/inspircd2.h"
-#endif
-
 #ifdef USE_PSUEDOCLIENTS
 #include "psuedoclients.h"
 #endif

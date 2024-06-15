@@ -55,10 +55,8 @@ int init_server_network(void) {
 		}
 	}
 
-#ifdef USE_INSPIRCD2_PROTOCOL
-	if (protocols[INSPIRCD2_PROTOCOL].init() != 0)
+	if (protocols_init() != 0)
 		return 1;
-#endif
 
 	return 0;
 }
@@ -101,6 +99,20 @@ int start_server_network_threads(size_t net) {
 			return 1;
 		type->net_type = net;
 		type->protocol = INSPIRCD2_PROTOCOL;
+		type->is_incoming = 1;
+		if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
+			free(type);
+			return 1;
+		}
+	}
+#endif
+#ifdef USE_INSPIRCD3_PROTOCOL
+	if (SERVER_INCOMING[net][INSPIRCD3_PROTOCOL]) {
+		type = malloc(sizeof(*type));
+		if (!type)
+			return 1;
+		type->net_type = net;
+		type->protocol = INSPIRCD3_PROTOCOL;
 		type->is_incoming = 1;
 		if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
 			free(type);
@@ -214,12 +226,7 @@ int add_server(struct string from, struct string attached_to, struct string sid,
 
 	protocols[protocol].update_propagations();
 
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_new_server(from, attached_to, new_info);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_new_server(from, attached_to, new_info);
-#endif
+	protocols_propagate_new_server(from, attached_to, new_info);
 
 	return 0;
 
@@ -266,15 +273,6 @@ void remove_server(struct string from, struct server_info *server, struct string
 	free_server(server);
 }
 
-void update_all_propagations(void) {
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].update_propagations();
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].update_propagations();
-#endif
-}
-
 void unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
 	if (!has_table_index(a->connected_to, b->sid))
 		return;
@@ -284,12 +282,7 @@ void unlink_server(struct string from, struct server_info *a, struct server_info
 
 	protocols[protocol].update_propagations();
 
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_unlink_server(from, a, b, protocol);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_unlink_server(from, a, b, protocol);
-#endif
+	protocols_propagate_unlink_server(from, a, b, protocol);
 
 	protocols[protocol].do_unlink(from, a, b);
 }

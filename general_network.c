@@ -50,6 +50,10 @@
 #include "openssl_network.h"
 #endif
 
+#ifdef USE_PROTOCOLS
+#include "protocols.h"
+#endif
+
 #ifdef USE_PSUEDOCLIENTS
 #include "psuedoclients.h"
 #endif
@@ -292,12 +296,7 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	new_info->channel_list.len = 0;
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_new_user(from, new_info);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_new_user(from, new_info);
-#endif
+	protocols_propagate_new_user(from, new_info);
 #endif
 
 	return 0;
@@ -342,12 +341,7 @@ int rename_user(struct string from, struct user_info *user, struct string nick, 
 	}
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_rename_user(from, user, nick, timestamp, timestamp_str);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_rename_user(from, user, nick, timestamp, timestamp_str);
-#endif
+	protocols_propagate_rename_user(from, user, nick, timestamp, timestamp_str);
 #endif
 
 	free(user->nick.data);
@@ -361,12 +355,7 @@ int rename_user(struct string from, struct user_info *user, struct string nick, 
 void remove_user(struct string from, struct user_info *user, struct string reason, char propagate) {
 #ifdef USE_SERVER
 	if (propagate) {
-#ifdef USE_HAXIRCD_PROTOCOL
-		protocols[HAXIRCD_PROTOCOL].propagate_remove_user(from, user, reason);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-		protocols[INSPIRCD2_PROTOCOL].propagate_remove_user(from, user, reason);
-#endif
+		protocols_propagate_remove_user(from, user, reason);
 	}
 #endif
 
@@ -411,12 +400,7 @@ int kill_user(struct string from, struct string source, struct user_info *user, 
 #endif
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_kill_user(from, source, user, reason);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_kill_user(from, source, user, reason);
-#endif
+	protocols_propagate_kill_user(from, source, user, reason);
 #endif
 
 	remove_user(from, user, reason, 0);
@@ -430,12 +414,7 @@ int oper_user(struct string from, struct user_info *user, struct string type) {
 		return 1;
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_oper_user(from, user, type);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_oper_user(from, user, type);
-#endif
+	protocols_propagate_oper_user(from, user, type);
 #endif
 
 	free(user->oper_type.data);
@@ -489,12 +468,7 @@ int set_channel(struct string from, struct string name, size_t timestamp, size_t
 	}
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_set_channel(from, channel, is_new_channel, user_count, users);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_set_channel(from, channel, is_new_channel, user_count, users);
-#endif
+	protocols_propagate_set_channel(from, channel, is_new_channel, user_count, users);
 #endif
 
 	return 0;
@@ -548,12 +522,7 @@ int join_channel(struct string from, struct channel_info *channel, size_t user_c
 #endif
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-		protocols[HAXIRCD_PROTOCOL].propagate_join_channel(from, channel, user_count, users);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-		protocols[INSPIRCD2_PROTOCOL].propagate_join_channel(from, channel, user_count, users);
-#endif
+		protocols_propagate_join_channel(from, channel, user_count, users);
 #endif
 	}
 
@@ -576,12 +545,7 @@ void part_channel(struct string from, struct channel_info *channel, struct user_
 
 	if (propagate) {
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-		protocols[HAXIRCD_PROTOCOL].propagate_part_channel(from, channel, user, reason);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-		protocols[INSPIRCD2_PROTOCOL].propagate_part_channel(from, channel, user, reason);
-#endif
+		protocols_propagate_part_channel(from, channel, user, reason);
 #endif
 	}
 
@@ -611,12 +575,7 @@ int kick_channel(struct string from, struct string source, struct channel_info *
 #endif
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_kick_channel(from, source, channel, user, reason);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_kick_channel(from, source, channel, user, reason);
-#endif
+	protocols_propagate_kick_channel(from, source, channel, user, reason);
 #endif
 
 	return 1;
@@ -654,12 +613,7 @@ int privmsg(struct string from, struct string sender, struct string target, stru
 	} while (0);
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_privmsg(from, sender, target, msg);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_privmsg(from, sender, target, msg);
-#endif
+	protocols_propagate_privmsg(from, sender, target, msg);
 #endif
 
 #ifdef USE_PSUEDOCLIENTS
@@ -714,12 +668,7 @@ int notice(struct string from, struct string sender, struct string target, struc
 	} while (0);
 
 #ifdef USE_SERVER
-#ifdef USE_HAXIRCD_PROTOCOL
-	protocols[HAXIRCD_PROTOCOL].propagate_notice(from, sender, target, msg);
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-	protocols[INSPIRCD2_PROTOCOL].propagate_notice(from, sender, target, msg);
-#endif
+	protocols_propagate_notice(from, sender, target, msg);
 #endif
 
 	return 0;

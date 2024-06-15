@@ -30,7 +30,8 @@
 
 #include "../config.h"
 #include "../haxstring.h"
-#include "../server_network.h"
+#include "../general_network.h"
+#include "../table.h"
 
 extern struct table inspircd2_protocol_init_commands;
 extern struct table inspircd2_protocol_commands;
@@ -91,15 +92,5 @@ int inspircd2_protocol_handle_notice(struct string source, size_t argc, struct s
 
 int inspircd2_protocol_handle_dump(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 
-#define MODE_TYPE_UNKNOWN 0
-#define MODE_TYPE_NOARGS 1
-#define MODE_TYPE_REPLACE 2
-#define MODE_TYPE_MULTIPLE 3
-
-// Channel modes only, goes away when the related user leaves
-#define MODE_TYPE_USERS 4
-
-// Used for e.g. snomasks
-#define MODE_TYPE_MODE 5
 extern char inspircd2_protocol_user_mode_types[UCHAR_MAX+1];
 extern char inspircd2_protocol_channel_mode_types[UCHAR_MAX+1];

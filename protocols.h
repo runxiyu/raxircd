@@ -30,6 +30,7 @@
 
 #include "haxstring.h"
 #include "general_network.h"
+#include "protocol_numbers.h"
 #include "server_network.h"
 
 struct protocol {
@@ -60,13 +61,25 @@ struct protocol {
 	void (*do_unlink)(struct string from, struct server_info *a, struct server_info *b);
 };
 
-#ifdef USE_HAXIRCD_PROTOCOL
-#define HAXIRCD_PROTOCOL 0
-#endif
-#ifdef USE_INSPIRCD2_PROTOCOL
-#define INSPIRCD2_PROTOCOL 1
-#endif
+int protocols_init(void);
 
-#define NUM_PROTOCOLS 2
+void protocols_update_propagations(void);
+
+void protocols_propagate_new_server(struct string from, struct string attached_to, struct server_info *info);
+void protocols_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
+
+void protocols_propagate_new_user(struct string from, struct user_info *info);
+void protocols_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void protocols_propagate_remove_user(struct string from, struct user_info *info, struct string reason);
+void protocols_propagate_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
+void protocols_propagate_oper_user(struct string from, struct user_info *info, struct string type);
+
+void protocols_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+void protocols_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
+void protocols_propagate_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
+void protocols_propagate_kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
+
+void protocols_propagate_privmsg(struct string from, struct string source, struct string target, struct string msg);
+void protocols_propagate_notice(struct string from, struct string source, struct string target, struct string msg);
 
 extern struct protocol protocols[NUM_PROTOCOLS];

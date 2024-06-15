@@ -33,6 +33,7 @@
 #include <sys/socket.h>
 
 #include "haxstring.h"
+#include "protocol_numbers.h"
 #include "table.h"
 
 struct network {
@@ -56,6 +57,8 @@ struct server_info {
 	struct table connected_to; // List of servers that this server is connected to
 
 	struct table user_list;
+
+	void *protocol_specific[NUM_PROTOCOLS];
 
 	void *handle;
 
@@ -92,6 +95,8 @@ struct user_info {
 
 	struct table channel_list;
 
+	void *protocol_specific[NUM_PROTOCOLS];
+
 	void *handle;
 
 	size_t protocol;
@@ -113,6 +118,8 @@ struct channel_info {
 	size_t channel_ts;
 
 	struct table user_list;
+
+	void *protocol_specific[NUM_PROTOCOLS];
 };
 
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr);
@@ -149,6 +156,18 @@ extern char casemap[UCHAR_MAX+1];
 #endif
 
 #define NUM_NET_TYPES 3
+
+#define MODE_TYPE_UNKNOWN 0
+#define MODE_TYPE_NOARGS 1
+#define MODE_TYPE_REPLACE 2
+#define MODE_TYPE_MULTIPLE 3
+
+// Channel modes only, goes away when the related user leaves
+#define MODE_TYPE_USERS 4
+
+// Used for e.g. snomasks
+#define MODE_TYPE_MODE 5
+
 extern struct network networks[NUM_NET_TYPES];
 
 extern struct table server_list;
