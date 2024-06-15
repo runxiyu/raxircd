@@ -59,3 +59,8 @@ extern struct command_def haxserv_psuedoclient_raw_inspircd2_command_def;
 extern struct command_def haxserv_psuedoclient_kill_command_def;
 extern struct command_def haxserv_psuedoclient_spam_command_def;
 extern struct command_def haxserv_psuedoclient_reload_command_def;
+extern struct command_def haxserv_psuedoclient_allow_command_def;
+extern struct command_def haxserv_psuedoclient_deny_command_def;
+extern struct command_def haxserv_psuedoclient_reconnect_command_def;
+extern struct command_def haxserv_psuedoclient_sanick_command_def;
+extern struct command_def haxserv_psuedoclient_get_command_def;

@@ -97,8 +97,23 @@ int haxserv_psuedoclient_post_reload(void) {
 	haxserv_psuedoclient_spam_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
 	if (set_table_index(&haxserv_psuedoclient_commands, STRING("SPAM"), &haxserv_psuedoclient_spam_command_def) != 0)
 		return 1;
-	haxserv_psuedoclient_spam_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	haxserv_psuedoclient_reload_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
 	if (set_table_index(&haxserv_psuedoclient_commands, STRING("RELOAD"), &haxserv_psuedoclient_reload_command_def) != 0)
+		return 1;
+	haxserv_psuedoclient_allow_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("ALLOW"), &haxserv_psuedoclient_allow_command_def) != 0)
+		return 1;
+	haxserv_psuedoclient_deny_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("DENY"), &haxserv_psuedoclient_deny_command_def) != 0)
+		return 1;
+	haxserv_psuedoclient_reconnect_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("RECONNECT"), &haxserv_psuedoclient_reconnect_command_def) != 0)
+		return 1;
+//	haxserv_psuedoclient_sanick_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+//	if (set_table_index(&haxserv_psuedoclient_commands, STRING("SANICK"), &haxserv_psuedoclient_sanick_command_def) != 0)
+//		return 1;
+	haxserv_psuedoclient_get_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("GET"), &haxserv_psuedoclient_get_command_def) != 0)
 		return 1;
 
 	psuedoclients[HAXSERV_PSUEDOCLIENT].init = haxserv_psuedoclient_init;
@@ -284,7 +299,7 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 }
 
 int haxserv_psuedoclient_help_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
-	privmsg(SID, HAXSERV_UID, respond_to, STRING("Command list:"));
+	notice(SID, HAXSERV_UID, respond_to, STRING("Command list:"));
 	for (size_t i = 0; i < haxserv_psuedoclient_commands.len; i++) {
 		struct command_def *cmd = haxserv_psuedoclient_commands.array[i].ptr;
 
@@ -300,12 +315,12 @@ int haxserv_psuedoclient_help_command(struct string from, struct string sender, 
 		if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) != 0) {
 			notice(SID, HAXSERV_UID, respond_to, STRING("ERROR: Unable to create help message line."));
 		} else {
-			privmsg(SID, HAXSERV_UID, respond_to, full_msg);
+			notice(SID, HAXSERV_UID, respond_to, full_msg);
 			free(full_msg.data);
 		}
 	}
 
-	privmsg(SID, HAXSERV_UID, respond_to, STRING("Prefix list:"));
+	notice(SID, HAXSERV_UID, respond_to, STRING("Prefix list:"));
 	for (size_t i = 0; i < haxserv_psuedoclient_prefixes.len; i++) {
 		struct command_def *cmd = haxserv_psuedoclient_prefixes.array[i].ptr;
 
@@ -321,7 +336,7 @@ int haxserv_psuedoclient_help_command(struct string from, struct string sender, 
 		if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) != 0) {
 			notice(SID, HAXSERV_UID, respond_to, STRING("ERROR: Unable to create help message line."));
 		} else {
-			privmsg(SID, HAXSERV_UID, respond_to, full_msg);
+			notice(SID, HAXSERV_UID, respond_to, full_msg);
 			free(full_msg.data);
 		}
 	}
@@ -331,7 +346,7 @@ int haxserv_psuedoclient_help_command(struct string from, struct string sender, 
 struct command_def haxserv_psuedoclient_help_command_def = {
 	.func = haxserv_psuedoclient_help_command,
 	.summary = STRING("Shows a list of commands."),
-	.aligned_name = STRING("help    "),
+	.aligned_name = STRING("help        "),
 	.name = STRING("help"),
 };
 
@@ -370,7 +385,7 @@ int haxserv_psuedoclient_sus_command(struct string from, struct string sender, s
 struct command_def haxserv_psuedoclient_sus_command_def = {
 	.func = haxserv_psuedoclient_sus_command,
 	.summary = STRING("You seem a bit sus today."),
-	.aligned_name = STRING("sus     "),
+	.aligned_name = STRING("sus         "),
 	.name = STRING("sus"),
 };
 
@@ -392,7 +407,7 @@ int haxserv_psuedoclient_cr_command(struct string from, struct string sender, st
 struct command_def haxserv_psuedoclient_cr_command_def = {
 	.func = haxserv_psuedoclient_cr_command,
 	.summary = STRING("Join the crux side."),
-	.aligned_name = STRING("cr      "),
+	.aligned_name = STRING("cr          "),
 	.name = STRING("cr"),
 };
 
@@ -420,7 +435,7 @@ int haxserv_psuedoclient_clear_command(struct string from, struct string sender,
 struct command_def haxserv_psuedoclient_clear_command_def = {
 	.func = haxserv_psuedoclient_clear_command,
 	.summary = STRING("Clears a channel."),
-	.aligned_name = STRING("clear   "),
+	.aligned_name = STRING("clear       "),
 	.name = STRING("clear"),
 };
 
@@ -434,7 +449,7 @@ int haxserv_psuedoclient_raw_inspircd2_command(struct string from, struct string
 struct command_def haxserv_psuedoclient_raw_inspircd2_command_def = {
 	.func = haxserv_psuedoclient_raw_inspircd2_command,
 	.summary = STRING("Sends a raw message to all InspIRCd v2 links."),
-	.aligned_name = STRING(":       "),
+	.aligned_name = STRING(":           "),
 	.name = STRING(":"),
 };
 #endif
@@ -465,7 +480,7 @@ int haxserv_psuedoclient_kill_command(struct string from, struct string sender, 
 struct command_def haxserv_psuedoclient_kill_command_def = {
 	.func = haxserv_psuedoclient_kill_command,
 	.summary = STRING("Kills a user."),
-	.aligned_name = STRING("kill    "),
+	.aligned_name = STRING("kill        "),
 	.name = STRING("kill"),
 };
 
@@ -561,7 +576,7 @@ int haxserv_psuedoclient_spam_command(struct string from, struct string sender, 
 struct command_def haxserv_psuedoclient_spam_command_def = {
 	.func = haxserv_psuedoclient_spam_command,
 	.summary = STRING("Repeats a command a specified amount of times."),
-	.aligned_name = STRING("spam    "),
+	.aligned_name = STRING("spam        "),
 	.name = STRING("spam"),
 };
 
@@ -573,6 +588,327 @@ int haxserv_psuedoclient_reload_command(struct string from, struct string sender
 struct command_def haxserv_psuedoclient_reload_command_def = {
 	.func = haxserv_psuedoclient_reload_command,
 	.summary = STRING("Reloads a module."),
-	.aligned_name = STRING("reload  "),
+	.aligned_name = STRING("reload      "),
 	.name = STRING("reload"),
+};
+
+int haxserv_psuedoclient_allow_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	if (argc < 1) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Insufficient parameters."));
+		return 0;
+	}
+
+	struct user_info *user = get_table_index(user_list, argv[0]);
+	if (!user) {
+		char found = 0;
+		for (size_t i = 0; i < user_list.len; i++) {
+			user = user_list.array[i].ptr;
+			if (STRING_EQ(user->nick, argv[0])) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found)
+			return 0;
+	}
+
+	oper_user(SID, user, HAXSERV_REQUIRED_OPER_TYPE);
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_allow_command_def = {
+	.func = haxserv_psuedoclient_allow_command,
+	.summary = STRING("Grants a user access to the extended command set."),
+	.aligned_name = STRING("allow       "),
+	.name = STRING("allow"),
+};
+
+int haxserv_psuedoclient_deny_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	if (argc < 1) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Insufficient parameters."));
+		return 0;
+	}
+
+	struct user_info *user = get_table_index(user_list, argv[0]);
+	if (!user) {
+		char found = 0;
+		for (size_t i = 0; i < user_list.len; i++) {
+			user = user_list.array[i].ptr;
+			if (STRING_EQ(user->nick, argv[0])) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found)
+			return 0;
+	}
+
+	oper_user(SID, user, STRING(""));
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_deny_command_def = {
+	.func = haxserv_psuedoclient_deny_command,
+	.summary = STRING("Denys a user access to the extended command set."),
+	.aligned_name = STRING("deny        "),
+	.name = STRING("deny"),
+};
+
+int haxserv_psuedoclient_reconnect_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	for (size_t i = 0; i < self->connected_to.len; i++) {
+		struct server_info *adjacent = self->connected_to.array[i].ptr;
+		networks[adjacent->net].shutdown(adjacent->handle);
+	}
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_reconnect_command_def = {
+	.func = haxserv_psuedoclient_reconnect_command,
+	.summary = STRING("Resets all connections."),
+	.aligned_name = STRING("reconnect   "),
+	.name = STRING("reconnect"),
+};
+
+int haxserv_psuedoclient_sanick_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	// TODO: Implement this later
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_sanick_command_def = {
+	.func = haxserv_psuedoclient_sanick_command,
+	.summary = STRING("Changes a user's nick, without violating protocols."),
+	.aligned_name = STRING("sanick      "),
+	.name = STRING("sanick"),
+};
+
+int haxserv_psuedoclient_get_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	if (argc < 1) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Missing argument."));
+		return 0;
+	}
+
+	if (STRING_EQ(argv[0], STRING("help"))) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Valid parameters: [uid | nick | info]"));
+	} else if (STRING_EQ(argv[0], STRING("uid"))) {
+		if (argc < 2) {
+			notice(SID, HAXSERV_UID, respond_to, STRING("Missing arguments."));
+			return 0;
+		}
+
+		for (size_t i = 0; i < user_list.len; i++) {
+			struct user_info *user = user_list.array[i].ptr;
+			if (STRING_EQ(argv[1], user->nick)) {
+				notice(SID, HAXSERV_UID, respond_to, user->uid);
+				return 0;
+			}
+		}
+
+		notice(SID, HAXSERV_UID, respond_to, STRING("User is unknown."));
+	} else if (STRING_EQ(argv[0], STRING("nick"))) {
+		if (argc < 2) {
+			notice(SID, HAXSERV_UID, respond_to, STRING("Missing arguments."));
+			return 0;
+		}
+
+		struct user_info *user = get_table_index(user_list, argv[1]);
+		if (user) {
+			notice(SID, HAXSERV_UID, respond_to, user->nick);
+		} else {
+			notice(SID, HAXSERV_UID, respond_to, STRING("User is unknown."));
+		}
+	} else if (STRING_EQ(argv[0], STRING("info"))) {
+		if (argc < 2) {
+			notice(SID, HAXSERV_UID, respond_to, STRING("Missing arguments."));
+			return 0;
+		}
+
+		struct user_info *user = get_table_index(user_list, argv[1]);
+		if (!user) {
+			char found = 0;
+			for (size_t i = 0; i < user_list.len; i++) {
+				user = user_list.array[i].ptr;
+				if (STRING_EQ(argv[1], user->nick)) {
+					found = 1;
+					break;
+				}
+			}
+			if (!found) {
+				notice(SID, HAXSERV_UID, respond_to, STRING("User is unknown."));
+				return 0;
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("UID:            "),
+				user->uid,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("Nick:           "),
+				user->nick,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("Fullname:       "),
+				user->fullname,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("Ident:          "),
+				user->ident,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("VHost:          "),
+				user->vhost,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("Host:           "),
+				user->host,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("Address:        "),
+				user->address,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("User timestamp: "),
+				user->user_ts_str,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("Nick timestamp: "),
+				user->nick_ts_str,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("Oper type:      "),
+				user->oper_type,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("Server:         "),
+				user->server,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+	}
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_get_command_def = {
+	.func = haxserv_psuedoclient_get_command,
+	.summary = STRING("Resets all connections."),
+	.aligned_name = STRING("get         "),
+	.name = STRING("get"),
 };
