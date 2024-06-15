@@ -52,6 +52,7 @@ int plaintext_send(void *fd, struct string msg) {
 		} while (res == -1 && (errno == EINTR));
 
 		if (res < 0 || (size_t)res > msg.len) { // res > len shouldn't be possible, but is still an error
+			plaintext_shutdown(fd);
 			return 1;
 		} else if (res > 0) {
 			msg.len -= (size_t)res;

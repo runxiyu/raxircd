@@ -38,7 +38,12 @@
 
 #include "haxserv.h"
 
+#ifdef USE_INSPIRCD2_PROTOCOL
+#include "../protocols/inspircd2.h"
+#endif
+
 struct table haxserv_psuedoclient_commands = {0};
+struct table haxserv_psuedoclient_prefixes = {0};
 
 // TODO: Potentially leaky on failure
 int haxserv_psuedoclient_init(void) {
@@ -73,6 +78,11 @@ int haxserv_psuedoclient_init(void) {
 	haxserv_psuedoclient_clear_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
 	if (set_table_index(&haxserv_psuedoclient_commands, STRING("CLEAR"), &haxserv_psuedoclient_clear_command_def) != 0)
 		return 1;
+#ifdef USE_INSPIRCD2_PROTOCOL
+	haxserv_psuedoclient_raw_inspircd2_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_prefixes, STRING(":"), &haxserv_psuedoclient_raw_inspircd2_command_def) != 0)
+		return 1;
+#endif
 
 	return 0;
 }
@@ -140,24 +150,45 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 
 	msg.data += prefix.len;
 	msg.len -= prefix.len;
-	struct string command_str = {.len = argv[0].len};
+
 	struct command_def *cmd;
-	command_str.data = malloc(command_str.len);
-	if (command_str.data) {
-		for (size_t i = 0; i < command_str.len; i++)
-			command_str.data[i] = CASEMAP(argv[0].data[i]);
 
-		cmd = get_table_index(haxserv_psuedoclient_commands, command_str);
+	struct string case_str = {.len = argv[0].len};
+	case_str.data = malloc(case_str.len);
+	if (case_str.data) {
+		for (size_t i = 0; i < case_str.len; i++)
+			case_str.data[i] = CASEMAP(argv[0].data[i]);
 
-		free(command_str.data);
+		cmd = get_table_index(haxserv_psuedoclient_commands, case_str);
+
+		free(case_str.data);
 	} else {
-		cmd = get_table_index(haxserv_psuedoclient_commands, command_str);
+		cmd = get_table_index(haxserv_psuedoclient_commands, argv[0]);
+	}
+
+	if (!cmd) {
+		case_str.len = msg.len;
+		case_str.data = malloc(case_str.len);
+		if (case_str.data) {
+			for (size_t i = 0; i < case_str.len; i++)
+				case_str.data[i] = CASEMAP(msg.data[i]);
+
+			cmd = get_table_prefix(haxserv_psuedoclient_prefixes, case_str);
+
+			free(case_str.data);
+		} else {
+			cmd = get_table_prefix(haxserv_psuedoclient_prefixes, msg);
+		}
 	}
 
 	if (cmd) {
 		if (cmd->privs.len != 0 && !(!has_table_index(user_list, source) && has_table_index(server_list, source))) {
-			notice(SID, HAXSERV_UID, respond_to, STRING("You are not authorized to execute this command."));
-			return;
+			struct user_info *user = get_table_index(user_list, source);
+			// TODO: Multiple privilege levels
+			if (!STRING_EQ(user->oper_type, cmd->privs)) {
+				notice(SID, HAXSERV_UID, respond_to, STRING("You are not authorized to execute this command."));
+				return;
+			}
 		}
 
 		cmd->func(from, source, msg, respond_to, argc - 1, &(argv[1]));
@@ -291,3 +322,19 @@ struct command_def haxserv_psuedoclient_clear_command_def = {
 	.summary = STRING("Clears a channel."),
 	.name = STRING("clear"),
 };
+
+#ifdef USE_INSPIRCD2_PROTOCOL
+int haxserv_psuedoclient_raw_inspircd2_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	struct server_info *self = get_table_index(server_list, SID);
+
+	inspircd2_protocol_propagate(SID, self, original_message);
+	inspircd2_protocol_propagate(SID, self, STRING("\n"));
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_raw_inspircd2_command_def = {
+	.func = haxserv_psuedoclient_raw_inspircd2_command,
+	.summary = STRING("Sends a raw message to all InspIRCd v2 links."),
+	.name = STRING(":"),
+};
+#endif

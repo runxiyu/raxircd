@@ -86,6 +86,8 @@ struct user_info {
 	size_t user_ts;
 	size_t nick_ts;
 
+	struct string oper_type;
+
 	struct string server;
 
 	struct table channel_list;
@@ -121,6 +123,7 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp);
 void remove_user(struct string from, struct user_info *user, struct string reason, char propagate);
 int kill_user(struct string from, struct string source, struct user_info *user, struct string reason);
+int oper_user(struct string from, struct user_info *user, struct string type);
 
 int set_channel(struct string from, struct string name, size_t timestamp, size_t user_count, struct user_info **users);
 int join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);

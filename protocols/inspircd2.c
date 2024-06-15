@@ -138,6 +138,7 @@ int init_inspircd2_protocol(void) {
 	set_table_index(&inspircd2_protocol_commands, STRING("NICK"), &inspircd2_protocol_handle_nick);
 	set_table_index(&inspircd2_protocol_commands, STRING("QUIT"), &inspircd2_protocol_handle_quit);
 	set_table_index(&inspircd2_protocol_commands, STRING("KILL"), &inspircd2_protocol_handle_kill);
+	set_table_index(&inspircd2_protocol_commands, STRING("OPERTYPE"), &inspircd2_protocol_handle_opertype);
 
 	set_table_index(&inspircd2_protocol_commands, STRING("FJOIN"), &inspircd2_protocol_handle_fjoin);
 	set_table_index(&inspircd2_protocol_commands, STRING("PART"), &inspircd2_protocol_handle_part);
@@ -489,6 +490,7 @@ void inspircd2_protocol_propagate(struct string from, struct server_info *self, 
 	}
 }
 
+// [:source] SERVER <name> <password> <always 0> <sid> <fullname>
 void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct server_info *info) {
 	struct server_info *self = get_table_index(server_list, SID);
 
@@ -527,6 +529,7 @@ void inspircd2_protocol_propagate_new_server(struct string from, struct string a
 	inspircd2_protocol_propagate(from, self, STRING(" ENDBURST\n"));
 }
 
+// [:source] SQUIT <sid> [<reason>?]
 void inspircd2_protocol_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
 	struct server_info *source;
 	struct server_info *target;
@@ -613,6 +616,17 @@ void inspircd2_protocol_propagate_kill_user(struct string from, struct string so
 	inspircd2_protocol_propagate(from, self, info->uid);
 	inspircd2_protocol_propagate(from, self, STRING(" :"));
 	inspircd2_protocol_propagate(from, self, reason);
+	inspircd2_protocol_propagate(from, self, STRING("\n"));
+}
+
+// :source OPERTYPE <type>
+void inspircd2_protocol_propagate_oper_user(struct string from, struct user_info *user, struct string type) {
+	struct server_info *self = get_table_index(server_list, SID);
+
+	inspircd2_protocol_propagate(from, self, STRING(":"));
+	inspircd2_protocol_propagate(from, self, user->uid);
+	inspircd2_protocol_propagate(from, self, STRING(" OPERTYPE :"));
+	inspircd2_protocol_propagate(from, self, type);
 	inspircd2_protocol_propagate(from, self, STRING("\n"));
 }
 
@@ -1014,6 +1028,10 @@ int inspircd2_protocol_handle_ping(struct string source, size_t argc, struct str
 		}
 	}
 
+	struct server_info *reply = get_table_index(server_list, argv[0]);
+	if (!reply || !STRING_EQ(reply->next, config->sid))
+		return 0;
+
 	networks[net].send(handle, STRING(":"));
 	networks[net].send(handle, argv[1]);
 	networks[net].send(handle, STRING(" PONG "));
@@ -1295,6 +1313,25 @@ int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct str
 
 	if (ignore)
 		inspircd2_protocol_introduce_user_to(net, handle, user, 1);
+
+	return 0;
+}
+
+// :source OPERTYPE <type>
+int inspircd2_protocol_handle_opertype(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 1) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid OPERTYPE recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	struct user_info *user = get_table_index(user_list, source);
+	if (!user)
+		return 0;
+
+	if (oper_user(config->sid, user, argv[0]) != 0) {
+		WRITES(2, STRING("[InspIRCd v2] ERROR: Unable to set oper type!\r\n"));
+		return -1;
+	}
 
 	return 0;
 }

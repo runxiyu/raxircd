@@ -273,8 +273,11 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	if (str_clone(&(new_info->address), address) != 0)
 		goto add_user_free_host;
 
-	if (set_table_index(&user_list, uid, new_info) != 0)
+	if (str_clone(&(new_info->oper_type), STRING("")) != 0)
 		goto add_user_free_address;
+
+	if (set_table_index(&user_list, uid, new_info) != 0)
+		goto add_user_free_oper_type;
 
 	if (set_table_index(&(attached->user_list), uid, new_info) != 0)
 		goto add_user_remove_user_list;
@@ -295,6 +298,8 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 
 	add_user_remove_user_list:
 	remove_table_index(&user_list, uid);
+	add_user_free_oper_type:
+	free(new_info->oper_type.data);
 	add_user_free_address:
 	free(new_info->address.data);
 	add_user_free_host:
@@ -379,6 +384,7 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 	free(user->vhost.data);
 	free(user->host.data);
 	free(user->address.data);
+	free(user->oper_type.data);
 	free(user);
 }
 
@@ -408,6 +414,26 @@ int kill_user(struct string from, struct string source, struct user_info *user, 
 #endif
 
 	remove_user(from, user, reason, 0);
+
+	return 0;
+}
+
+int oper_user(struct string from, struct user_info *user, struct string type) {
+	struct string tmp;
+	if (str_clone(&tmp, type) != 0)
+		return 1;
+
+#ifdef USE_SERVER
+#ifdef USE_HAXIRCD_PROTOCOL
+	protocols[HAXIRCD_PROTOCOL].propagate_oper_user(from, user, type);
+#endif
+#ifdef USE_INSPIRCD2_PROTOCOL
+	protocols[INSPIRCD2_PROTOCOL].propagate_oper_user(from, user, type);
+#endif
+#endif
+
+	free(user->oper_type.data);
+	user->oper_type = tmp;
 
 	return 0;
 }

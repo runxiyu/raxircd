@@ -46,3 +46,6 @@ extern char has_table_index(struct table tbl, struct string name);
 extern void * remove_table_index(struct table *tbl, struct string name); // returns same as get_table_index
 extern void clear_table(struct table *tbl);
 extern size_t get_table_offset(struct table tbl, struct string name, char *exists);
+
+// Longest index that <name> starts with
+extern void * get_table_prefix(struct table tbl, struct string name);
