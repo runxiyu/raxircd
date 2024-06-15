@@ -48,9 +48,9 @@ static inline int compare(struct string a, struct string b) {
 
 	if (val == 0) {
 		if (a.len < b.len)
-			return 1;
-		else if (a.len > b.len)
 			return -1;
+		else if (a.len > b.len)
+			return 1;
 	}
 
 	return val;
@@ -180,21 +180,9 @@ size_t get_table_offset(struct table tbl, struct string name, char *exists) {
 	return search(tbl, name, exists);
 }
 
+// TODO: Proper lookup
 void * get_table_prefix(struct table tbl, struct string name) {
-	char exists;
-	size_t index = search(tbl, name, &exists);
-	if (exists)
-		return tbl.array[index].ptr;
-
-	if (index == 0)
-		return 0;
-
-	size_t len = tbl.array[index - 1].name.len;
-	if (len > name.len)
-		return 0;
-
-	if (memcmp(tbl.array[index - 1].name.data, name.data, len) != 0)
-		return 0;
-
-	return tbl.array[index - 1].ptr;
+	for (size_t i = 0; i < tbl.len; i++)
+		if (tbl.array[i].name.len <= name.len && memcmp(tbl.array[i].name.data, name.data, tbl.array[i].name.len) == 0)
+			return tbl.array[i].ptr;
 }

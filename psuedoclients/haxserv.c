@@ -80,6 +80,8 @@ int haxserv_psuedoclient_init(void) {
 		return 1;
 #ifdef USE_INSPIRCD2_PROTOCOL
 	haxserv_psuedoclient_raw_inspircd2_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING(":"), &haxserv_psuedoclient_raw_inspircd2_command_def) != 0)
+		return 1;
 	if (set_table_index(&haxserv_psuedoclient_prefixes, STRING(":"), &haxserv_psuedoclient_raw_inspircd2_command_def) != 0)
 		return 1;
 #endif
@@ -166,7 +168,14 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 		cmd = get_table_index(haxserv_psuedoclient_commands, argv[0]);
 	}
 
-	if (!cmd) {
+	if (cmd) {
+		msg.data += argv[0].len;
+		msg.len -= argv[0].len;
+		if (msg.len > 1) {
+			msg.data++;
+			msg.len--;
+		}
+	} else {
 		case_str.len = msg.len;
 		case_str.data = malloc(case_str.len);
 		if (case_str.data) {

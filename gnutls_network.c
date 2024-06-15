@@ -61,7 +61,7 @@ int init_gnutls_network(void) {
 	if (GNUTLS_USE_SYSTEM_TRUST && (gnutls_certificate_set_x509_system_trust(gnutls_cert_creds) < 0))
 		return 3;
 
-	if (gnutls_certificate_set_x509_key_file(gnutls_cert_creds, GNUTLS_CERT_PATH, GNUTLS_KEY_PATH, GNUTLS_X509_FMT_PEM) < 0)
+	if (GNUTLS_KEY_PATH && GNUTLS_CERT_PATH && gnutls_certificate_set_x509_key_file(gnutls_cert_creds, GNUTLS_CERT_PATH, GNUTLS_KEY_PATH, GNUTLS_X509_FMT_PEM) < 0)
 		return 4;
 
 	return 0;
