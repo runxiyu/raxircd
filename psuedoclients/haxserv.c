@@ -85,6 +85,9 @@ int haxserv_psuedoclient_init(void) {
 	if (set_table_index(&haxserv_psuedoclient_prefixes, STRING(":"), &haxserv_psuedoclient_raw_inspircd2_command_def) != 0)
 		return 1;
 #endif
+	haxserv_psuedoclient_kill_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("KILL"), &haxserv_psuedoclient_kill_command_def) != 0)
+		return 1;
 
 	return 0;
 }
@@ -209,7 +212,6 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 				STRING("'"),
 			};
 
-			struct string name;
 			struct user_info *user = get_table_index(user_list, source);
 			if (user) {
 				log_msg_parts[1] = user->nick;
@@ -249,14 +251,15 @@ int haxserv_psuedoclient_help_command(struct string from, struct string sender, 
 		struct command_def *cmd = haxserv_psuedoclient_commands.array[i].ptr;
 
 		struct string msg_parts[] = {
+			STRING("        "),
 			HAXSERV_COMMAND_PREFIX,
-			cmd->name,
-			STRING("\x0F" " "),
+			cmd->aligned_name,
+			STRING("\x0F"),
 			cmd->summary,
 		};
 
 		struct string full_msg;
-		if (str_combine(&full_msg, 4, msg_parts) != 0) {
+		if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) != 0) {
 			notice(SID, HAXSERV_UID, respond_to, STRING("ERROR: Unable to create help message line."));
 		} else {
 			privmsg(SID, HAXSERV_UID, respond_to, full_msg);
@@ -269,14 +272,15 @@ int haxserv_psuedoclient_help_command(struct string from, struct string sender, 
 		struct command_def *cmd = haxserv_psuedoclient_prefixes.array[i].ptr;
 
 		struct string msg_parts[] = {
+			STRING("        "),
 			HAXSERV_COMMAND_PREFIX,
-			cmd->name,
-			STRING("\x0F" " "),
+			cmd->aligned_name,
+			STRING("\x0F"),
 			cmd->summary,
 		};
 
 		struct string full_msg;
-		if (str_combine(&full_msg, 4, msg_parts) != 0) {
+		if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) != 0) {
 			notice(SID, HAXSERV_UID, respond_to, STRING("ERROR: Unable to create help message line."));
 		} else {
 			privmsg(SID, HAXSERV_UID, respond_to, full_msg);
@@ -289,6 +293,7 @@ int haxserv_psuedoclient_help_command(struct string from, struct string sender, 
 struct command_def haxserv_psuedoclient_help_command_def = {
 	.func = haxserv_psuedoclient_help_command,
 	.summary = STRING("Shows a list of commands."),
+	.aligned_name = STRING("help    "),
 	.name = STRING("help"),
 };
 
@@ -327,6 +332,7 @@ int haxserv_psuedoclient_sus_command(struct string from, struct string sender, s
 struct command_def haxserv_psuedoclient_sus_command_def = {
 	.func = haxserv_psuedoclient_sus_command,
 	.summary = STRING("You seem a bit sus today."),
+	.aligned_name = STRING("sus     "),
 	.name = STRING("sus"),
 };
 
@@ -348,6 +354,7 @@ int haxserv_psuedoclient_cr_command(struct string from, struct string sender, st
 struct command_def haxserv_psuedoclient_cr_command_def = {
 	.func = haxserv_psuedoclient_cr_command,
 	.summary = STRING("Join the crux side."),
+	.aligned_name = STRING("cr      "),
 	.name = STRING("cr"),
 };
 
@@ -375,6 +382,7 @@ int haxserv_psuedoclient_clear_command(struct string from, struct string sender,
 struct command_def haxserv_psuedoclient_clear_command_def = {
 	.func = haxserv_psuedoclient_clear_command,
 	.summary = STRING("Clears a channel."),
+	.aligned_name = STRING("clear   "),
 	.name = STRING("clear"),
 };
 
@@ -390,6 +398,37 @@ int haxserv_psuedoclient_raw_inspircd2_command(struct string from, struct string
 struct command_def haxserv_psuedoclient_raw_inspircd2_command_def = {
 	.func = haxserv_psuedoclient_raw_inspircd2_command,
 	.summary = STRING("Sends a raw message to all InspIRCd v2 links."),
+	.aligned_name = STRING(":       "),
 	.name = STRING(":"),
 };
 #endif
+
+// TODO: Kill reason as an argument
+int haxserv_psuedoclient_kill_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	if (argc < 1) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Insufficient parameters."));
+		return 0;
+	}
+
+	struct user_info *user = get_table_index(user_list, argv[0]);
+	if (user) {
+		kill_user(SID, HAXSERV_UID, user, STRING("Impostor removed."));
+		return 0;
+	}
+
+	for (size_t i = 0; i < user_list.len; i++) {
+		struct user_info *user = user_list.array[i].ptr;
+		if (STRING_EQ(user->nick, argv[0])) {
+			kill_user(SID, HAXSERV_UID, user_list.array[i].ptr, STRING("Impostor removed."));
+			return 0;
+		}
+	}
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_kill_command_def = {
+	.func = haxserv_psuedoclient_kill_command,
+	.summary = STRING("Kills a user."),
+	.aligned_name = STRING("kill    "),
+	.name = STRING("kill"),
+};

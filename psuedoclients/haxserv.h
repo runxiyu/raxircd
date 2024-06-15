@@ -33,6 +33,7 @@ struct command_def {
 	int (*func)(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv);
 	struct string privs;
 	struct string summary;
+	struct string aligned_name;
 	struct string name;
 };
 
@@ -52,3 +53,4 @@ extern struct command_def haxserv_psuedoclient_clear_command_def;
 #ifdef USE_INSPIRCD2_PROTOCOL
 extern struct command_def haxserv_psuedoclient_raw_inspircd2_command_def;
 #endif
+extern struct command_def haxserv_psuedoclient_kill_command_def;
