@@ -158,8 +158,10 @@ void * server_accept_thread(void *type) {
 		struct string address;
 		void *con_handle;
 		int con_fd = networks[net].accept(listen_fd, &con_handle, &address);
-		if (con_fd == -1)
+		if (con_fd == -1) {
+			sleep(60);
 			continue; // TODO: Handle error
+		}
 
 		pthread_t trash;
 		struct server_connection_info *info;

@@ -122,8 +122,29 @@ struct table server_list = {0};
 struct table user_list = {0};
 struct table channel_list = {0};
 
-// TODO: Proper string handling
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr) {
+	// NULL isn't really valid in this anyways so... just checking it and replacing with null-terminated for now
+	for (size_t i = 0; i < address.len; i++)
+		if (address.data[i] == 0)
+			return 1;
+	for (size_t i = 0; i < port.len; i++)
+		if (port.data[i] == 0)
+			return 1;
+
+	char *addr_null = malloc(address.len+1);
+	if (!addr_null)
+		return 1;
+	memcpy(addr_null, address.data, address.len);
+	addr_null[address.len] = 0;
+
+	char *port_null = malloc(port.len+1);
+	if (!port_null) {
+		free(addr_null);
+		return 1;
+	}
+	memcpy(port_null, port.data, port.len);
+	port_null[port.len] = 0;
+
 	int success;
 	struct addrinfo hints = {
 		.ai_family = AF_INET,
@@ -133,13 +154,15 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 	};
 	struct addrinfo *info;
 
-	success = getaddrinfo(address.data, port.data, &hints, &info);
+	success = getaddrinfo(addr_null, port_null, &hints, &info);
 
 	if (success == 0) {
 		*sockaddr = *(info->ai_addr);
 		freeaddrinfo(info);
 	}
 
+	free(port_null);
+	free(addr_null);
 	return success;
 }
 
@@ -614,7 +637,7 @@ int privmsg(struct string from, struct string sender, struct string target, stru
 			send = 0;
 			for (size_t i = 0; i < channel->user_list.len; i++) {
 				struct user_info *user = channel->user_list.array[i].ptr;
-				if (user->is_psuedoclient && user->psuedoclient == HAXSERV_PSUEDOCLIENT) {
+				if (user->is_psuedoclient && user->psuedoclient == HAXSERV_PSUEDOCLIENT && !STRING_EQ(sender, user->uid)) {
 					send = 1;
 					break;
 				}

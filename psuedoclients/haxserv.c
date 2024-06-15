@@ -86,9 +86,6 @@ int haxserv_psuedoclient_allow_kick(struct string from, struct string source, st
 }
 
 void haxserv_psuedoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg) {
-	if (STRING_EQ(source, HAXSERV_UID))
-		return;
-
 	struct string respond_to;
 	struct string prefix;
 
