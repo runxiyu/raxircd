@@ -200,6 +200,31 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 			}
 		}
 
+		{
+			struct string log_msg_parts[] = {
+				STRING("User `"),
+				STRING(""),
+				STRING("' executes `"),
+				cmd->name,
+				STRING("'"),
+			};
+
+			struct string name;
+			struct user_info *user = get_table_index(user_list, source);
+			if (user) {
+				log_msg_parts[1] = user->nick;
+			} else {
+				log_msg_parts[0] = STRING("Unknown user executes `");
+				log_msg_parts[2] = STRING("");
+			}
+
+			struct string log_msg;
+			if (str_combine(&log_msg, sizeof(log_msg_parts)/sizeof(*log_msg_parts), log_msg_parts) != 0)
+				return;
+			privmsg(SID, HAXSERV_UID, HAXSERV_LOG_CHANNEL, log_msg);
+			free(log_msg.data);
+		}
+
 		cmd->func(from, source, msg, respond_to, argc - 1, &(argv[1]));
 	} else {
 		struct string msg_parts[] = {
@@ -219,8 +244,29 @@ void haxserv_psuedoclient_handle_privmsg(struct string from, struct string sourc
 }
 
 int haxserv_psuedoclient_help_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	privmsg(SID, HAXSERV_UID, respond_to, STRING("Command list:"));
 	for (size_t i = 0; i < haxserv_psuedoclient_commands.len; i++) {
 		struct command_def *cmd = haxserv_psuedoclient_commands.array[i].ptr;
+
+		struct string msg_parts[] = {
+			HAXSERV_COMMAND_PREFIX,
+			cmd->name,
+			STRING("\x0F" " "),
+			cmd->summary,
+		};
+
+		struct string full_msg;
+		if (str_combine(&full_msg, 4, msg_parts) != 0) {
+			notice(SID, HAXSERV_UID, respond_to, STRING("ERROR: Unable to create help message line."));
+		} else {
+			privmsg(SID, HAXSERV_UID, respond_to, full_msg);
+			free(full_msg.data);
+		}
+	}
+
+	privmsg(SID, HAXSERV_UID, respond_to, STRING("Prefix list:"));
+	for (size_t i = 0; i < haxserv_psuedoclient_prefixes.len; i++) {
+		struct command_def *cmd = haxserv_psuedoclient_prefixes.array[i].ptr;
 
 		struct string msg_parts[] = {
 			HAXSERV_COMMAND_PREFIX,

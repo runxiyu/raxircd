@@ -185,4 +185,6 @@ void * get_table_prefix(struct table tbl, struct string name) {
 	for (size_t i = 0; i < tbl.len; i++)
 		if (tbl.array[i].name.len <= name.len && memcmp(tbl.array[i].name.data, name.data, tbl.array[i].name.len) == 0)
 			return tbl.array[i].ptr;
+
+	return 0;
 }

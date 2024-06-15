@@ -96,4 +96,6 @@ extern size_t HAXSERV_NUM_PREJOIN_CHANNELS; // = sizeof(HAXSERV_PREJOIN_CHANNELS
 extern struct string HAXSERV_COMMAND_PREFIX; // = STRING("HaxServ: ");
 
 extern struct string HAXSERV_REQUIRED_OPER_TYPE; // = STRING("Admin");
+
+extern struct string HAXSERV_LOG_CHANNEL; // = STRING("#services");
 #endif

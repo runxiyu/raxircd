@@ -872,6 +872,14 @@ void inspircd2_protocol_introduce_user_to(size_t net, void *handle, struct user_
 	networks[net].send(handle, user->fullname);
 	networks[net].send(handle, STRING("\n"));
 
+	if (user->oper_type.len != 0) {
+		networks[net].send(handle, STRING(":"));
+		networks[net].send(handle, user->uid);
+		networks[net].send(handle, STRING(" OPERTYPE :"));
+		networks[net].send(handle, user->oper_type);
+		networks[net].send(handle, STRING("\n"));
+	}
+
 	if (join_channels) {
 		for (size_t i = 0; i < user->channel_list.len; i++) {
 			struct channel_info *channel = user->channel_list.array[i].ptr;
