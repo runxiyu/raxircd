@@ -95,15 +95,17 @@ int start_server_network_threads(size_t net) {
 	pthread_t trash; // Not actually used, so discard
 	struct server_network_info *type;
 #ifdef USE_INSPIRCD2_PROTOCOL
-	type = malloc(sizeof(*type));
-	if (!type)
-		return 1;
-	type->net_type = net;
-	type->protocol = INSPIRCD2_PROTOCOL;
-	type->is_incoming = 1;
-	if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
-		free(type);
-		return 1;
+	if (SERVER_INCOMING[net][INSPIRCD2_PROTOCOL]) {
+		type = malloc(sizeof(*type));
+		if (!type)
+			return 1;
+		type->net_type = net;
+		type->protocol = INSPIRCD2_PROTOCOL;
+		type->is_incoming = 1;
+		if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
+			free(type);
+			return 1;
+		}
 	}
 #endif
 	return 0;
@@ -116,19 +118,6 @@ void * server_accept_thread(void *type) {
 		struct server_network_info *t = type;
 		net = t->net_type;
 		protocol = t->protocol;
-	}
-
-	// Check if there is actually an incoming server connection configured using this net+protocol, and if not just return from this thread; some excess may have been spawned
-	{
-		char found = 0;
-		for (size_t i = 0; i < SERVER_CONFIG_LEN; i++) {
-			if (SERVER_CONFIG[i].protocol == protocol && !(SERVER_CONFIG[i].autoconnect)) { // TODO: Don't make autoconnect conflict with incoming connections
-				found = 1;
-				break;
-			}
-		}
-		if (!found)
-			return 0;
 	}
 
 	int listen_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);

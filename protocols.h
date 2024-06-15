@@ -38,6 +38,8 @@ struct protocol {
 	void * (*autoconnect)(void *config);
 	void (*update_propagations)(void);
 
+	void (*propagate)(struct string from, struct string msg);
+
 	void (*propagate_new_server)(struct string from, struct string attached_to, struct server_info *info);
 	void (*propagate_unlink_server)(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 

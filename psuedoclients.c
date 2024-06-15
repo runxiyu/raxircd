@@ -26,30 +26,31 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+#include <dlfcn.h>
+#include <stdio.h>
+
 #include "haxstring.h"
 #include "psuedoclients.h"
 
-#ifdef USE_HAXSERV_PSUEDOCLIENT
-#include "psuedoclients/haxserv.h"
-#endif
+struct psuedoclient psuedoclients[NUM_PSUEDOCLIENTS] = {0};
 
-struct psuedoclient psuedoclients[NUM_PSUEDOCLIENTS] = {
-#ifdef USE_HAXSERV_PSUEDOCLIENT
-	[HAXSERV_PSUEDOCLIENT] = {
-		.init = haxserv_psuedoclient_init,
-
-		.allow_kill = haxserv_psuedoclient_allow_kill,
-		.allow_kick = haxserv_psuedoclient_allow_kick,
-
-		.handle_privmsg = haxserv_psuedoclient_handle_privmsg,
-	},
-#endif
-};
+char reload_psuedoclients[NUM_PSUEDOCLIENTS] = {0};
 
 int init_psuedoclients(void) {
 #ifdef USE_HAXSERV_PSUEDOCLIENT
-	if (psuedoclients[HAXSERV_PSUEDOCLIENT].init() != 0)
-		return 1;
+	{
+		void *dl_handle = dlopen("psuedoclients/haxserv.so", RTLD_NOW | RTLD_LOCAL);
+		if (!dl_handle) {
+			puts(dlerror());
+			return 1;
+		}
+
+		psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle = dl_handle;
+		psuedoclients[HAXSERV_PSUEDOCLIENT].init = dlsym(dl_handle, "haxserv_psuedoclient_init");
+
+		if (psuedoclients[HAXSERV_PSUEDOCLIENT].init() != 0)
+			return 1;
+	}
 #endif
 
 	return 0;

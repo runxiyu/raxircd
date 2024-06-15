@@ -133,6 +133,8 @@ int kick_channel(struct string from, struct string source, struct channel_info *
 int privmsg(struct string from, struct string sender, struct string target, struct string msg);
 int notice(struct string from, struct string sender, struct string target, struct string msg);
 
+int do_trivial_reloads(void);
+
 extern char casemap[UCHAR_MAX+1];
 #define CASEMAP(x) (casemap[(unsigned char)x])
 
@@ -152,3 +154,5 @@ extern struct network networks[NUM_NET_TYPES];
 extern struct table server_list;
 extern struct table user_list;
 extern struct table channel_list;
+
+extern struct server_info *self;

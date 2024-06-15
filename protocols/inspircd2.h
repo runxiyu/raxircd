@@ -41,7 +41,7 @@ void * inspircd2_protocol_connection(void *type);
 void * inspircd2_protocol_autoconnect(void *type);
 void inspircd2_protocol_update_propagations(void);
 
-void inspircd2_protocol_propagate(struct string from, struct server_info *self, struct string msg);
+void inspircd2_protocol_propagate(struct string from, struct string msg);
 
 void inspircd2_protocol_propagate_new_server(struct string from, struct string attached_to, struct server_info *info);
 void inspircd2_protocol_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);

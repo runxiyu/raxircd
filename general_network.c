@@ -27,7 +27,9 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include <arpa/inet.h>
+#include <dlfcn.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -122,6 +124,8 @@ struct table server_list = {0};
 struct table user_list = {0};
 struct table channel_list = {0};
 
+struct server_info *self;
+
 int resolve(struct string address, struct string port, struct sockaddr *sockaddr) {
 	// NULL isn't really valid in this anyways so... just checking it and replacing with null-terminated for now
 	for (size_t i = 0; i < address.len; i++)
@@ -201,6 +205,8 @@ int init_general_network(void) {
 	own_info->awaiting_pong = 0;
 	own_info->latency = (struct timeval){0};
 	own_info->latency_valid = 1;
+
+	self = own_info;
 
 	user_list.array = malloc(0);
 	channel_list.array = malloc(0);
@@ -716,5 +722,28 @@ int notice(struct string from, struct string sender, struct string target, struc
 #endif
 #endif
 
+	return 0;
+}
+
+int do_trivial_reloads(void) {
+#ifdef USE_PSUEDOCLIENTS
+#ifdef USE_HAXSERV_PSUEDOCLIENT
+	if (reload_psuedoclients[HAXSERV_PSUEDOCLIENT]) {
+		if (psuedoclients[HAXSERV_PSUEDOCLIENT].pre_reload() != 0)
+			return 1;
+		dlclose(psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle);
+		psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle = dlopen("psuedoclients/haxserv.so", RTLD_NOW | RTLD_LOCAL);
+		if (!psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle) {
+			puts(dlerror());
+			abort(); // TODO: Ugh...
+		}
+
+		psuedoclients[HAXSERV_PSUEDOCLIENT].post_reload = dlsym(psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle, "haxserv_psuedoclient_post_reload");
+		if (psuedoclients[HAXSERV_PSUEDOCLIENT].post_reload() != 0) {
+			abort(); // TODO: Ugh...
+		}
+	}
+#endif
+#endif
 	return 0;
 }

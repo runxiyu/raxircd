@@ -30,7 +30,12 @@
 #include "general_network.h"
 
 struct psuedoclient {
+	void *dl_handle;
+
 	int (*init)(void);
+
+	int (*pre_reload)(void);
+	int (*post_reload)(void);
 
 	int (*allow_kill)(struct string from, struct string source, struct user_info *user, struct string reason);
 	int (*allow_kick)(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
@@ -44,6 +49,8 @@ int init_psuedoclients(void);
 #define HAXSERV_PSUEDOCLIENT 0
 #endif
 
-#define NUM_PSUEDOCLIENTS
+#define NUM_PSUEDOCLIENTS 1
 
 extern struct psuedoclient psuedoclients[NUM_PSUEDOCLIENTS];
+
+extern char reload_psuedoclients[NUM_PSUEDOCLIENTS];

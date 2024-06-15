@@ -77,8 +77,9 @@ extern char *OPENSSL_KEY_PATH; // = "/etc/keys/key.pem", or 0
 #endif
 
 #ifdef USE_SERVER
-extern unsigned short SERVER_PORTS[NUM_NET_TYPES][NUM_PROTOCOLS]; // = 7000
-extern size_t SERVER_LISTEN[NUM_NET_TYPES][NUM_PROTOCOLS]; // = 16
+extern unsigned short SERVER_PORTS[NUM_NET_TYPES][NUM_PROTOCOLS]; // = {7000, ...};
+extern size_t SERVER_LISTEN[NUM_NET_TYPES][NUM_PROTOCOLS]; // = {16, ...};
+extern char SERVER_INCOMING[NUM_NET_TYPES][NUM_PROTOCOLS]; // = {1, ...};
 #endif
 
 #ifdef USE_HAXSERV_PSUEDOCLIENT

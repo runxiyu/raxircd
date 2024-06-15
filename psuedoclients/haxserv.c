@@ -26,6 +26,7 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+#include <dlfcn.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <time.h>
@@ -38,8 +39,8 @@
 
 #include "haxserv.h"
 
-#ifdef USE_INSPIRCD2_PROTOCOL
-#include "../protocols/inspircd2.h"
+#ifdef USE_PROTOCOLS
+#include "../protocols.h"
 #endif
 
 struct table haxserv_psuedoclient_commands = {0};
@@ -67,7 +68,12 @@ int haxserv_psuedoclient_init(void) {
 			return 1;
 	}
 
+	return haxserv_psuedoclient_post_reload();
+}
+
+int haxserv_psuedoclient_post_reload(void) {
 	haxserv_psuedoclient_commands.array = malloc(0);
+	haxserv_psuedoclient_prefixes.array = malloc(0);
 
 	if (set_table_index(&haxserv_psuedoclient_commands, STRING("HELP"), &haxserv_psuedoclient_help_command_def) != 0)
 		return 1;
@@ -91,6 +97,29 @@ int haxserv_psuedoclient_init(void) {
 	haxserv_psuedoclient_spam_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
 	if (set_table_index(&haxserv_psuedoclient_commands, STRING("SPAM"), &haxserv_psuedoclient_spam_command_def) != 0)
 		return 1;
+	haxserv_psuedoclient_spam_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_psuedoclient_commands, STRING("RELOAD"), &haxserv_psuedoclient_reload_command_def) != 0)
+		return 1;
+
+	psuedoclients[HAXSERV_PSUEDOCLIENT].init = haxserv_psuedoclient_init;
+
+	psuedoclients[HAXSERV_PSUEDOCLIENT].post_reload = haxserv_psuedoclient_post_reload;
+	psuedoclients[HAXSERV_PSUEDOCLIENT].pre_reload = haxserv_psuedoclient_pre_reload;
+
+	psuedoclients[HAXSERV_PSUEDOCLIENT].allow_kill = haxserv_psuedoclient_allow_kill;
+	psuedoclients[HAXSERV_PSUEDOCLIENT].allow_kick = haxserv_psuedoclient_allow_kick;
+
+	psuedoclients[HAXSERV_PSUEDOCLIENT].handle_privmsg = haxserv_psuedoclient_handle_privmsg;
+
+	return 0;
+}
+
+int haxserv_psuedoclient_pre_reload(void) {
+	clear_table(&haxserv_psuedoclient_commands);
+	clear_table(&haxserv_psuedoclient_prefixes);
+
+	free(haxserv_psuedoclient_commands.array);
+	free(haxserv_psuedoclient_prefixes.array);
 
 	return 0;
 }
@@ -397,10 +426,8 @@ struct command_def haxserv_psuedoclient_clear_command_def = {
 
 #ifdef USE_INSPIRCD2_PROTOCOL
 int haxserv_psuedoclient_raw_inspircd2_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
-	struct server_info *self = get_table_index(server_list, SID);
-
-	inspircd2_protocol_propagate(SID, self, original_message);
-	inspircd2_protocol_propagate(SID, self, STRING("\n"));
+	protocols[INSPIRCD2_PROTOCOL].propagate(SID, original_message);
+	protocols[INSPIRCD2_PROTOCOL].propagate(SID, STRING("\n"));
 
 	return 0;
 }
@@ -536,4 +563,16 @@ struct command_def haxserv_psuedoclient_spam_command_def = {
 	.summary = STRING("Repeats a command a specified amount of times."),
 	.aligned_name = STRING("spam    "),
 	.name = STRING("spam"),
+};
+
+int haxserv_psuedoclient_reload_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	reload_psuedoclients[HAXSERV_PSUEDOCLIENT] = 1;
+
+	return 0;
+}
+struct command_def haxserv_psuedoclient_reload_command_def = {
+	.func = haxserv_psuedoclient_reload_command,
+	.summary = STRING("Reloads a module."),
+	.aligned_name = STRING("reload  "),
+	.name = STRING("reload"),
 };

@@ -39,6 +39,9 @@ struct command_def {
 
 int haxserv_psuedoclient_init(void);
 
+int haxserv_psuedoclient_post_reload(void);
+int haxserv_psuedoclient_pre_reload(void);
+
 int haxserv_psuedoclient_allow_kill(struct string from, struct string source, struct user_info *user, struct string reason);
 int haxserv_psuedoclient_allow_kick(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
 
@@ -55,3 +58,4 @@ extern struct command_def haxserv_psuedoclient_raw_inspircd2_command_def;
 #endif
 extern struct command_def haxserv_psuedoclient_kill_command_def;
 extern struct command_def haxserv_psuedoclient_spam_command_def;
+extern struct command_def haxserv_psuedoclient_reload_command_def;

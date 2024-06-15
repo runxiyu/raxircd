@@ -1,4 +1,4 @@
-// "Main" file for haxserv
+// One of the code files for HaxServ
 //
 // Written by: Test_User <hax@andrewyu.org>
 //
@@ -26,108 +26,16 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#include <signal.h>
-#include <pthread.h>
-
-#include "config.h"
-#include "general_network.h"
-#include "main.h"
-
-#ifdef USE_PLAINTEXT
-#include "plaintext_network.h"
-#endif
-#ifdef USE_GNUTLS
-#include "gnutls_network.h"
-#endif
-#ifdef USE_OPENSSL
-#include "openssl_network.h"
-#endif
-
-#ifdef USE_SERVER
-#include "server_network.h"
-#endif
-#ifdef USE_CLIENT
-#include "client_network.h"
-#endif
-
-#ifdef USE_INSPIRCD2_PROTOCOL
-#include "protocols/inspircd2.h"
-#endif
-
-#ifdef USE_PSUEDOCLIENTS
-#include "psuedoclients.h"
-#endif
-
-#ifdef USE_HAXSERV_PSUEDOCLIENT
-#include "psuedoclients/haxserv.h"
-#endif
-
-pthread_attr_t pthread_attr;
-pthread_mutexattr_t pthread_mutexattr;
-
-pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
+#include <dlfcn.h>
+#include <stdio.h>
 
 int main(void) {
-	if (init_general_network() != 0)
+	void *dl_handle = dlopen("./haxserv.so", RTLD_NOW | RTLD_GLOBAL);
+	if (!dl_handle) {
+		puts(dlerror());
 		return 1;
-
-#ifdef USE_PLAINTEXT
-	if (init_plaintext_network() != 0) // there's not really anything to do ahead of time with plain tcp networking, this is just here for consistency
-		return 1;
-#endif
-
-#ifdef USE_GNUTLS
-	if (init_gnutls_network() != 0)
-		return 1;
-#endif
-
-#ifdef USE_OPENSSL
-	if (init_openssl_network() != 0)
-		return 1;
-#endif
-
-#ifdef USE_SERVER
-	if (init_server_network() != 0)
-		return 1;
-#endif
-
-#ifdef USE_CLIENT
-	if (init_client_network() != 0)
-		return 1;
-#endif
-
-#ifdef USE_PSUEDOCLIENTS
-	if (init_psuedoclients() != 0)
-		return 1;
-#endif
-
-	{
-		struct sigaction tmp = {
-			.sa_handler = SIG_IGN,
-		};
-		sigaction(SIGPIPE, &tmp, 0);
 	}
 
-	if (pthread_attr_init(&pthread_attr) != 0)
-		return 1;
-
-	if (pthread_mutexattr_init(&pthread_mutexattr) != 0)
-		return 1;
-
-	if (pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED) != 0) // shouldn't actually happen
-		return 1;
-
-#ifdef USE_CLIENT
-	if (start_client_network() != 0)
-		return 1;
-#endif
-
-#ifdef USE_SERVER
-	if (start_server_network() != 0)
-		return 1;
-#endif
-
-	pthread_exit(0);
-
-	return 0;
+	int (*real_main)(void) = dlsym(dl_handle, "real_main");
+	return real_main();
 }

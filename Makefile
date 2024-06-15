@@ -150,7 +150,8 @@ USE_CLIENT = 0
 USE_GNUTLS = 0
 USE_SERVER = 0
 
-OFILES = config.o general_network.o haxstring_utils.o main.o table.o
+OFILES = config.o general_network.o haxstring_utils.o real_main.o table.o
+SOFILES =
 
 ifeq ($(PLAINTEXT_CLIENT),1)
 CFLAGS += -DUSE_PLAINTEXT_CLIENT
@@ -199,7 +200,7 @@ endif
 
 
 ifeq ($(HAXSERV_PSUEDOCLIENT),1)
-OFILES += psuedoclients/haxserv.o
+SOFILES += psuedoclients/haxserv.so
 CFLAGS += -DUSE_HAXSERV_PSUEDOCLIENT
 USE_PSUEDOCLIENTS = 1
 endif
@@ -260,65 +261,73 @@ endif
 
 
 
-DEPS = $(shell $(CC) $(CFLAGS) -M -MT $(1).o $(1).c | sed -z 's/\\\n //g') .makeopts Makefile
+DEPS = $(shell $(CC) $(CFLAGS) -M -MT $(1).$(2) $(1).c | sed -z 's/\\\n //g') .makeopts Makefile
 
 
 .PHONY: all clean
-all: haxserv
+all: haxserv $(SOFILES) haxserv haxserv.so
 
-haxserv: $(OFILES) .makeopts Makefile
-	$(CC) $(OFILES) -o $@ $(LDFLAGS)
+haxserv: main.c
+	$(CC) main.c -o haxserv
+
+haxserv.so: $(OFILES) .makeopts Makefile
+	$(CC) $(OFILES) -shared -o $@ $(LDFLAGS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
-$(call DEPS,config)
+%.so: %.c
+	$(CC) $(CFLAGS) -shared -fPIC $< -o $@
 
-$(call DEPS,general_network)
+$(call DEPS,config,o)
 
-$(call DEPS,haxstring_utils)
+$(call DEPS,general_network,o)
 
-$(call DEPS,main)
+$(call DEPS,haxstring_utils,o)
 
-$(call DEPS,protocols)
+$(call DEPS,real_main,o)
 
-$(call DEPS,table)
+$(call DEPS,main,o)
+
+$(call DEPS,protocols,o)
+
+$(call DEPS,table,o)
 
 ifeq ($(USE_PLAINTEXT),1)
-$(call DEPS,plaintext_network)
+$(call DEPS,plaintext_network,o)
 endif
 
 ifeq ($(USE_GNUTLS),1)
-$(call DEPS,gnutls_network)
+$(call DEPS,gnutls_network,o)
 endif
 
 ifeq ($(USE_OPENSSL),1)
-$(call DEPS,openssl_network)
+$(call DEPS,openssl_network,o)
 endif
 
 ifeq ($(USE_CLIENT),1)
-$(call DEPS,client_network)
+$(call DEPS,client_network,o)
 endif
 
 ifeq ($(USE_SERVER),1)
-$(call DEPS,server_network)
+$(call DEPS,server_network,o)
 endif
 
 ifeq ($(USE_PROTOCOLS),1)
-$(call DEPS,protocols)
+$(call DEPS,protocols,o)
 endif
 
 ifeq ($(INSPIRCD2_PROTOCOL),1)
-$(call DEPS,protocols/inspircd2)
+$(call DEPS,protocols/inspircd2,o)
 endif
 
 ifeq ($(USE_PSUEDOCLIENTS),1)
-$(call DEPS,psuedoclients)
+$(call DEPS,psuedoclients,o)
 endif
 
 ifeq ($(HAXSERV_PSUEDOCLIENT),1)
-$(call DEPS,psuedoclients/haxserv)
+$(call DEPS,psuedoclients/haxserv,so)
 endif
 
 clean:
-	$(RM) -r haxserv *.o protocols/*.o psuedoclients/*.o
+	$(RM) -r haxserv *.o *.so protocols/*.o protocols/*.so psuedoclients/*.o psuedoclients/*.so
