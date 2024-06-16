@@ -1,4 +1,4 @@
-# Makefile for HaxServ
+# Makefile for HaxIRCd
 #
 # Written by: Test_User <hax@andrewyu.org>
 #
@@ -160,7 +160,7 @@ USE_GNUTLS = 0
 USE_SERVER = 0
 
 OFILES = config.o general_network.o haxstring_utils.o real_main.o table.o
-SOFILES =
+SOFILES = HaxIRCd.so
 
 ifeq ($(PLAINTEXT_CLIENT),1)
 CFLAGS += -DUSE_PLAINTEXT_CLIENT
@@ -280,12 +280,12 @@ DEPS = $(shell $(CC) $(CFLAGS) -M -MT $(1).$(2) $(1).c | sed -z 's/\\\n //g') .m
 
 
 .PHONY: all clean
-all: haxserv $(SOFILES) haxserv haxserv.so
+all: HaxIRCd $(SOFILES)
 
-haxserv: main.c
+HaxIRCd: main.c
 	$(CC) main.c -o haxserv
 
-haxserv.so: $(OFILES) .makeopts Makefile
+HaxIRCd.so: $(OFILES) .makeopts Makefile
 	$(CC) $(OFILES) -shared -o $@ $(LDFLAGS)
 
 %.o: %.c
@@ -349,4 +349,4 @@ $(call DEPS,psuedoclients/haxserv,so)
 endif
 
 clean:
-	$(RM) -r haxserv *.o *.so protocols/*.o protocols/*.so psuedoclients/*.o psuedoclients/*.so
+	$(RM) HaxIRCd *.o *.so protocols/*.o protocols/*.so psuedoclients/*.o psuedoclients/*.so

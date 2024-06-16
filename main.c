@@ -30,7 +30,7 @@
 #include <stdio.h>
 
 int main(void) {
-	void *dl_handle = dlopen("./haxserv.so", RTLD_NOW | RTLD_GLOBAL);
+	void *dl_handle = dlopen("./HaxIRCd.so", RTLD_NOW | RTLD_GLOBAL);
 	if (!dl_handle) {
 		puts(dlerror());
 		return 1;
