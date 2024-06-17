@@ -8,7 +8,7 @@
   traditional IRCDs.
 * Could provide internal services (ChanServ, NickServ, HaxServ) and synchronize
   the services database, handling collisions gracefully.
-* Correct, Fast and scalable.
+* Correct, fast and scalable.
 * Modular.
   More extensive runtime module reloading is planned.
 * Replace [CoupServ](https://git.andrewyu.org/hax/coupserv.git/about) and

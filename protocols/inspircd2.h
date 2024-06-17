@@ -37,6 +37,7 @@ extern struct table inspircd2_protocol_init_commands;
 extern struct table inspircd2_protocol_commands;
 
 int init_inspircd2_protocol(void);
+void init_inspircd2_protocol_fail(void);
 
 void * inspircd2_protocol_connection(void *type);
 void * inspircd2_protocol_autoconnect(void *type);
@@ -60,6 +61,29 @@ void inspircd2_protocol_propagate_kick_channel(struct string from, struct string
 
 void inspircd2_protocol_propagate_privmsg(struct string from, struct string source, struct string target, struct string msg);
 void inspircd2_protocol_propagate_notice(struct string from, struct string source, struct string target, struct string msg);
+
+int inspircd2_protocol_handle_new_server(struct string from, struct string attached_to, struct server_info *info);
+void inspircd2_protocol_handle_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
+
+int inspircd2_protocol_handle_new_user(struct string from, struct user_info *info);
+int inspircd2_protocol_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void inspircd2_protocol_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate);
+void inspircd2_protocol_handle_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
+int inspircd2_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type);
+
+int inspircd2_protocol_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+int inspircd2_protocol_handle_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
+void inspircd2_protocol_handle_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
+void inspircd2_protocol_handle_kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
+
+void inspircd2_protocol_fail_new_server(struct string from, struct string attached_to, struct server_info *info);
+
+void inspircd2_protocol_fail_new_user(struct string from, struct user_info *info);
+void inspircd2_protocol_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void inspircd2_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type);
+
+void inspircd2_protocol_fail_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+void inspircd2_protocol_fail_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
 
 void inspircd2_protocol_do_unlink(struct string from, struct server_info *a, struct server_info *b);
 

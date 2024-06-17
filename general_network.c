@@ -296,11 +296,17 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	new_info->channel_list.len = 0;
 
 #ifdef USE_SERVER
+	if (protocols_handle_new_user(from, new_info) != 0)
+		goto add_user_free_channel_list;
+
 	protocols_propagate_new_user(from, new_info);
 #endif
 
 	return 0;
 
+	add_user_free_channel_list:
+	free(new_info->channel_list.array);
+	remove_table_index(&(attached->user_list), uid);
 	add_user_remove_user_list:
 	remove_table_index(&user_list, uid);
 	add_user_free_oper_type:
@@ -341,6 +347,12 @@ int rename_user(struct string from, struct user_info *user, struct string nick, 
 	}
 
 #ifdef USE_SERVER
+	if (protocols_handle_rename_user(from, user, nick, timestamp, timestamp_str) != 0) {
+		free(tmp);
+		free(timestamp_str.data);
+		return 1;
+	}
+
 	protocols_propagate_rename_user(from, user, nick, timestamp, timestamp_str);
 #endif
 
@@ -357,6 +369,8 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 	if (propagate) {
 		protocols_propagate_remove_user(from, user, reason);
 	}
+
+	protocols_handle_remove_user(from, user, reason, propagate);
 #endif
 
 	remove_table_index(&user_list, user->uid);
@@ -401,6 +415,8 @@ int kill_user(struct string from, struct string source, struct user_info *user, 
 
 #ifdef USE_SERVER
 	protocols_propagate_kill_user(from, source, user, reason);
+
+	protocols_handle_kill_user(from, source, user, reason);
 #endif
 
 	remove_user(from, user, reason, 0);
@@ -414,6 +430,11 @@ int oper_user(struct string from, struct user_info *user, struct string type) {
 		return 1;
 
 #ifdef USE_SERVER
+	if (protocols_handle_oper_user(from, user, type) != 0) {
+		free(tmp.data);
+		return 1;
+	}
+
 	protocols_propagate_oper_user(from, user, type);
 #endif
 
@@ -458,14 +479,17 @@ int set_channel(struct string from, struct string name, size_t timestamp, size_t
 	if (join_channel(from, channel, user_count, users, 0) != 0)
 		goto set_channel_free_name;
 
-	{
-		struct string ts_str;
-		if (unsigned_to_str(timestamp, &ts_str) != 0)
-			goto set_channel_remove_users;
+	struct string ts_str;
+	if (unsigned_to_str(timestamp, &ts_str) != 0)
+		goto set_channel_remove_users;
 
-		channel->channel_ts_str = ts_str;
-		channel->channel_ts = timestamp;
-	}
+#ifdef USE_SERVER
+	if (protocols_handle_set_channel(from, channel, is_new_channel, user_count, users))
+		goto set_channel_free_ts_str;
+#endif
+
+	channel->channel_ts_str = ts_str;
+	channel->channel_ts = timestamp;
 
 #ifdef USE_SERVER
 	protocols_propagate_set_channel(from, channel, is_new_channel, user_count, users);
@@ -473,6 +497,8 @@ int set_channel(struct string from, struct string name, size_t timestamp, size_t
 
 	return 0;
 
+	set_channel_free_ts_str:
+	free(ts_str.data);
 	set_channel_remove_users:
 	for (size_t i = 0; i < user_count; i++) {
 		remove_table_index(&(channel->user_list), users[i]->uid);
@@ -517,12 +543,17 @@ int join_channel(struct string from, struct channel_info *channel, size_t user_c
 		i++;
 	}
 
+#ifdef USE_SERVER
+	if (protocols_handle_join_channel(from, channel, user_count, users, propagate) != 0)
+		goto join_channel_remove_users;
+#endif
+
 	if (propagate) {
 #ifdef USE_CLIENT
 #endif
 
 #ifdef USE_SERVER
-		protocols_propagate_join_channel(from, channel, user_count, users);
+		protocols_propagate_join_channel(from, channel, user_count, users, propagate);
 #endif
 	}
 
@@ -691,6 +722,8 @@ int do_trivial_reloads(void) {
 		if (psuedoclients[HAXSERV_PSUEDOCLIENT].post_reload() != 0) {
 			abort(); // TODO: Ugh...
 		}
+
+		reload_psuedoclients[HAXSERV_PSUEDOCLIENT] = 0;
 	}
 #endif
 #endif

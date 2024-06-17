@@ -140,7 +140,7 @@ int init_inspircd3_protocol(void) {
 	set_table_index(&inspircd3_protocol_commands, STRING("KILL"), &inspircd3_protocol_handle_kill);
 	set_table_index(&inspircd3_protocol_commands, STRING("OPERTYPE"), &inspircd3_protocol_handle_opertype);
 
-//	set_table_index(&inspircd3_protocol_commands, STRING("FJOIN"), &inspircd3_protocol_handle_fjoin);
+	set_table_index(&inspircd3_protocol_commands, STRING("FJOIN"), &inspircd3_protocol_handle_fjoin);
 //	set_table_index(&inspircd3_protocol_commands, STRING("PART"), &inspircd3_protocol_handle_part);
 //	set_table_index(&inspircd3_protocol_commands, STRING("KICK"), &inspircd3_protocol_handle_kick);
 //
@@ -148,6 +148,11 @@ int init_inspircd3_protocol(void) {
 //	set_table_index(&inspircd3_protocol_commands, STRING("NOTICE"), &inspircd3_protocol_handle_notice);
 
 	return 0;
+}
+
+void init_inspircd3_protocol_fail(void) {
+	clear_table(&inspircd3_protocol_commands);
+	free(inspircd3_protocol_commands.array);
 }
 
 void * inspircd3_protocol_connection(void *type) {
@@ -661,7 +666,7 @@ void inspircd3_protocol_propagate_set_channel(struct string from, struct channel
 	for (size_t x = 0; x < user_count; x++) {
 		inspircd3_protocol_propagate(from, STRING(","));
 		inspircd3_protocol_propagate(from, users[x]->uid);
-		if (x != channel->user_list.len - 1)
+		if (x != user_count - 1)
 			inspircd3_protocol_propagate(from, STRING(" "));
 	}
 	inspircd3_protocol_propagate(from, STRING("\n"));
@@ -679,7 +684,7 @@ void inspircd3_protocol_propagate_join_channel(struct string from, struct channe
 	for (size_t x = 0; x < user_count; x++) {
 		inspircd3_protocol_propagate(from, STRING(","));
 		inspircd3_protocol_propagate(from, users[x]->uid);
-		if (x != channel->user_list.len - 1)
+		if (x != user_count - 1)
 			inspircd3_protocol_propagate(from, STRING(" "));
 	}
 	inspircd3_protocol_propagate(from, STRING("\n"));
@@ -783,6 +788,87 @@ void inspircd3_protocol_propagate_notice(struct string from, struct string sourc
 		inspircd3_protocol_propagate(from, msg);
 		inspircd3_protocol_propagate(from, STRING("\n"));
 	}
+}
+
+int inspircd3_protocol_handle_new_server(struct string from, struct string attached_to, struct server_info *info) {
+	return 0;
+}
+
+void inspircd3_protocol_handle_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
+	return;
+}
+
+int inspircd3_protocol_handle_new_user(struct string from, struct user_info *info) {
+	struct inspircd3_protocol_specific_user *prot_info;
+	prot_info = malloc(sizeof(*prot_info));
+	if (!prot_info)
+		return 1;
+
+	prot_info->memberships.array = malloc(0);
+
+	info->protocol_specific[INSPIRCD3_PROTOCOL] = prot_info;
+
+	return 0;
+}
+
+int inspircd3_protocol_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str) {
+	return 0;
+}
+
+void inspircd3_protocol_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate) {
+	return;
+}
+
+void inspircd3_protocol_handle_kill_user(struct string from, struct string source, struct user_info *info, struct string reason) {
+	return;
+}
+
+int inspircd3_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type) {
+	return 0;
+}
+
+int inspircd3_protocol_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users) {
+	return 0;
+}
+
+int inspircd3_protocol_handle_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate) {
+	return 0;
+}
+
+void inspircd3_protocol_handle_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason) {
+	return;
+}
+
+void inspircd3_protocol_handle_kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason) {
+	return;
+}
+
+void inspircd3_protocol_fail_new_server(struct string from, struct string attached_to, struct server_info *info) {
+	return;
+}
+
+void inspircd3_protocol_fail_new_user(struct string from, struct user_info *info) {
+	struct inspircd3_protocol_specific_user *prot_info = info->protocol_specific[INSPIRCD3_PROTOCOL];
+	free(prot_info->memberships.array);
+	free(prot_info);
+
+	return;
+}
+
+void inspircd3_protocol_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str) {
+	return;
+}
+
+void inspircd3_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type) {
+	return;
+}
+
+void inspircd3_protocol_fail_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users) {
+	return;
+}
+
+void inspircd3_protocol_fail_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate) {
+	return;
 }
 
 void inspircd3_protocol_do_unlink_inner(struct string from, struct server_info *target, struct string reason) {
@@ -1346,112 +1432,118 @@ int inspircd3_protocol_handle_opertype(struct string source, size_t argc, struct
 	return 0;
 }
 
-//// [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
-//int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
-//	if (argc < 4) {
-//		WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved! (Missing parameters)\r\n"));
-//		return -1;
-//	}
-//
-//	char err;
-//	size_t timestamp = str_to_unsigned(argv[1], &err);
-//	if (err) {
-//		WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved! (Invalid timestamp)\r\n"));
-//		return -1;
-//	}
-//
-//	size_t arg_i = 3;
-//	char dir = '?';
-//	for (size_t i = 0; i < argv[2].len; i++) {
-//		switch(argv[2].data[i]) {
-//			case '+':
-//			case '-':
-//				dir = argv[2].data[i];
-//				break;
-//			default:
-//				if (dir == '?') {
-//					WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved (Mode direction not set)\r\n"));
-//					return -1;
-//				}
-//				switch(inspircd3_protocol_channel_mode_types[(unsigned char)argv[2].data[i]]) {
-//					case MODE_TYPE_NOARGS:
-//						break;
-//					case MODE_TYPE_REPLACE:
-//					case MODE_TYPE_MODE:
-//						if (dir == '-')
-//							break;
-//					case MODE_TYPE_MULTIPLE:
-//						arg_i++;
-//						break;
-//					case MODE_TYPE_USERS:
-//						WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved! (User mode put in the modes instead of the user list)\r\n"));
-//						return -1;
-//					default:
-//						WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved! (Unknown mode given)\r\n"));
-//						return -1;
-//				}
-//		}
-//	}
-//
-//	size_t user_count = 0;
-//	for (size_t i = 0; i < argv[arg_i].len;) {
-//		while (i < argv[arg_i].len && argv[arg_i].data[i] != ',')
-//			i++;
-//
-//		i++;
-//
-//		user_count++;
-//
-//		while (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
-//			i++;
-//	}
-//
-//	struct user_info **users;
-//	users = malloc(sizeof(**users) * user_count);
-//	if (!users && user_count != 0) {
-//		WRITES(2, STRING("[InspIRCd v3] [FJOIN] OOM! Disconnecting server.\r\n"));
-//		return -1;
-//	}
-//
-//	for (size_t i = 0, n = 0; i < argv[arg_i].len; n++) {
-//		struct string uid;
-//		while (i < argv[arg_i].len && argv[arg_i].data[i] != ',')
-//			i++;
-//
-//		i++;
-//
-//		uid.data = &(argv[arg_i].data[i]);
-//
-//		while (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
-//			i++;
-//
-//		uid.len = (size_t)(&(argv[arg_i].data[i]) - uid.data);
-//
-//		users[n] = get_table_index(user_list, uid);
-//		if (!users[n]) { // Maybe KILLed or smth
-//			n--;
-//			user_count--;
-//		}
-//	}
-//
-//	struct channel_info *channel = get_table_index(channel_list, argv[0]);
-//	if (!channel || timestamp < channel->channel_ts) {
-//		if (set_channel(config->sid, argv[0], timestamp, user_count, users) != 0)
-//			goto inspircd3_protocol_handle_fjoin_free_users;
-//	} else {
-//		if (join_channel(config->sid, channel, user_count, users, 1) != 0)
-//			goto inspircd3_protocol_handle_fjoin_free_users;
-//	}
-//
-//	free(users);
-//
-//	return 0;
-//
-//	inspircd3_protocol_handle_fjoin_free_users:
-//	free(users);
-//	return -1;
-//}
-//
+// [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
+int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 4) {
+		WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	char err;
+	size_t timestamp = str_to_unsigned(argv[1], &err);
+	if (err) {
+		WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved! (Invalid timestamp)\r\n"));
+		return -1;
+	}
+
+	size_t arg_i = 3;
+	char dir = '?';
+	for (size_t i = 0; i < argv[2].len; i++) {
+		switch(argv[2].data[i]) {
+			case '+':
+			case '-':
+				dir = argv[2].data[i];
+				break;
+			default:
+				if (dir == '?') {
+					WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved (Mode direction not set)\r\n"));
+					return -1;
+				}
+				switch(inspircd3_protocol_channel_mode_types[(unsigned char)argv[2].data[i]]) {
+					case MODE_TYPE_NOARGS:
+						break;
+					case MODE_TYPE_REPLACE:
+					case MODE_TYPE_MODE:
+						if (dir == '-')
+							break;
+					case MODE_TYPE_MULTIPLE:
+						arg_i++;
+						break;
+					case MODE_TYPE_USERS:
+						WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved! (User mode put in the modes instead of the user list)\r\n"));
+						return -1;
+					default:
+						WRITES(2, STRING("[InspIRCd v3] Invalid FJOIN recieved! (Unknown mode given)\r\n"));
+						return -1;
+				}
+		}
+	}
+
+	size_t user_count = 0;
+	for (size_t i = 0; i < argv[arg_i].len;) {
+		while (i < argv[arg_i].len && argv[arg_i].data[i] != ',')
+			i++;
+
+		i++;
+
+		while (i < argv[arg_i].len && argv[arg_i].data[i] != ':')
+			i++;
+
+		user_count++;
+
+		while (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
+			i++;
+	}
+
+	struct user_info **users;
+	users = malloc(sizeof(**users) * user_count);
+	if (!users && user_count != 0) {
+		WRITES(2, STRING("[InspIRCd v3] [FJOIN] OOM! Disconnecting server.\r\n"));
+		return -1;
+	}
+
+	for (size_t i = 0, n = 0; i < argv[arg_i].len; n++) {
+		struct string uid;
+		while (i < argv[arg_i].len && argv[arg_i].data[i] != ',')
+			i++;
+
+		i++;
+
+		uid.data = &(argv[arg_i].data[i]);
+
+		while (i < argv[arg_i].len && argv[arg_i].data[i] != ':')
+			i++;
+
+		uid.len = (size_t)(&(argv[arg_i].data[i]) - uid.data);
+
+		users[n] = get_table_index(user_list, uid);
+		if (!users[n]) { // Maybe KILLed or smth
+			n--;
+			user_count--;
+		}
+
+		while (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
+			i++;
+	}
+
+	struct channel_info *channel = get_table_index(channel_list, argv[0]);
+	if (!channel || timestamp < channel->channel_ts) {
+		if (set_channel(config->sid, argv[0], timestamp, user_count, users) != 0)
+			goto inspircd3_protocol_handle_fjoin_free_users;
+	} else {
+		if (join_channel(config->sid, channel, user_count, users, 1) != 0)
+			goto inspircd3_protocol_handle_fjoin_free_users;
+	}
+
+	free(users);
+
+	return 0;
+
+	inspircd3_protocol_handle_fjoin_free_users:
+	free(users);
+	return -1;
+}
+
 //// :source PART <channel> [<reason>]
 //int inspircd3_protocol_handle_part(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 //	if (argc < 1) {

@@ -35,6 +35,8 @@
 
 struct protocol {
 	int (*init)(void);
+	void (*fail_init)(void);
+
 	void * (*handle_connection)(void *info);
 	void * (*autoconnect)(void *config);
 	void (*update_propagations)(void);
@@ -58,6 +60,33 @@ struct protocol {
 	void (*propagate_privmsg)(struct string from, struct string source, struct string target, struct string msg);
 	void (*propagate_notice)(struct string from, struct string source, struct string target, struct string msg);
 
+	// Do whatever required with protocol-specific data here
+	int (*handle_new_server)(struct string from, struct string attached_to, struct server_info *info);
+	void (*handle_unlink_server)(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
+
+	int (*handle_new_user)(struct string from, struct user_info *info);
+	int (*handle_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+	void (*handle_remove_user)(struct string from, struct user_info *info, struct string reason, char propagate);
+	void (*handle_kill_user)(struct string from, struct string source, struct user_info *info, struct string reason);
+	int (*handle_oper_user)(struct string from, struct user_info *info, struct string type);
+
+	int (*handle_set_channel)(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+	int (*handle_join_channel)(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
+	void (*handle_part_channel)(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
+	void (*handle_kick_channel)(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
+	// ^^^^
+
+	// If some other protocol failed above after ours ran, these get called to clean up
+	void (*fail_new_server)(struct string from, struct string attached_to, struct server_info *info);
+
+	void (*fail_new_user)(struct string from, struct user_info *info);
+	void (*fail_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+	void (*fail_oper_user)(struct string from, struct user_info *info, struct string type);
+
+	void (*fail_set_channel)(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+	void (*fail_join_channel)(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
+	// ^^^^
+
 	void (*do_unlink)(struct string from, struct server_info *a, struct server_info *b);
 };
 
@@ -75,11 +104,34 @@ void protocols_propagate_kill_user(struct string from, struct string source, str
 void protocols_propagate_oper_user(struct string from, struct user_info *info, struct string type);
 
 void protocols_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
-void protocols_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
+void protocols_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
 void protocols_propagate_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
 void protocols_propagate_kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
 
 void protocols_propagate_privmsg(struct string from, struct string source, struct string target, struct string msg);
 void protocols_propagate_notice(struct string from, struct string source, struct string target, struct string msg);
+
+int protocols_handle_new_server(struct string from, struct string attached_to, struct server_info *info);
+void protocols_handle_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
+
+int protocols_handle_new_user(struct string from, struct user_info *info);
+int protocols_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void protocols_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate);
+void protocols_handle_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
+int protocols_handle_oper_user(struct string from, struct user_info *info, struct string type);
+
+int protocols_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+int protocols_handle_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
+void protocols_handle_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
+void protocols_handle_kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
+
+void protocols_fail_new_server(struct string from, struct string attached_to, struct server_info *info);
+
+void protocols_fail_new_user(struct string from, struct user_info *info);
+void protocols_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void protocols_fail_oper_user(struct string from, struct user_info *info, struct string type);
+
+void protocols_fail_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
+void protocols_fail_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
 
 extern struct protocol protocols[NUM_PROTOCOLS];

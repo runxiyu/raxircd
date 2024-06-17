@@ -283,7 +283,7 @@ DEPS = $(shell $(CC) $(CFLAGS) -M -MT $(1).$(2) $(1).c | sed -z 's/\\\n //g') .m
 all: HaxIRCd $(SOFILES)
 
 HaxIRCd: main.c
-	$(CC) main.c -o haxserv
+	$(CC) main.c -o HaxIRCd
 
 HaxIRCd.so: $(OFILES) .makeopts Makefile
 	$(CC) $(OFILES) -shared -o $@ $(LDFLAGS)
