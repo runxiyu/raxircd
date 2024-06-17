@@ -1175,7 +1175,7 @@ int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct st
 
 	struct server_info *a = get_table_index(server_list, source);
 	struct server_info *b = get_table_index(server_list, argv[0]);
-	if (!a || !b) { // Maybe we already RSQUIT it or smth
+	if (!a || !b) {
 		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT recieved! (Unknown source or target)\r\n"));
 		return -1;
 	}
@@ -1219,7 +1219,7 @@ int inspircd2_protocol_handle_rsquit(struct string source, size_t argc, struct s
 				networks[next->net].send(next->handle, argv[1]);
 				networks[next->net].send(next->handle, STRING("\n"));
 			} else {
-				networks[next->net].send(next->handle, STRING(":\n"));
+				networks[next->net].send(next->handle, STRING(" :\n"));
 			}
 		}
 	}
