@@ -1140,9 +1140,9 @@ int inspircd3_protocol_handle_ping(struct string source, size_t argc, struct str
 		return 0;
 
 	networks[net].send(handle, STRING(":"));
-	networks[net].send(handle, argv[1]);
-	networks[net].send(handle, STRING(" PONG :"));
 	networks[net].send(handle, argv[0]);
+	networks[net].send(handle, STRING(" PONG :"));
+	networks[net].send(handle, source);
 	networks[net].send(handle, STRING("\n"));
 
 	return 0;

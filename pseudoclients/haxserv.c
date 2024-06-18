@@ -940,7 +940,7 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 }
 struct command_def haxserv_pseudoclient_get_command_def = {
 	.func = haxserv_pseudoclient_get_command,
-	.summary = STRING("Resets all connections."),
+	.summary = STRING("[uid | name | info] <target>"),
 	.aligned_name = STRING("get         "),
 	.name = STRING("get"),
 };
