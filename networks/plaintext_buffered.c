@@ -28,6 +28,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +45,9 @@
 
 struct plaintext_buffered_handle {
 	MUTEX_TYPE mutex;
+#ifdef USE_FUTEX
+	MUTEX_TYPE release_read;
+#endif
 	int fd;
 	char valid;
 	char close;
@@ -60,7 +64,22 @@ void * plaintext_buffered_send_thread(void *handle) {
 	while (1) {
 		size_t len;
 		len = info->buffer_len;
+
+		if (!info->valid)
+			goto plaintext_buffered_send_thread_error_unlock;
+
+#ifdef USE_FUTEX
+		info->release_read = (len == 0);
+#endif
+
 		mutex_unlock(&(info->mutex));
+
+#ifdef USE_FUTEX
+		mutex_lock(&(info->release_read));
+		if (len == 0)
+			continue;
+#endif
+
 		if (read_buffer_index + len > PLAINTEXT_BUFFERED_LEN)
 			len = PLAINTEXT_BUFFERED_LEN - read_buffer_index;
 
@@ -80,6 +99,8 @@ void * plaintext_buffered_send_thread(void *handle) {
 		info->buffer_len -= (size_t)res;
 	}
 
+	plaintext_buffered_send_thread_error_unlock:
+	mutex_unlock(&(info->mutex));
 	plaintext_buffered_send_thread_error:
 	// TODO: Sane solution that works with ptread mutexes
 	while (1) {
@@ -118,6 +139,9 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 		if (plaintext_handle->write_buffer_index >= PLAINTEXT_BUFFERED_LEN)
 			plaintext_handle->write_buffer_index = 0;
 		plaintext_handle->buffer_len += len;
+#ifdef USE_FUTEX
+		mutex_unlock(&(plaintext_handle->release_read));
+#endif
 		mutex_unlock(&(plaintext_handle->mutex));
 		msg.len -= len;
 	}
@@ -196,6 +220,10 @@ int plaintext_buffered_connect(void **handle, struct string address, struct stri
 	if (mutex_init(&(plaintext_handle->mutex)) != 0)
 		goto plaintext_buffered_connect_free_buffer;
 
+#ifdef USE_FUTEX
+	plaintext_handle->release_read = 0;
+#endif
+
 	pthread_t trash;
 	if (pthread_create(&trash, &pthread_attr, plaintext_buffered_send_thread, plaintext_handle) != 0)
 		goto plaintext_buffered_connect_destroy_mutex;
@@ -252,6 +280,10 @@ int plaintext_buffered_accept(int listen_fd, void **handle, struct string *addr)
 	if (mutex_init(&(plaintext_handle->mutex)) != 0)
 		goto plaintext_buffered_accept_free_buffer;
 
+#ifdef USE_FUTEX
+	plaintext_handle->release_read = 0;
+#endif
+
 	pthread_t trash;
 	if (pthread_create(&trash, &pthread_attr, plaintext_buffered_send_thread, plaintext_handle) != 0)
 		goto plaintext_buffered_accept_destroy_mutex;
@@ -276,6 +308,9 @@ void plaintext_buffered_shutdown(void *handle) {
 	struct plaintext_buffered_handle *plaintext_handle = handle;
 	mutex_lock(&(plaintext_handle->mutex));
 	plaintext_handle->valid = 0;
+#ifdef USE_FUTEX
+	mutex_unlock(&(plaintext_handle->release_read));
+#endif
 	mutex_unlock(&(plaintext_handle->mutex));
 	shutdown(plaintext_handle->fd, SHUT_RDWR);
 }
@@ -283,6 +318,10 @@ void plaintext_buffered_shutdown(void *handle) {
 void plaintext_buffered_close(int fd, void *handle) {
 	struct plaintext_buffered_handle *plaintext_handle = handle;
 	mutex_lock(&(plaintext_handle->mutex));
+	plaintext_handle->valid = 0;
+#ifdef USE_FUTEX
+	mutex_unlock(&(plaintext_handle->release_read));
+#endif
 	plaintext_handle->close = 1;
 	mutex_unlock(&(plaintext_handle->mutex));
 }

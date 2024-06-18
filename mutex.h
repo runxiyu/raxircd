@@ -43,7 +43,7 @@ inline int mutex_init(uint32_t *futex) {
 
 inline void mutex_lock(uint32_t *futex) {
 	uint32_t val;
-	while (val = __sync_lock_test_and_set(futex, 1))
+	while ((val = __sync_lock_test_and_set(futex, 1)))
 		syscall(SYS_futex, futex, FUTEX_WAIT, val, 0, 0, 0);
 }
 
