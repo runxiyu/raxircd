@@ -35,10 +35,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "config.h"
-#include "general_network.h"
-#include "haxstring.h"
-#include "plaintext_network.h"
+#include "../config.h"
+#include "../general_network.h"
+#include "../haxstring.h"
+#include "plaintext.h"
 
 int init_plaintext_network(void) {
 	return 0;

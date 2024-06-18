@@ -37,11 +37,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "config.h"
-#include "general_network.h"
-#include "gnutls_network.h"
-#include "main.h"
-#include "mutex.h"
+#include "../config.h"
+#include "../general_network.h"
+#include "../main.h"
+#include "../mutex.h"
+#include "gnutls.h"
 
 struct gnutls_handle {
 	gnutls_session_t session;

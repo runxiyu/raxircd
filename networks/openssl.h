@@ -30,16 +30,16 @@
 
 #include <stddef.h>
 
-#include "haxstring.h"
-#include "general_network.h"
+#include "../haxstring.h"
+#include "../general_network.h"
 
-int init_gnutls_network(void);
+int init_openssl_network(void);
 
-int gnutls_send(void *fd, struct string msg);
-size_t gnutls_recv(void *fd, char *data, size_t len, char *err);
+int openssl_send(void *handle, struct string msg);
+size_t openssl_recv(void *handle, char *data, size_t len, char *err);
 
-int gnutls_connect(void **handle, struct string address, struct string port, struct string *addr_out);
-int gnutls_accept(int listen_fd, void **handle, struct string *addr);
+int openssl_connect(void **handle, struct string address, struct string port, struct string *addr_out);
+int openssl_accept(int listen_fd, void **handle, struct string *addr);
 
-void gnutls_shutdown(void *handle);
-void gnutls_close(int fd, void *handle);
+void openssl_shutdown(void *handle);
+void openssl_close(int fd, void *handle);

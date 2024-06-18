@@ -41,13 +41,16 @@
 #include "haxstring_utils.h"
 
 #ifdef USE_PLAINTEXT
-#include "plaintext_network.h"
+#include "networks/plaintext.h"
 #endif
 #ifdef USE_GNUTLS
-#include "gnutls_network.h"
+#include "networks/gnutls.h"
 #endif
 #ifdef USE_OPENSSL
-#include "openssl_network.h"
+#include "networks/openssl.h"
+#endif
+#ifdef USE_PLAINTEXT_BUFFERED
+#include "networks/plaintext_buffered.h"
 #endif
 
 #ifdef USE_PROTOCOLS
@@ -100,6 +103,16 @@ struct network networks[NUM_NET_TYPES] = {
 		.accept = plaintext_accept,
 		.shutdown = plaintext_shutdown,
 		.close = plaintext_close,
+	},
+#endif
+#ifdef USE_PLAINTEXT_BUFFERED
+	[NET_TYPE_PLAINTEXT_BUFFERED] = {
+		.send = plaintext_buffered_send,
+		.recv = plaintext_buffered_recv,
+		.connect = plaintext_buffered_connect,
+		.accept = plaintext_buffered_accept,
+		.shutdown = plaintext_buffered_shutdown,
+		.close = plaintext_buffered_close,
 	},
 #endif
 #ifdef USE_GNUTLS

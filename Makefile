@@ -39,6 +39,8 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_GNUTLS_SERVER = $(GNUTLS_SERVER)' >> .makeopts
 	printf '%s\n' 'LAST_OPENSSL_CLIENT = $(OPENSSL_CLIENT)' >> .makeopts
 	printf '%s\n' 'LAST_OPENSSL_SERVER = $(OPENSSL_SERVER)' >> .makeopts
+	printf '%s\n' 'LAST_PLAINTEXT_BUFFERED_CLIENT = $(PLAINTEXT_BUFFERED_CLIENT)' >> .makeopts
+	printf '%s\n' 'LAST_PLAINTEXT_BUFFERED_SERVER = $(PLAINTEXT_BUFFERED_SERVER)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD2_PROTOCOL = $(INSPIRCD2_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD3_PROTOCOL = $(INSPIRCD3_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_HAXSERV_PSEUDOCLIENT = $(HAXSERV_PSEUDOCLIENT)' >> .makeopts
@@ -100,6 +102,22 @@ rebuild = 1
 endif
 else
 OPENSSL_SERVER = $(LAST_OPENSSL_SERVER)
+endif
+
+ifneq ($(PLAINTEXT_CLIENT),)
+ifneq ($(PLAINTEXT_CLIENT),$(LAST_PLAINTEXT_CLIENT))
+rebuild = 1
+endif
+else
+PLAINTEXT_CLIENT = $(LAST_PLAINTEXT_CLIENT)
+endif
+
+ifneq ($(PLAINTEXT_BUFFERED_SERVER),)
+ifneq ($(PLAINTEXT_BUFFERED_SERVER),$(LAST_PLAINTEXT_BUFFERED_SERVER))
+rebuild = 1
+endif
+else
+PLAINTEXT_BUFFERED_SERVER = $(LAST_PLAINTEXT_BUFFERED_SERVER)
 endif
 
 ifneq ($(INSPIRCD2_PROTOCOL),)
@@ -209,6 +227,18 @@ USE_SERVER = 1
 USE_OPENSSL = 1
 endif
 
+ifeq ($(PLAINTEXT_BUFFERED_CLIENT),1)
+CFLAGS += -DUSE_PLAINTEXT_BUFFERED_CLIENT
+USE_CLIENT = 1
+USE_PLAINTEXT_BUFFERED = 1
+endif
+
+ifeq ($(PLAINTEXT_BUFFERED_SERVER),1)
+CFLAGS += -DUSE_PLAINTEXT_BUFFERED_SERVER
+USE_SERVER = 1
+USE_PLAINTEXT_BUFFERED = 1
+endif
+
 
 
 ifeq ($(INSPIRCD2_PROTOCOL),1)
@@ -247,20 +277,25 @@ CFLAGS += -DUSE_SERVER
 endif
 
 ifeq ($(USE_PLAINTEXT),1)
-OFILES += plaintext_network.o
+OFILES += networks/plaintext.o
 CFLAGS += -DUSE_PLAINTEXT
 endif
 
 ifeq ($(USE_GNUTLS),1)
-OFILES += gnutls_network.o
+OFILES += networks/gnutls.o
 CFLAGS += -DUSE_GNUTLS $(shell pkg-config gnutls --cflags)
 LDFLAGS += $(shell pkg-config gnutls --libs)
 endif
 
 ifeq ($(USE_OPENSSL),1)
-OFILES += openssl_network.o
+OFILES += networks/openssl.o
 CFLAGS += -DUSE_OPENSSL $(shell pkg-config openssl --cflags)
 LDFLAGS += $(shell pkg-config openssl --libs)
+endif
+
+ifeq ($(USE_PLAINTEXT_BUFFERED),1)
+OFILES += networks/plaintext_buffered.o
+CFLAGS += -DUSE_PLAINTEXT_BUFFERED
 endif
 
 
@@ -328,15 +363,19 @@ $(call DEPS,protocols,o)
 $(call DEPS,table,o)
 
 ifeq ($(USE_PLAINTEXT),1)
-$(call DEPS,plaintext_network,o)
+$(call DEPS,networks/plaintext,o)
 endif
 
 ifeq ($(USE_GNUTLS),1)
-$(call DEPS,gnutls_network,o)
+$(call DEPS,networks/gnutls,o)
 endif
 
 ifeq ($(USE_OPENSSL),1)
-$(call DEPS,openssl_network,o)
+$(call DEPS,networks/openssl,o)
+endif
+
+ifeq ($(USE_PLAINTEXT_BUFFERED),1)
+$(call DEPS,networks/plaintext_buffered,o)
 endif
 
 ifeq ($(USE_CLIENT),1)
@@ -368,4 +407,6 @@ $(call DEPS,pseudoclients/haxserv,so)
 endif
 
 clean:
-	$(RM) HaxIRCd *.o *.so protocols/*.o protocols/*.so pseudoclients/*.o pseudoclients/*.so
+	$(RM) HaxIRCd
+	for file in `find . -name '*.so'`; do $(RM) $$file; done
+	for file in `find . -name '*.o'`; do $(RM) $$file; done

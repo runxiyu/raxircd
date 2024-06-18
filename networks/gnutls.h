@@ -30,16 +30,16 @@
 
 #include <stddef.h>
 
-#include "haxstring.h"
-#include "general_network.h"
+#include "../haxstring.h"
+#include "../general_network.h"
 
-int init_plaintext_network(void);
+int init_gnutls_network(void);
 
-int plaintext_send(void *fd, struct string msg);
-size_t plaintext_recv(void *fd, char *data, size_t len, char *err);
+int gnutls_send(void *fd, struct string msg);
+size_t gnutls_recv(void *fd, char *data, size_t len, char *err);
 
-int plaintext_connect(void **handle, struct string address, struct string port, struct string *addr_out);
-int plaintext_accept(int listen_fd, void **handle, struct string *addr);
+int gnutls_connect(void **handle, struct string address, struct string port, struct string *addr_out);
+int gnutls_accept(int listen_fd, void **handle, struct string *addr);
 
-void plaintext_shutdown(void *handle);
-void plaintext_close(int fd, void *handle);
+void gnutls_shutdown(void *handle);
+void gnutls_close(int fd, void *handle);

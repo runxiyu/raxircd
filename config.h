@@ -33,6 +33,10 @@
 #include "general_network.h"
 #include "protocols.h"
 
+// #define K 1024
+// #define M (1024 * K)
+// #define G (1024 * M)
+
 #ifdef USE_SERVER
 struct server_config {
 	struct string name; // = STRING("hax.example.org"),
@@ -74,6 +78,10 @@ extern char *GNUTLS_KEY_PATH; // = "/etc/keys/key.pem", or 0
 extern char OPENSSL_USE_SYSTEM_TRUST; // = 1;
 extern char *OPENSSL_CERT_PATH; // = "/etc/keys/crt.pem", or 0
 extern char *OPENSSL_KEY_PATH; // = "/etc/keys/key.pem", or 0
+#endif
+
+#ifdef USE_PLAINTEXT_BUFFERED
+extern size_t PLAINTEXT_BUFFERED_LEN; // = 1 M
 #endif
 
 #ifdef USE_SERVER

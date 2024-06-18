@@ -157,8 +157,11 @@ extern char casemap[UCHAR_MAX+1];
 #ifdef USE_OPENSSL
 #define NET_TYPE_OPENSSL 2
 #endif
+#ifdef USE_PLAINTEXT_BUFFERED
+#define NET_TYPE_PLAINTEXT_BUFFERED 3
+#endif
 
-#define NUM_NET_TYPES 3
+#define NUM_NET_TYPES 4
 
 #define MODE_TYPE_UNKNOWN 0
 #define MODE_TYPE_NOARGS 1

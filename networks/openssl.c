@@ -35,10 +35,10 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "config.h"
-#include "main.h"
-#include "mutex.h"
-#include "openssl_network.h"
+#include "../config.h"
+#include "../main.h"
+#include "../mutex.h"
+#include "openssl.h"
 
 struct openssl_handle {
 	SSL *ssl;

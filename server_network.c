@@ -40,10 +40,16 @@
 #include "server_network.h"
 
 #ifdef USE_PLAINTEXT_SERVER
-#include "plaintext_network.h"
+#include "networks/plaintext.h"
 #endif
 #ifdef USE_GNUTLS_SERVER
-#include "gnutls_network.h"
+#include "networks/gnutls.h"
+#endif
+#ifdef USE_OPENSSL_SERVER
+#include "networks/openssl.h"
+#endif
+#ifdef USE_PLAINTEXT_BUFFERED_SERVER
+#include "networks/plaintext_buffered.h"
 #endif
 
 struct table server_config = {0};
@@ -75,6 +81,10 @@ int start_server_network(void) {
 	if (OPENSSL_CERT_PATH && OPENSSL_KEY_PATH)
 		if (start_server_network_threads(NET_TYPE_OPENSSL) != 0)
 			return 1;
+#endif
+#ifdef USE_PLAINTEXT_BUFFERED_SERVER
+	if (start_server_network_threads(NET_TYPE_PLAINTEXT_BUFFERED) != 0)
+		return 1;
 #endif
 
 	pthread_t trash;

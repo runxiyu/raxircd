@@ -35,13 +35,13 @@
 #include "mutex.h"
 
 #ifdef USE_PLAINTEXT
-#include "plaintext_network.h"
+#include "networks/plaintext.h"
 #endif
 #ifdef USE_GNUTLS
-#include "gnutls_network.h"
+#include "networks/gnutls.h"
 #endif
 #ifdef USE_OPENSSL
-#include "openssl_network.h"
+#include "networks/openssl.h"
 #endif
 
 #ifdef USE_SERVER
