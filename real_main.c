@@ -32,6 +32,7 @@
 #include "config.h"
 #include "general_network.h"
 #include "main.h"
+#include "mutex.h"
 
 #ifdef USE_PLAINTEXT
 #include "plaintext_network.h"
@@ -59,11 +60,13 @@
 #endif
 
 pthread_attr_t pthread_attr;
-pthread_mutexattr_t pthread_mutexattr;
 
-pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
+MUTEX_TYPE state_lock;
 
 int real_main(void) {
+	if (mutex_init(&state_lock) != 0)
+		return 1;
+
 	if (init_general_network() != 0)
 		return 1;
 
@@ -107,7 +110,7 @@ int real_main(void) {
 	if (pthread_attr_init(&pthread_attr) != 0)
 		return 1;
 
-	if (pthread_mutexattr_init(&pthread_mutexattr) != 0)
+	if (SETUP_MUTEX() != 0)
 		return 1;
 
 	if (pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED) != 0) // shouldn't actually happen

@@ -37,11 +37,12 @@
 
 #include "config.h"
 #include "main.h"
+#include "mutex.h"
 #include "openssl_network.h"
 
 struct openssl_handle {
 	SSL *ssl;
-	pthread_mutex_t mutex;
+	MUTEX_TYPE mutex;
 	int fd;
 	char valid;
 };
@@ -74,7 +75,7 @@ int openssl_send(void *handle, struct string msg) {
 
 	struct openssl_handle *openssl_handle = handle;
 
-	pthread_mutex_lock(&(openssl_handle->mutex));
+	mutex_lock(&(openssl_handle->mutex));
 
 	if (!openssl_handle->valid)
 		goto openssl_send_error_unlock;
@@ -111,15 +112,15 @@ int openssl_send(void *handle, struct string msg) {
 			goto openssl_send_error_unlock;
 	} while (1);
 
-	pthread_mutex_unlock(&(openssl_handle->mutex));
+	mutex_unlock(&(openssl_handle->mutex));
 	return 0;
 
 	openssl_send_error_unlock:
 	if (openssl_handle->valid) {
-		pthread_mutex_unlock(&(openssl_handle->mutex));
+		mutex_unlock(&(openssl_handle->mutex));
 		openssl_shutdown(handle);
 	} else {
-		pthread_mutex_unlock(&(openssl_handle->mutex));
+		mutex_unlock(&(openssl_handle->mutex));
 	}
 	return 1;
 }
@@ -132,14 +133,14 @@ size_t openssl_recv(void *handle, char *data, size_t len, char *err) {
 	};
 	int res;
 	do {
-		pthread_mutex_lock(&(openssl_handle->mutex));
+		mutex_lock(&(openssl_handle->mutex));
 		if (!openssl_handle->valid) {
-			pthread_mutex_unlock(&(openssl_handle->mutex));
+			mutex_unlock(&(openssl_handle->mutex));
 			*err = 3;
 			return 0;
 		}
 		res = SSL_read(openssl_handle->ssl, data, len);
-		pthread_mutex_unlock(&(openssl_handle->mutex));
+		mutex_unlock(&(openssl_handle->mutex));
 		if (res <= 0) {
 			switch(SSL_get_error(openssl_handle->ssl, res)) {
 				case SSL_ERROR_WANT_READ:
@@ -234,7 +235,7 @@ int openssl_connect(void **handle, struct string address, struct string port, st
 		goto openssl_connect_free_openssl_handle;
 	SSL_set_fd(openssl_handle->ssl, fd);
 
-	res = pthread_mutex_init(&(openssl_handle->mutex), &(pthread_mutexattr));
+	res = mutex_init(&(openssl_handle->mutex));
 	if (res != 0)
 		goto openssl_connect_free_ssl;
 
@@ -279,7 +280,7 @@ int openssl_connect(void **handle, struct string address, struct string port, st
 	return fd;
 
 	openssl_connect_destroy_mutex:
-	pthread_mutex_destroy(&(openssl_handle->mutex));
+	mutex_destroy(&(openssl_handle->mutex));
 	openssl_connect_free_ssl:
 	SSL_free(openssl_handle->ssl);
 	openssl_connect_free_openssl_handle:
@@ -335,7 +336,7 @@ int openssl_accept(int listen_fd, void **handle, struct string *addr) {
 
 	SSL_set_fd(openssl_handle->ssl, con_fd);
 
-	int res = pthread_mutex_init(&(openssl_handle->mutex), &(pthread_mutexattr));
+	int res = mutex_init(&(openssl_handle->mutex));
 	if (res != 0)
 		goto openssl_accept_free_ssl;
 
@@ -380,7 +381,7 @@ int openssl_accept(int listen_fd, void **handle, struct string *addr) {
 	return con_fd;
 
 	openssl_accept_destroy_mutex:
-	pthread_mutex_destroy(&(openssl_handle->mutex));
+	mutex_destroy(&(openssl_handle->mutex));
 	openssl_accept_free_ssl:
 	SSL_free(openssl_handle->ssl);
 	openssl_accept_free_openssl_handle:
@@ -395,15 +396,15 @@ int openssl_accept(int listen_fd, void **handle, struct string *addr) {
 
 void openssl_shutdown(void *handle) {
 	struct openssl_handle *openssl_handle = handle;
-	pthread_mutex_lock(&(openssl_handle->mutex));
+	mutex_lock(&(openssl_handle->mutex));
 	shutdown(openssl_handle->fd, SHUT_RDWR);
 	openssl_handle->valid = 0;
-	pthread_mutex_unlock(&(openssl_handle->mutex));
+	mutex_unlock(&(openssl_handle->mutex));
 }
 
 void openssl_close(int fd, void *handle) {
 	struct openssl_handle *openssl_handle = handle;
-	pthread_mutex_destroy(&(openssl_handle->mutex));
+	mutex_destroy(&(openssl_handle->mutex));
 	SSL_free(openssl_handle->ssl);
 	free(openssl_handle);
 	close(fd);

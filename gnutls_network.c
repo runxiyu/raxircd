@@ -41,10 +41,11 @@
 #include "general_network.h"
 #include "gnutls_network.h"
 #include "main.h"
+#include "mutex.h"
 
 struct gnutls_handle {
 	gnutls_session_t session;
-	pthread_mutex_t mutex;
+	MUTEX_TYPE mutex;
 	int fd;
 	char valid;
 };
@@ -73,7 +74,7 @@ int gnutls_send(void *handle, struct string msg) {
 
 	struct gnutls_handle *gnutls_handle = handle;
 
-	pthread_mutex_lock(&(gnutls_handle->mutex));
+	mutex_lock(&(gnutls_handle->mutex));
 
 	if (!gnutls_handle->valid)
 		goto gnutls_send_error_unlock;
@@ -120,15 +121,15 @@ int gnutls_send(void *handle, struct string msg) {
 			goto gnutls_send_error_unlock;
 	} while (1);
 
-	pthread_mutex_unlock(&(gnutls_handle->mutex));
+	mutex_unlock(&(gnutls_handle->mutex));
 	return 0;
 
 	gnutls_send_error_unlock:
 	if (gnutls_handle->valid) {
-		pthread_mutex_unlock(&(gnutls_handle->mutex));
+		mutex_unlock(&(gnutls_handle->mutex));
 		gnutls_shutdown(gnutls_handle);
 	} else {
-		pthread_mutex_unlock(&(gnutls_handle->mutex));
+		mutex_unlock(&(gnutls_handle->mutex));
 	}
 	return 1;
 }
@@ -142,16 +143,16 @@ size_t gnutls_recv(void *handle, char *data, size_t len, char *err) {
 	ssize_t gnutls_res;
 	do {
 		int poll_res;
-		pthread_mutex_lock(&(gnutls_handle->mutex));
+		mutex_lock(&(gnutls_handle->mutex));
 		if (!gnutls_handle->valid) {
-			pthread_mutex_unlock(&(gnutls_handle->mutex));
+			mutex_unlock(&(gnutls_handle->mutex));
 			*err = 3;
 			return 0;
 		}
 		do {
 			gnutls_res = gnutls_record_recv(gnutls_handle->session, data, len);
 		} while (gnutls_res == GNUTLS_E_INTERRUPTED);
-		pthread_mutex_unlock(&(gnutls_handle->mutex));
+		mutex_unlock(&(gnutls_handle->mutex));
 		if (gnutls_res < 0) {
 			if (gnutls_res == GNUTLS_E_AGAIN) {
 				pollfd.events = POLLIN | POLLOUT;
@@ -206,7 +207,7 @@ int gnutls_connect(void **handle, struct string address, struct string port, str
 
 	*handle = gnutls_handle;
 
-	int res = pthread_mutex_init(&(gnutls_handle->mutex), &pthread_mutexattr);
+	int res = mutex_init(&(gnutls_handle->mutex));
 	if (res != 0)
 		goto gnutls_connect_free_gnutls_handle;
 
@@ -301,7 +302,7 @@ int gnutls_connect(void **handle, struct string address, struct string port, str
 	gnutls_connect_close:
 	close(fd);
 	gnutls_connect_destroy_mutex:
-	pthread_mutex_destroy(&(gnutls_handle->mutex));
+	mutex_destroy(&(gnutls_handle->mutex));
 	gnutls_connect_free_gnutls_handle:
 	free(gnutls_handle);
 
@@ -338,7 +339,7 @@ int gnutls_accept(int listen_fd, void **handle, struct string *addr) {
 	gnutls_handle->valid = 1;
 	gnutls_handle->fd = con_fd;
 
-	int res = pthread_mutex_init(&(gnutls_handle->mutex), &(pthread_mutexattr));
+	int res = mutex_init(&(gnutls_handle->mutex));
 	if (res != 0)
 		goto gnutls_accept_free_gnutls_handle;
 
@@ -410,7 +411,7 @@ int gnutls_accept(int listen_fd, void **handle, struct string *addr) {
 	gnutls_accept_free_addr_data:
 	free(addr->data);
 	gnutls_accept_destroy_mutex:
-	pthread_mutex_destroy(&(gnutls_handle->mutex));
+	mutex_destroy(&(gnutls_handle->mutex));
 	gnutls_accept_free_gnutls_handle:
 	free(gnutls_handle);
 	gnutls_accept_close:
@@ -420,15 +421,15 @@ int gnutls_accept(int listen_fd, void **handle, struct string *addr) {
 
 void gnutls_shutdown(void *handle) {
 	struct gnutls_handle *gnutls_handle = handle;
-	pthread_mutex_lock(&(gnutls_handle->mutex));
+	mutex_lock(&(gnutls_handle->mutex));
 	shutdown(gnutls_handle->fd, SHUT_RDWR);
 	gnutls_handle->valid = 0;
-	pthread_mutex_unlock(&(gnutls_handle->mutex));
+	mutex_unlock(&(gnutls_handle->mutex));
 }
 
 void gnutls_close(int fd, void *handle) {
 	struct gnutls_handle *gnutls_handle = handle;
-	pthread_mutex_destroy(&(gnutls_handle->mutex));
+	mutex_destroy(&(gnutls_handle->mutex));
 	gnutls_deinit(gnutls_handle->session);
 	free(gnutls_handle);
 	close(fd);

@@ -1,3 +1,5 @@
+// One of the code files for HaxServ
+//
 // Written by: Test_User <hax@andrewyu.org>
 //
 // This is free and unencumbered software released into the public
@@ -24,12 +26,9 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#pragma once
-
 #include "mutex.h"
 
-extern pthread_attr_t pthread_attr;
-
-extern MUTEX_TYPE state_lock;
-
-int main(void);
+#ifdef USE_FUTEX
+#else
+pthread_mutexattr_t pthread_mutexattr;
+#endif

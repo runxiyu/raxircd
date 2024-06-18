@@ -45,6 +45,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_INSPIRCD3_PROTOCOL = $(INSPIRCD3_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_HAXSERV_PSEUDOCLIENT = $(HAXSERV_PSEUDOCLIENT)' >> .makeopts
 	printf '%s\n' 'LAST_SAFE_STACK = $(SAFE_STACK)' >> .makeopts
+	printf '%s\n' 'LAST_FUTEX = $(FUTEX)' >> .makeopts
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
 
@@ -150,6 +151,14 @@ else
 CC = $(LAST_CC)
 endif
 
+ifneq ($(FUTEX),)
+ifneq ($(FUTEX),$(LAST_FUTEX))
+rebuild = 1
+endif
+else
+FUXEX = $(LAST_FUTEX)
+endif
+
 ifeq ($(rebuild),1)
 .PHONY: .makeopts
 endif
@@ -159,7 +168,7 @@ USE_CLIENT = 0
 USE_GNUTLS = 0
 USE_SERVER = 0
 
-OFILES = config.o general_network.o haxstring_utils.o real_main.o table.o
+OFILES = config.o general_network.o haxstring_utils.o real_main.o table.o mutex.o
 SOFILES = HaxIRCd.so
 
 ifeq ($(PLAINTEXT_CLIENT),1)
@@ -270,6 +279,12 @@ endif
 
 
 
+ifeq ($(FUTEX),1)
+CFLAGS += -DUSE_FUTEX
+endif
+
+
+
 ifeq ($(SAFE_STACK),1)
 CFLAGS += -fstack-check
 endif
@@ -303,6 +318,8 @@ $(call DEPS,haxstring_utils,o)
 $(call DEPS,real_main,o)
 
 $(call DEPS,main,o)
+
+$(call DEPS,mutex,o)
 
 $(call DEPS,protocols,o)
 

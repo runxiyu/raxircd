@@ -38,6 +38,7 @@
 #include "../haxstring.h"
 #include "../haxstring_utils.h"
 #include "../main.h"
+#include "../mutex.h"
 #include "../server_network.h"
 #include "inspircd3.h"
 
@@ -211,7 +212,7 @@ void * inspircd3_protocol_connection(void *type) {
 							goto inspircd3_protocol_handle_connection_close;
 						timeout++;
 
-						pthread_mutex_lock(&(state_lock));
+						mutex_lock(&(state_lock));
 						networks[net].send(handle, STRING(":"));
 						networks[net].send(handle, SID);
 						networks[net].send(handle, STRING(" PING :"));
@@ -222,7 +223,7 @@ void * inspircd3_protocol_connection(void *type) {
 						server->awaiting_pong = 1;
 						gettimeofday(&(server->last_ping), 0);
 
-						pthread_mutex_unlock(&(state_lock));
+						mutex_unlock(&(state_lock));
 					} else {
 						goto inspircd3_protocol_handle_connection_close;
 					}
@@ -381,7 +382,7 @@ void * inspircd3_protocol_connection(void *type) {
 				i++;
 			}
 
-			pthread_mutex_lock(&state_lock);
+			mutex_lock(&state_lock);
 
 			if (source.len != 0) {
 				struct server_info *server;
@@ -430,7 +431,7 @@ void * inspircd3_protocol_connection(void *type) {
 			WRITES(2, STRING("\n"));
 
 			do_trivial_reloads();
-			pthread_mutex_unlock(&state_lock);
+			mutex_unlock(&state_lock);
 			memmove(full_msg.data, full_msg.data + msg_len + 1, full_msg.len - msg_len - 1);
 			full_msg.len -= msg_len + 1;
 			void *tmp = realloc(full_msg.data, full_msg.len);
@@ -440,14 +441,14 @@ void * inspircd3_protocol_connection(void *type) {
 	}
 
 	inspircd3_protocol_handle_connection_unlock_close:
-	pthread_mutex_unlock(&state_lock);
+	mutex_unlock(&state_lock);
 	inspircd3_protocol_handle_connection_close:
 	free(full_msg.data);
 
 	if (ready) {
-		pthread_mutex_lock(&(state_lock));
+		mutex_lock(&(state_lock));
 		unlink_server(config->sid, get_table_index(server_list, config->sid), self, INSPIRCD3_PROTOCOL);
-		pthread_mutex_unlock(&(state_lock));
+		mutex_unlock(&(state_lock));
 	}
 
 	networks[net].close(fd, handle);

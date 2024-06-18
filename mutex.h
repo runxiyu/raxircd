@@ -26,10 +26,58 @@
 
 #pragma once
 
-#include "mutex.h"
+#ifdef USE_FUTEX
 
-extern pthread_attr_t pthread_attr;
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <stdint.h>
+#include <linux/futex.h>
 
-extern MUTEX_TYPE state_lock;
+#define SETUP_MUTEX() 0
+#define MUTEX_TYPE uint32_t
 
-int main(void);
+inline int mutex_init(uint32_t *futex) {
+	*futex = 0;
+	return 0;
+}
+
+inline void mutex_lock(uint32_t *futex) {
+	uint32_t val;
+	while (val = __sync_lock_test_and_set(futex, 1))
+		syscall(SYS_futex, futex, FUTEX_WAIT, val, 0, 0, 0);
+}
+
+inline void mutex_unlock(uint32_t *futex) {
+	__sync_lock_release(futex);
+	syscall(SYS_futex, futex, FUTEX_WAKE, 1, 0, 0, 0);
+}
+
+inline void mutex_destroy(uint32_t *futex) {
+	return;
+}
+
+#else
+
+#include <pthread.h>
+
+#define SETUP_MUTEX() pthread_mutexattr_init(&pthread_mutexattr)
+#define MUTEX_TYPE pthread_mutex_t
+
+extern pthread_mutexattr_t pthread_mutexattr;
+inline int mutex_init(pthread_mutex_t *mutex) {
+	return pthread_mutex_init(mutex, &pthread_mutexattr);
+}
+
+inline void mutex_lock(pthread_mutex_t *mutex) {
+	pthread_mutex_lock(mutex);
+}
+
+inline void mutex_unlock(pthread_mutex_t *mutex) {
+	pthread_mutex_unlock(mutex);
+}
+
+inline void mutex_destroy(pthread_mutex_t *mutex) {
+	pthread_mutex_destroy(mutex);
+}
+
+#endif
