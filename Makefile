@@ -47,6 +47,8 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
 
+$(shell [ -e .makeopts ] || > .makeopts)
+
 include .makeopts
 
 rebuild = 0
