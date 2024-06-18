@@ -37,6 +37,11 @@ struct inspircd3_protocol_specific_user {
 	struct table memberships;
 };
 
+struct inspircd3_protocol_member_id {
+	struct string id_str;
+	size_t id;
+};
+
 extern struct table inspircd3_protocol_init_commands;
 extern struct table inspircd3_protocol_commands;
 

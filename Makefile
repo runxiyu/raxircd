@@ -291,7 +291,7 @@ endif
 
 
 
-DEPS = $(shell $(CC) $(CFLAGS) -M -MT $(1).$(2) $(1).c | sed -z 's/\\\n //g') .makeopts Makefile
+DEPS = $(shell $(CC) $(CFLAGS) -M -MT $(1).$(2) $(1).c | sed 's_\\$$__') .makeopts Makefile
 
 
 .PHONY: all clean

@@ -275,7 +275,7 @@ void * inspircd3_protocol_connection(void *type) {
 			}
 
 			// Trim tags
-			while (offset < full_msg.len && full_msg.data[offset] == '@') {
+			if (offset < full_msg.len && full_msg.data[offset] == '@') {
 				while (offset < full_msg.len && full_msg.data[offset] != ' ')
 					offset++;
 
@@ -663,7 +663,7 @@ void inspircd3_protocol_propagate_oper_user(struct string from, struct user_info
 	}
 }
 
-// [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
+// [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid:mid [...]>
 void inspircd3_protocol_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_server, size_t user_count, struct user_info **users) {
 	inspircd3_protocol_propagate(from, STRING(":"));
 	inspircd3_protocol_propagate(from, SID);
@@ -675,13 +675,22 @@ void inspircd3_protocol_propagate_set_channel(struct string from, struct channel
 	for (size_t x = 0; x < user_count; x++) {
 		inspircd3_protocol_propagate(from, STRING(","));
 		inspircd3_protocol_propagate(from, users[x]->uid);
+		struct server_info *server = get_table_index(user_list, users[x]->uid);
+		if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL) {
+			inspircd3_protocol_propagate(from, STRING(":0"));
+		} else {
+			inspircd3_protocol_propagate(from, STRING(":"));
+			struct inspircd3_protocol_specific_user *prot_specific = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
+			struct inspircd3_protocol_member_id *member = get_table_index(prot_specific->memberships, channel->name);
+			inspircd3_protocol_propagate(from, member->id_str);
+		}
 		if (x != user_count - 1)
 			inspircd3_protocol_propagate(from, STRING(" "));
 	}
 	inspircd3_protocol_propagate(from, STRING("\n"));
 }
 
-// [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
+// [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid:mid [...]>
 void inspircd3_protocol_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users) {
 	inspircd3_protocol_propagate(from, STRING(":"));
 	inspircd3_protocol_propagate(from, SID);
@@ -693,6 +702,15 @@ void inspircd3_protocol_propagate_join_channel(struct string from, struct channe
 	for (size_t x = 0; x < user_count; x++) {
 		inspircd3_protocol_propagate(from, STRING(","));
 		inspircd3_protocol_propagate(from, users[x]->uid);
+		struct server_info *server = get_table_index(user_list, users[x]->uid);
+		if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL) {
+			inspircd3_protocol_propagate(from, STRING(":0"));
+		} else {
+			inspircd3_protocol_propagate(from, STRING(":"));
+			struct inspircd3_protocol_specific_user *prot_specific = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
+			struct inspircd3_protocol_member_id *member = get_table_index(prot_specific->memberships, channel->name);
+			inspircd3_protocol_propagate(from, member->id_str);
+		}
 		if (x != user_count - 1)
 			inspircd3_protocol_propagate(from, STRING(" "));
 	}
@@ -808,12 +826,17 @@ void inspircd3_protocol_handle_unlink_server(struct string from, struct server_i
 }
 
 int inspircd3_protocol_handle_new_user(struct string from, struct user_info *info) {
+	struct server_info *server = get_table_index(server_list, info->server);
+	if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL)
+		return 0;
+
 	struct inspircd3_protocol_specific_user *prot_info;
 	prot_info = malloc(sizeof(*prot_info));
 	if (!prot_info)
 		return 1;
 
 	prot_info->memberships.array = malloc(0);
+	prot_info->memberships.len = 0;
 
 	info->protocol_specific[INSPIRCD3_PROTOCOL] = prot_info;
 
@@ -825,6 +848,14 @@ int inspircd3_protocol_handle_rename_user(struct string from, struct user_info *
 }
 
 void inspircd3_protocol_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate) {
+	struct server_info *server = get_table_index(server_list, info->server);
+	if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL)
+		return;
+
+	struct inspircd3_protocol_specific_user *prot_info = info->protocol_specific[INSPIRCD3_PROTOCOL];
+	free(prot_info->memberships.array);
+	free(prot_info);
+
 	return;
 }
 
@@ -857,7 +888,19 @@ void inspircd3_protocol_fail_new_server(struct string from, struct string attach
 }
 
 void inspircd3_protocol_fail_new_user(struct string from, struct user_info *info) {
+	struct server_info *server = get_table_index(server_list, info->server);
+	if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL)
+		return;
+
 	struct inspircd3_protocol_specific_user *prot_info = info->protocol_specific[INSPIRCD3_PROTOCOL];
+
+	for (size_t i = 0; i < prot_info->memberships.len; i++) {
+		struct inspircd3_protocol_member_id *member = prot_info->memberships.array[i].ptr;
+		free(member->id_str.data);
+		free(member);
+	}
+
+	clear_table(&(prot_info->memberships));
 	free(prot_info->memberships.array);
 	free(prot_info);
 
@@ -1511,7 +1554,13 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 		return -1;
 	}
 
-	for (size_t i = 0, n = 0; i < argv[arg_i].len; n++) {
+	struct inspircd3_protocol_member_id **members;
+	members = malloc(sizeof(*members) * user_count * 2);
+	if (!members && user_count != 0)
+		goto inspircd3_protocol_handle_fjoin_free_users;
+
+	size_t n = 0;
+	for (size_t i = 0; i < argv[arg_i].len; n++) {
 		struct string uid;
 		while (i < argv[arg_i].len && argv[arg_i].data[i] != ',')
 			i++;
@@ -1531,23 +1580,78 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 			user_count--;
 		}
 
+		i++;
+
+		struct string mid;
+		mid.data = &(argv[arg_i].data[i]);
+
 		while (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
 			i++;
+
+		mid.len = (size_t)(&(argv[arg_i].data[i]) - mid.data);
+
+		char err;
+		size_t mid_number = str_to_unsigned(mid, &err);
+		if (err)
+			goto inspircd3_protocol_handle_fjoin_free_member_ids;
+
+		members[n] = malloc(sizeof(**members));
+		if (!members[n])
+			goto inspircd3_protocol_handle_fjoin_free_member_ids;
+
+
+		members[n]->id = mid_number;
+
+		if (str_clone(&(members[n]->id_str), mid) != 0) {
+			free(members[n]);
+			goto inspircd3_protocol_handle_fjoin_free_member_ids;
+		}
+	}
+
+	for (n = 0; n < user_count; n++) {
+		struct inspircd3_protocol_specific_user *this = users[n]->protocol_specific[INSPIRCD3_PROTOCOL];
+		members[user_count + n] = get_table_index(this->memberships, argv[0]);
+		if (set_table_index(&(this->memberships), argv[0], members[n]) != 0)
+			goto inspircd3_protocol_handle_fjoin_reset_member_ids;
+	}
+
+	for (size_t i = 0; i < user_count; i++) {
+		if (members[user_count + i])
+			free(members[user_count + i]->id_str.data);
 	}
 
 	struct channel_info *channel = get_table_index(channel_list, argv[0]);
 	if (!channel || timestamp < channel->channel_ts) {
 		if (set_channel(config->sid, argv[0], timestamp, user_count, users) != 0)
-			goto inspircd3_protocol_handle_fjoin_free_users;
+			goto inspircd3_protocol_handle_fjoin_free_member_ids;
 	} else {
 		if (join_channel(config->sid, channel, user_count, users, 1) != 0)
-			goto inspircd3_protocol_handle_fjoin_free_users;
+			goto inspircd3_protocol_handle_fjoin_free_member_ids;
 	}
 
+	free(members);
 	free(users);
 
 	return 0;
 
+	inspircd3_protocol_handle_fjoin_reset_member_ids:
+	for (size_t x = n; n > 0;) {
+		x--;
+		struct inspircd3_protocol_specific_user *this = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
+		if (members[user_count + x])
+			set_table_index(&(this->memberships), argv[0], members[user_count + x]); // Cannot fail
+		else
+			remove_table_index(&(this->memberships), argv[0]);
+	}
+
+	n = user_count;
+	inspircd3_protocol_handle_fjoin_free_member_ids:
+	for (size_t x = n; n > 0;) {
+		n--;
+		free(members[x]->id_str.data);
+		free(members[x]);
+	}
+	free(members);
 	inspircd3_protocol_handle_fjoin_free_users:
 	free(users);
 	return -1;
