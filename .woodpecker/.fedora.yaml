@@ -4,6 +4,6 @@ steps:
   build:
     image: fedora
     commands:
-      - dnf -y install make gcc openssl-devel pkg-config curl
+      - dnf -y install make gcc openssl-devel gnutls-devel pkg-config curl
       - curl -o config.c 'https://paste.sr.ht/blob/09d145e35ce3b058e02f5a0c664046fb66ba67e3'
       - make GNUTLS_SERVER=1 OPENSSL_SERVER=1 INSPIRCD2_PROTOCOL=1
