@@ -1,0 +1,9 @@
+skip_clone: false
+
+steps:
+  build:
+    image: archlinux
+    commands:
+      - pacman --noconfirm -Sy make gcc openssl gnutls curl pkgconf
+      - curl -o config.c 'https://paste.sr.ht/blob/09d145e35ce3b058e02f5a0c664046fb66ba67e3'
+      - make OPENSSL_SERVER=1 INSPIRCD2_PROTOCOL=1
