@@ -2,6 +2,9 @@ skip_clone: false
 
 steps:
   build:
+    when:
+      branch: [master]
+      event: [manual]
     image: fedora
     commands:
       - dnf -y install make gcc openssl-devel gnutls-devel pkg-config curl

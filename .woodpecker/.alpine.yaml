@@ -2,6 +2,9 @@ skip_clone: false
 
 steps:
   build:
+    when:
+      branch: [master]
+      event: [manual]
     image: alpine
     commands:
       - apk add --no-cache build-base gcc curl openssl-dev gnutls-dev

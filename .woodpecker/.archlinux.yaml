@@ -2,6 +2,9 @@ skip_clone: false
 
 steps:
   build:
+    when:
+      branch: [master]
+      event: [manual]
     image: archlinux
     commands:
       - pacman --noconfirm -Sy make gcc openssl gnutls curl pkgconf
