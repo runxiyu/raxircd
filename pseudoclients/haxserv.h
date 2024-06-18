@@ -37,30 +37,30 @@ struct command_def {
 	struct string name;
 };
 
-int haxserv_psuedoclient_init(void);
+int haxserv_pseudoclient_init(void);
 
-int haxserv_psuedoclient_post_reload(void);
-int haxserv_psuedoclient_pre_reload(void);
+int haxserv_pseudoclient_post_reload(void);
+int haxserv_pseudoclient_pre_reload(void);
 
-int haxserv_psuedoclient_allow_kill(struct string from, struct string source, struct user_info *user, struct string reason);
-int haxserv_psuedoclient_allow_kick(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
+int haxserv_pseudoclient_allow_kill(struct string from, struct string source, struct user_info *user, struct string reason);
+int haxserv_pseudoclient_allow_kick(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
 
-void haxserv_psuedoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);
+void haxserv_pseudoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);
 
-extern struct table haxserv_psuedoclient_commands;
+extern struct table haxserv_pseudoclient_commands;
 
-extern struct command_def haxserv_psuedoclient_help_command_def;
-extern struct command_def haxserv_psuedoclient_sus_command_def;
-extern struct command_def haxserv_psuedoclient_cr_command_def;
-extern struct command_def haxserv_psuedoclient_clear_command_def;
+extern struct command_def haxserv_pseudoclient_help_command_def;
+extern struct command_def haxserv_pseudoclient_sus_command_def;
+extern struct command_def haxserv_pseudoclient_cr_command_def;
+extern struct command_def haxserv_pseudoclient_clear_command_def;
 #ifdef USE_INSPIRCD2_PROTOCOL
-extern struct command_def haxserv_psuedoclient_raw_inspircd2_command_def;
+extern struct command_def haxserv_pseudoclient_raw_inspircd2_command_def;
 #endif
-extern struct command_def haxserv_psuedoclient_kill_command_def;
-extern struct command_def haxserv_psuedoclient_spam_command_def;
-extern struct command_def haxserv_psuedoclient_reload_command_def;
-extern struct command_def haxserv_psuedoclient_allow_command_def;
-extern struct command_def haxserv_psuedoclient_deny_command_def;
-extern struct command_def haxserv_psuedoclient_reconnect_command_def;
-extern struct command_def haxserv_psuedoclient_sanick_command_def;
-extern struct command_def haxserv_psuedoclient_get_command_def;
+extern struct command_def haxserv_pseudoclient_kill_command_def;
+extern struct command_def haxserv_pseudoclient_spam_command_def;
+extern struct command_def haxserv_pseudoclient_reload_command_def;
+extern struct command_def haxserv_pseudoclient_allow_command_def;
+extern struct command_def haxserv_pseudoclient_deny_command_def;
+extern struct command_def haxserv_pseudoclient_reconnect_command_def;
+extern struct command_def haxserv_pseudoclient_sanick_command_def;
+extern struct command_def haxserv_pseudoclient_get_command_def;

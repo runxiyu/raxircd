@@ -82,7 +82,7 @@ extern size_t SERVER_LISTEN[NUM_NET_TYPES][NUM_PROTOCOLS]; // = {16, ...};
 extern char SERVER_INCOMING[NUM_NET_TYPES][NUM_PROTOCOLS]; // = {1, ...};
 #endif
 
-#ifdef USE_HAXSERV_PSUEDOCLIENT
+#ifdef USE_HAXSERV_PSEUDOCLIENT
 extern struct string HAXSERV_UID; // = STRING("200000000");
 extern struct string HAXSERV_NICK; // = STRING("HaxServ");
 extern struct string HAXSERV_FULLNAME; // = STRING("Hax Services");

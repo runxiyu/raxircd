@@ -1,5 +1,3 @@
-// One of the code files for HaxServ
-//
 // Written by: Test_User <hax@andrewyu.org>
 //
 // This is free and unencumbered software released into the public
@@ -26,32 +24,33 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#include <dlfcn.h>
-#include <stdio.h>
+#pragma once
 
 #include "haxstring.h"
-#include "psuedoclients.h"
+#include "general_network.h"
 
-struct psuedoclient psuedoclients[NUM_PSUEDOCLIENTS] = {0};
+struct pseudoclient {
+	void *dl_handle;
 
-char reload_psuedoclients[NUM_PSUEDOCLIENTS] = {0};
+	int (*init)(void);
 
-int init_psuedoclients(void) {
-#ifdef USE_HAXSERV_PSUEDOCLIENT
-	{
-		void *dl_handle = dlopen("psuedoclients/haxserv.so", RTLD_NOW | RTLD_LOCAL);
-		if (!dl_handle) {
-			puts(dlerror());
-			return 1;
-		}
+	int (*pre_reload)(void);
+	int (*post_reload)(void);
 
-		psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle = dl_handle;
-		psuedoclients[HAXSERV_PSUEDOCLIENT].init = dlsym(dl_handle, "haxserv_psuedoclient_init");
+	int (*allow_kill)(struct string from, struct string source, struct user_info *user, struct string reason);
+	int (*allow_kick)(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
 
-		if (psuedoclients[HAXSERV_PSUEDOCLIENT].init() != 0)
-			return 1;
-	}
+	void (*handle_privmsg)(struct string from, struct string source, struct string target, struct string msg);
+};
+
+int init_pseudoclients(void);
+
+#ifdef USE_HAXSERV_PSEUDOCLIENT
+#define HAXSERV_PSEUDOCLIENT 0
 #endif
 
-	return 0;
-}
+#define NUM_PSEUDOCLIENTS 1
+
+extern struct pseudoclient pseudoclients[NUM_PSEUDOCLIENTS];
+
+extern char reload_pseudoclients[NUM_PSEUDOCLIENTS];

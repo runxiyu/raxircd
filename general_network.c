@@ -54,8 +54,8 @@
 #include "protocols.h"
 #endif
 
-#ifdef USE_PSUEDOCLIENTS
-#include "psuedoclients.h"
+#ifdef USE_PSEUDOCLIENTS
+#include "pseudoclients.h"
 #endif
 
 char casemap[UCHAR_MAX+1] = {
@@ -231,7 +231,7 @@ int init_general_network(void) {
 	return 1;
 }
 
-int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net, char is_psuedoclient, size_t psuedoclient) {
+int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net, char is_pseudoclient, size_t pseudoclient) {
 	struct server_info *attached = get_table_index(server_list, attached_to);
 	if (!attached)
 		return 1;
@@ -251,8 +251,8 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	new_info->net = net;
 	new_info->handle = handle;
 
-	new_info->is_psuedoclient = is_psuedoclient;
-	new_info->psuedoclient = psuedoclient;
+	new_info->is_pseudoclient = is_pseudoclient;
+	new_info->pseudoclient = pseudoclient;
 
 	new_info->server = attached->sid;
 
@@ -398,12 +398,12 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 }
 
 int kill_user(struct string from, struct string source, struct user_info *user, struct string reason) {
-#ifdef USE_PSUEDOCLIENTS
-	if (user->is_psuedoclient) {
-		switch (user->psuedoclient) {
-#ifdef USE_HAXSERV_PSUEDOCLIENT
-			case HAXSERV_PSUEDOCLIENT:
-				if (!psuedoclients[HAXSERV_PSUEDOCLIENT].allow_kill(from, source, user, reason))
+#ifdef USE_PSEUDOCLIENTS
+	if (user->is_pseudoclient) {
+		switch (user->pseudoclient) {
+#ifdef USE_HAXSERV_PSEUDOCLIENT
+			case HAXSERV_PSEUDOCLIENT:
+				if (!pseudoclients[HAXSERV_PSEUDOCLIENT].allow_kill(from, source, user, reason))
 					return 1;
 				break;
 #endif
@@ -590,12 +590,12 @@ void part_channel(struct string from, struct channel_info *channel, struct user_
 }
 
 int kick_channel(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason) {
-#ifdef USE_PSUEDOCLIENTS
-	if (user->is_psuedoclient) {
-		switch (user->psuedoclient) {
-#ifdef USE_HAXSERV_PSUEDOCLIENT
-			case HAXSERV_PSUEDOCLIENT:
-				if (!psuedoclients[HAXSERV_PSUEDOCLIENT].allow_kick(from, source, channel, user, reason))
+#ifdef USE_PSEUDOCLIENTS
+	if (user->is_pseudoclient) {
+		switch (user->pseudoclient) {
+#ifdef USE_HAXSERV_PSEUDOCLIENT
+			case HAXSERV_PSEUDOCLIENT:
+				if (!pseudoclients[HAXSERV_PSEUDOCLIENT].allow_kick(from, source, channel, user, reason))
 					return 1;
 				break;
 #endif
@@ -647,14 +647,14 @@ int privmsg(struct string from, struct string sender, struct string target, stru
 	protocols_propagate_privmsg(from, sender, target, msg);
 #endif
 
-#ifdef USE_PSUEDOCLIENTS
-	if ((user && user->is_psuedoclient && user->psuedoclient == HAXSERV_PSUEDOCLIENT) || (!user && !server)) {
+#ifdef USE_PSEUDOCLIENTS
+	if ((user && user->is_pseudoclient && user->pseudoclient == HAXSERV_PSEUDOCLIENT) || (!user && !server)) {
 		char send;
 		if (!user && !server) {
 			send = 0;
 			for (size_t i = 0; i < channel->user_list.len; i++) {
 				struct user_info *user = channel->user_list.array[i].ptr;
-				if (user->is_psuedoclient && user->psuedoclient == HAXSERV_PSUEDOCLIENT && !STRING_EQ(sender, user->uid)) {
+				if (user->is_pseudoclient && user->pseudoclient == HAXSERV_PSEUDOCLIENT && !STRING_EQ(sender, user->uid)) {
 					send = 1;
 					break;
 				}
@@ -663,7 +663,7 @@ int privmsg(struct string from, struct string sender, struct string target, stru
 			send = 1;
 		}
 		if (send)
-			psuedoclients[HAXSERV_PSUEDOCLIENT].handle_privmsg(from, sender, target, msg);
+			pseudoclients[HAXSERV_PSEUDOCLIENT].handle_privmsg(from, sender, target, msg);
 	}
 #endif
 
@@ -706,24 +706,24 @@ int notice(struct string from, struct string sender, struct string target, struc
 }
 
 int do_trivial_reloads(void) {
-#ifdef USE_PSUEDOCLIENTS
-#ifdef USE_HAXSERV_PSUEDOCLIENT
-	if (reload_psuedoclients[HAXSERV_PSUEDOCLIENT]) {
-		if (psuedoclients[HAXSERV_PSUEDOCLIENT].pre_reload() != 0)
+#ifdef USE_PSEUDOCLIENTS
+#ifdef USE_HAXSERV_PSEUDOCLIENT
+	if (reload_pseudoclients[HAXSERV_PSEUDOCLIENT]) {
+		if (pseudoclients[HAXSERV_PSEUDOCLIENT].pre_reload() != 0)
 			return 1;
-		dlclose(psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle);
-		psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle = dlopen("psuedoclients/haxserv.so", RTLD_NOW | RTLD_LOCAL);
-		if (!psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle) {
+		dlclose(pseudoclients[HAXSERV_PSEUDOCLIENT].dl_handle);
+		pseudoclients[HAXSERV_PSEUDOCLIENT].dl_handle = dlopen("pseudoclients/haxserv.so", RTLD_NOW | RTLD_LOCAL);
+		if (!pseudoclients[HAXSERV_PSEUDOCLIENT].dl_handle) {
 			puts(dlerror());
 			abort(); // TODO: Ugh...
 		}
 
-		psuedoclients[HAXSERV_PSUEDOCLIENT].post_reload = dlsym(psuedoclients[HAXSERV_PSUEDOCLIENT].dl_handle, "haxserv_psuedoclient_post_reload");
-		if (psuedoclients[HAXSERV_PSUEDOCLIENT].post_reload() != 0) {
+		pseudoclients[HAXSERV_PSEUDOCLIENT].post_reload = dlsym(pseudoclients[HAXSERV_PSEUDOCLIENT].dl_handle, "haxserv_pseudoclient_post_reload");
+		if (pseudoclients[HAXSERV_PSEUDOCLIENT].post_reload() != 0) {
 			abort(); // TODO: Ugh...
 		}
 
-		reload_psuedoclients[HAXSERV_PSUEDOCLIENT] = 0;
+		reload_pseudoclients[HAXSERV_PSEUDOCLIENT] = 0;
 	}
 #endif
 #endif

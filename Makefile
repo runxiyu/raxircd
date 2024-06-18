@@ -43,7 +43,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_OPENSSL_SERVER = $(OPENSSL_SERVER)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD2_PROTOCOL = $(INSPIRCD2_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD3_PROTOCOL = $(INSPIRCD3_PROTOCOL)' >> .makeopts
-	printf '%s\n' 'LAST_HAXSERV_PSUEDOCLIENT = $(HAXSERV_PSUEDOCLIENT)' >> .makeopts
+	printf '%s\n' 'LAST_HAXSERV_PSEUDOCLIENT = $(HAXSERV_PSEUDOCLIENT)' >> .makeopts
 	printf '%s\n' 'LAST_SAFE_STACK = $(SAFE_STACK)' >> .makeopts
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
@@ -117,12 +117,12 @@ else
 INSPIRCD3_PROTOCOL = $(LAST_INSPIRCD3_PROTOCOL)
 endif
 
-ifneq ($(HAXSERV_PSUEDOCLIENT),)
-ifneq ($(HAXSERV_PSUEDOCLIENT),$(LAST_HAXSERV_PSUEDOCLIENT))
+ifneq ($(HAXSERV_PSEUDOCLIENT),)
+ifneq ($(HAXSERV_PSEUDOCLIENT),$(LAST_HAXSERV_PSEUDOCLIENT))
 rebuild = 1
 endif
 else
-HAXSERV_PSUEDOCLIENT = $(LAST_HAXSERV_PSUEDOCLIENT)
+HAXSERV_PSEUDOCLIENT = $(LAST_HAXSERV_PSEUDOCLIENT)
 endif
 
 ifneq ($(SAFE_STACK),)
@@ -214,10 +214,10 @@ endif
 
 
 
-ifeq ($(HAXSERV_PSUEDOCLIENT),1)
-SOFILES += psuedoclients/haxserv.so
-CFLAGS += -DUSE_HAXSERV_PSUEDOCLIENT
-USE_PSUEDOCLIENTS = 1
+ifeq ($(HAXSERV_PSEUDOCLIENT),1)
+SOFILES += pseudoclients/haxserv.so
+CFLAGS += -DUSE_HAXSERV_PSEUDOCLIENT
+USE_PSEUDOCLIENTS = 1
 endif
 
 
@@ -263,9 +263,9 @@ endif
 
 
 
-ifeq ($(USE_PSUEDOCLIENTS),1)
-OFILES += psuedoclients.o
-CFLAGS += -DUSE_PSUEDOCLIENTS
+ifeq ($(USE_PSEUDOCLIENTS),1)
+OFILES += pseudoclients.o
+CFLAGS += -DUSE_PSEUDOCLIENTS
 endif
 
 
@@ -340,13 +340,13 @@ ifeq ($(INSPIRCD3_PROTOCOL),1)
 $(call DEPS,protocols/inspircd3,o)
 endif
 
-ifeq ($(USE_PSUEDOCLIENTS),1)
-$(call DEPS,psuedoclients,o)
+ifeq ($(USE_PSEUDOCLIENTS),1)
+$(call DEPS,pseudoclients,o)
 endif
 
-ifeq ($(HAXSERV_PSUEDOCLIENT),1)
-$(call DEPS,psuedoclients/haxserv,so)
+ifeq ($(HAXSERV_PSEUDOCLIENT),1)
+$(call DEPS,pseudoclients/haxserv,so)
 endif
 
 clean:
-	$(RM) HaxIRCd *.o *.so protocols/*.o protocols/*.so psuedoclients/*.o psuedoclients/*.so
+	$(RM) HaxIRCd *.o *.so protocols/*.o protocols/*.so pseudoclients/*.o pseudoclients/*.so

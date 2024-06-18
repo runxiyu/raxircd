@@ -107,8 +107,8 @@ struct user_info {
 	char awaiting_pong;
 	char latency_ready;
 
-	char is_psuedoclient;
-	size_t psuedoclient;
+	char is_pseudoclient;
+	size_t pseudoclient;
 };
 
 struct channel_info {
@@ -126,7 +126,7 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 
 int init_general_network(void);
 
-int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net, char is_psuedoclient, size_t psuedoclient);
+int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net, char is_pseudoclient, size_t pseudoclient);
 int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp);
 void remove_user(struct string from, struct user_info *user, struct string reason, char propagate);
 int kill_user(struct string from, struct string source, struct user_info *user, struct string reason);

@@ -50,12 +50,12 @@
 #include "client_network.h"
 #endif
 
-#ifdef USE_PSUEDOCLIENTS
-#include "psuedoclients.h"
+#ifdef USE_PSEUDOCLIENTS
+#include "pseudoclients.h"
 #endif
 
-#ifdef USE_HAXSERV_PSUEDOCLIENT
-#include "psuedoclients/haxserv.h"
+#ifdef USE_HAXSERV_PSEUDOCLIENT
+#include "pseudoclients/haxserv.h"
 #endif
 
 pthread_attr_t pthread_attr;
@@ -92,8 +92,8 @@ int real_main(void) {
 		return 1;
 #endif
 
-#ifdef USE_PSUEDOCLIENTS
-	if (init_psuedoclients() != 0)
+#ifdef USE_PSEUDOCLIENTS
+	if (init_pseudoclients() != 0)
 		return 1;
 #endif
 
