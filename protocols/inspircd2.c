@@ -986,7 +986,7 @@ void inspircd2_protocol_introduce_channel_to(size_t net, void *handle, struct ch
 // CAPAB <type> [<args> [, ...]]
 int inspircd2_protocol_init_handle_capab(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming) {
 	if (argc < 1) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid CAPAB recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid CAPAB received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1000,7 +1000,7 @@ int inspircd2_protocol_init_handle_capab(struct string source, size_t argc, stru
 // SERVER <address> <password> <always 0> <SID> <name>
 int inspircd2_protocol_init_handle_server(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming) {
 	if (argc < 5) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid SERVER recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid SERVER received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1085,7 +1085,7 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 // [:source] PING <reply_to> <target>
 int inspircd2_protocol_handle_ping(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 2) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid PING recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid PING received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1145,7 +1145,7 @@ int inspircd2_protocol_handle_pong(struct string source, size_t argc, struct str
 // [:source] SERVER <address> <password> <always 0> <SID> <name>
 int inspircd2_protocol_handle_server(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 5) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid SERVER recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid SERVER received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1165,7 +1165,7 @@ int inspircd2_protocol_handle_server(struct string source, size_t argc, struct s
 // [:source] SQUIT <SID> [<reason>?]
 int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 1) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1176,11 +1176,11 @@ int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct st
 	struct server_info *a = get_table_index(server_list, source);
 	struct server_info *b = get_table_index(server_list, argv[0]);
 	if (!a || !b) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT recieved! (Unknown source or target)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT received! (Unknown source or target)\r\n"));
 		return -1;
 	}
 	if (a->protocol != INSPIRCD2_PROTOCOL || b->protocol != INSPIRCD2_PROTOCOL) { // They're trying to use SQUIT for some unrelated server...
-		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT recieved! (Bad SID or source)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid SQUIT received! (Bad SID or source)\r\n"));
 		return -1;
 	}
 
@@ -1192,7 +1192,7 @@ int inspircd2_protocol_handle_squit(struct string source, size_t argc, struct st
 // [:source] RSQUIT <server name> [<reason>?]
 int inspircd2_protocol_handle_rsquit(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 1) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid RSQUIT recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid RSQUIT received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1230,7 +1230,7 @@ int inspircd2_protocol_handle_rsquit(struct string source, size_t argc, struct s
 // [:source] UID <UID> <nick_ts> <nick> <host> <vhost> <ident> <address> <user_ts> <modes> [<mode args>] <fullname>
 int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 10) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid UID received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1253,7 +1253,7 @@ int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct stri
 				break;
 			default:
 				if (dir == '?') {
-					WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Mode direction not set)\r\n"));
+					WRITES(2, STRING("[InspIRCd v2] Invalid UID received! (Mode direction not set)\r\n"));
 					return -1;
 				}
 
@@ -1268,7 +1268,7 @@ int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct stri
 						arg_i++;
 						break;
 					default:
-						WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Unknown mode given)\r\n"));
+						WRITES(2, STRING("[InspIRCd v2] Invalid UID received! (Unknown mode given)\r\n"));
 						return -1;
 				}
 		}
@@ -1277,20 +1277,20 @@ int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct stri
 	}
 
 	if (arg_i >= argc) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Missing mode arguments)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid UID received! (Missing mode arguments)\r\n"));
 		return -1;
 	}
 
 	char err;
 	size_t nick_ts = str_to_unsigned(argv[1], &err);
 	if (err) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Invalid nick timestamp)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid UID received! (Invalid nick timestamp)\r\n"));
 		return -1;
 	}
 
 	size_t user_ts = str_to_unsigned(argv[7], &err);
 	if (err) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid UID recieved! (Invalid user timestamp)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid UID received! (Invalid user timestamp)\r\n"));
 		return -1;
 	}
 
@@ -1305,14 +1305,14 @@ int inspircd2_protocol_handle_uid(struct string source, size_t argc, struct stri
 // :source NICK <nick> <timestamp>
 int inspircd2_protocol_handle_nick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 2) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid NICK recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid NICK received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
 	char err;
 	size_t nick_ts = str_to_unsigned(argv[1], &err);
 	if (err) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid NICK recieved! (Invalid timestamp)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid NICK received! (Invalid timestamp)\r\n"));
 		return -1;
 	}
 
@@ -1339,7 +1339,7 @@ int inspircd2_protocol_handle_quit(struct string source, size_t argc, struct str
 		return 0; // Maybe KILLed or something
 
 	if (STRING_EQ(user->server, SID)) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid QUIT recieved! (Attempting to quit a local user)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid QUIT received! (Attempting to quit a local user)\r\n"));
 		return -1;
 	}
 
@@ -1351,7 +1351,7 @@ int inspircd2_protocol_handle_quit(struct string source, size_t argc, struct str
 // [:source] KILL <target> [<reason>?]
 int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 1) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid KILL recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid KILL received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1397,7 +1397,7 @@ int inspircd2_protocol_handle_kill(struct string source, size_t argc, struct str
 // :source OPERTYPE <type>
 int inspircd2_protocol_handle_opertype(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 1) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid OPERTYPE recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid OPERTYPE received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1416,14 +1416,14 @@ int inspircd2_protocol_handle_opertype(struct string source, size_t argc, struct
 // [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
 int inspircd2_protocol_handle_fjoin(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 4) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
 	char err;
 	size_t timestamp = str_to_unsigned(argv[1], &err);
 	if (err) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN recieved! (Invalid timestamp)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN received! (Invalid timestamp)\r\n"));
 		return -1;
 	}
 
@@ -1437,7 +1437,7 @@ int inspircd2_protocol_handle_fjoin(struct string source, size_t argc, struct st
 				break;
 			default:
 				if (dir == '?') {
-					WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN recieved (Mode direction not set)\r\n"));
+					WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN received (Mode direction not set)\r\n"));
 					return -1;
 				}
 				switch(inspircd2_protocol_channel_mode_types[(unsigned char)argv[2].data[i]]) {
@@ -1451,10 +1451,10 @@ int inspircd2_protocol_handle_fjoin(struct string source, size_t argc, struct st
 						arg_i++;
 						break;
 					case MODE_TYPE_USERS:
-						WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN recieved! (User mode put in the modes instead of the user list)\r\n"));
+						WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN received! (User mode put in the modes instead of the user list)\r\n"));
 						return -1;
 					default:
-						WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN recieved! (Unknown mode given)\r\n"));
+						WRITES(2, STRING("[InspIRCd v2] Invalid FJOIN received! (Unknown mode given)\r\n"));
 						return -1;
 				}
 		}
@@ -1522,7 +1522,7 @@ int inspircd2_protocol_handle_fjoin(struct string source, size_t argc, struct st
 // :source PART <channel> [<reason>]
 int inspircd2_protocol_handle_part(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 1) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid PART recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid PART received! (Missing parameters)\r\n"));
 		return -1;
 	}
 	struct string reason;
@@ -1547,7 +1547,7 @@ int inspircd2_protocol_handle_part(struct string source, size_t argc, struct str
 // [:source] KICK <channel> <user> [<reason>]
 int inspircd2_protocol_handle_kick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 2) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid KICK recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid KICK received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1593,7 +1593,7 @@ int inspircd2_protocol_handle_kick(struct string source, size_t argc, struct str
 // [:source] PRIVMSG <target> <message>
 int inspircd2_protocol_handle_privmsg(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 2) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid PRIVMSG recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid PRIVMSG received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
@@ -1605,7 +1605,7 @@ int inspircd2_protocol_handle_privmsg(struct string source, size_t argc, struct 
 // [:source] NOTICE <target> <message>
 int inspircd2_protocol_handle_notice(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 2) {
-		WRITES(2, STRING("[InspIRCd v2] Invalid NOTICE recieved! (Missing parameters)\r\n"));
+		WRITES(2, STRING("[InspIRCd v2] Invalid NOTICE received! (Missing parameters)\r\n"));
 		return -1;
 	}
 
