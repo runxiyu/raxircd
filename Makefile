@@ -30,8 +30,6 @@ ORIGINAL_CFLAGS := $(CFLAGS)
 
 INCLUDEFLAGS =
 
-CFLAGS += $(INCLUDEFLAGS) -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -Wno-unused-parameter -Wno-implicit-fallthrough -std=gnu99
-
 LDFLAGS = -lpthread
 
 .makeopts:
@@ -162,6 +160,8 @@ endif
 ifeq ($(rebuild),1)
 .PHONY: .makeopts
 endif
+
+CFLAGS += $(INCLUDEFLAGS) -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -Wno-unused-parameter -Wno-implicit-fallthrough -std=gnu99
 
 USE_PLAINTEXT = 0
 USE_CLIENT = 0
