@@ -608,11 +608,28 @@ int haxserv_pseudoclient_allow_command(struct string from, struct string sender,
 				break;
 			}
 		}
-		if (!found)
+		if (!found) {
+			notice(SID, HAXSERV_UID, respond_to, STRING("This user doesn't exist, so is thereby already denied access."));
 			return 0;
+		}
 	}
 
-	oper_user(SID, user, HAXSERV_REQUIRED_OPER_TYPE, HAXSERV_UID);
+	if (oper_user(SID, user, HAXSERV_REQUIRED_OPER_TYPE, HAXSERV_UID) != 0) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Failed to oper target."));
+		return 0;
+	}
+
+	struct string msg_parts[] = {
+		STRING("User `"),
+		user->nick,
+		STRING("' is now considered an oper."),
+	};
+	struct string msg;
+	if (str_combine(&msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+		notice(SID, HAXSERV_UID, respond_to, msg);
+	} else {
+		notice(SID, HAXSERV_UID, respond_to, STRING("User is now considered an oper."));
+	}
 
 	return 0;
 }
@@ -643,7 +660,22 @@ int haxserv_pseudoclient_deny_command(struct string from, struct string sender, 
 			return 0;
 	}
 
-	oper_user(SID, user, STRING(""), HAXSERV_UID);
+	if (oper_user(SID, user, STRING(""), HAXSERV_UID) != 0) {
+		notice(SID, HAXSERV_UID, respond_to, STRING("Failed to deoper target."));
+		return 0;
+	}
+
+	struct string msg_parts[] = {
+		STRING("User `"),
+		user->nick,
+		STRING("' is no longer an oper."),
+	};
+	struct string msg;
+	if (str_combine(&msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+		notice(SID, HAXSERV_UID, respond_to, msg);
+	} else {
+		notice(SID, HAXSERV_UID, respond_to, STRING("User is no longer an oper."));
+	}
 
 	return 0;
 }
