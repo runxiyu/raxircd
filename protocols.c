@@ -232,11 +232,11 @@ void protocols_propagate_kill_user(struct string from, struct string source, str
 	}
 }
 
-void protocols_propagate_oper_user(struct string from, struct user_info *info, struct string type) {
+void protocols_propagate_oper_user(struct string from, struct user_info *info, struct string type, struct string source) {
 	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
 		if (!active_protocols[i])
 			continue;
-		protocols[i].propagate_oper_user(from, info, type);
+		protocols[i].propagate_oper_user(from, info, type, source);
 	}
 }
 
@@ -378,12 +378,12 @@ void protocols_handle_kill_user(struct string from, struct string source, struct
 	}
 }
 
-int protocols_handle_oper_user(struct string from, struct user_info *info, struct string type) {
+int protocols_handle_oper_user(struct string from, struct user_info *info, struct string type, struct string source) {
 	size_t i;
 	for (i = 0; i < NUM_PROTOCOLS; i++) {
 		if (!active_protocols[i])
 			continue;
-		if (protocols[i].handle_oper_user(from, info, type) != 0)
+		if (protocols[i].handle_oper_user(from, info, type, source) != 0)
 			goto protocols_handle_oper_user_fail;
 	}
 
@@ -394,7 +394,7 @@ int protocols_handle_oper_user(struct string from, struct user_info *info, struc
 		i--;
 		if (!active_protocols[i])
 			continue;
-		protocols[i].fail_oper_user(from, info, type);
+		protocols[i].fail_oper_user(from, info, type, source);
 	}
 
 	return 1;
@@ -484,11 +484,11 @@ void protocols_fail_rename_user(struct string from, struct user_info *info, stru
 	}
 }
 
-void protocols_fail_oper_user(struct string from, struct user_info *info, struct string type) {
+void protocols_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source) {
 	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
 		if (!active_protocols[i])
 			continue;
-		protocols[i].fail_oper_user(from, info, type);
+		protocols[i].fail_oper_user(from, info, type, source);
 	}
 }
 

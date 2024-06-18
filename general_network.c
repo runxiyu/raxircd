@@ -424,18 +424,21 @@ int kill_user(struct string from, struct string source, struct user_info *user, 
 	return 0;
 }
 
-int oper_user(struct string from, struct user_info *user, struct string type) {
+int oper_user(struct string from, struct user_info *user, struct string type, struct string source) {
+	if (STRING_EQ(user->oper_type, type))
+		return 0;
+
 	struct string tmp;
 	if (str_clone(&tmp, type) != 0)
 		return 1;
 
 #ifdef USE_SERVER
-	if (protocols_handle_oper_user(from, user, type) != 0) {
+	if (protocols_handle_oper_user(from, user, type, source) != 0) {
 		free(tmp.data);
 		return 1;
 	}
 
-	protocols_propagate_oper_user(from, user, type);
+	protocols_propagate_oper_user(from, user, type, source);
 #endif
 
 	free(user->oper_type.data);
@@ -728,4 +731,15 @@ int do_trivial_reloads(void) {
 #endif
 #endif
 	return 0;
+}
+
+int case_string_eq(struct string x, struct string y) {
+	if (x.len != y.len)
+		return 0;
+
+	for (size_t i = 0; i < x.len; i++)
+		if (CASEMAP(x.data[i]) != CASEMAP(y.data[i]))
+			return 0;
+
+	return 1;
 }

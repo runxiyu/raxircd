@@ -646,12 +646,20 @@ void inspircd3_protocol_propagate_kill_user(struct string from, struct string so
 }
 
 // :source OPERTYPE <type>
-void inspircd3_protocol_propagate_oper_user(struct string from, struct user_info *user, struct string type) {
-	inspircd3_protocol_propagate(from, STRING(":"));
-	inspircd3_protocol_propagate(from, user->uid);
-	inspircd3_protocol_propagate(from, STRING(" OPERTYPE :"));
-	inspircd3_protocol_propagate(from, type);
-	inspircd3_protocol_propagate(from, STRING("\n"));
+void inspircd3_protocol_propagate_oper_user(struct string from, struct user_info *user, struct string type, struct string source) {
+	if (type.len == 0) {
+		inspircd3_protocol_propagate(from, STRING(":"));
+		inspircd3_protocol_propagate(from, source);
+		inspircd3_protocol_propagate(from, STRING(" MODE "));
+		inspircd3_protocol_propagate(from, user->uid);
+		inspircd3_protocol_propagate(from, STRING(" -o\n"));
+	} else {
+		inspircd3_protocol_propagate(from, STRING(":"));
+		inspircd3_protocol_propagate(from, user->uid);
+		inspircd3_protocol_propagate(from, STRING(" OPERTYPE :"));
+		inspircd3_protocol_propagate(from, type);
+		inspircd3_protocol_propagate(from, STRING("\n"));
+	}
 }
 
 // [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
@@ -823,7 +831,7 @@ void inspircd3_protocol_handle_kill_user(struct string from, struct string sourc
 	return;
 }
 
-int inspircd3_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type) {
+int inspircd3_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type, struct string source) {
 	return 0;
 }
 
@@ -859,7 +867,7 @@ void inspircd3_protocol_fail_rename_user(struct string from, struct user_info *i
 	return;
 }
 
-void inspircd3_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type) {
+void inspircd3_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source) {
 	return;
 }
 
@@ -1424,7 +1432,7 @@ int inspircd3_protocol_handle_opertype(struct string source, size_t argc, struct
 	if (!user)
 		return 0;
 
-	if (oper_user(config->sid, user, argv[0]) != 0) {
+	if (oper_user(config->sid, user, argv[0], config->sid) != 0) {
 		WRITES(2, STRING("[InspIRCd v3] ERROR: Unable to set oper type!\r\n"));
 		return -1;
 	}

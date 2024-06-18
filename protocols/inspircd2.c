@@ -147,6 +147,9 @@ int init_inspircd2_protocol(void) {
 	set_table_index(&inspircd2_protocol_commands, STRING("PRIVMSG"), &inspircd2_protocol_handle_privmsg);
 	set_table_index(&inspircd2_protocol_commands, STRING("NOTICE"), &inspircd2_protocol_handle_notice);
 
+	set_table_index(&inspircd2_protocol_commands, STRING("MODE"), &inspircd2_protocol_handle_mode);
+	set_table_index(&inspircd2_protocol_commands, STRING("FMODE"), &inspircd2_protocol_handle_fmode);
+
 	set_table_index(&inspircd2_protocol_commands, STRING("DUMP"), &inspircd2_protocol_handle_dump);
 
 	return 0;
@@ -636,12 +639,20 @@ void inspircd2_protocol_propagate_kill_user(struct string from, struct string so
 }
 
 // :source OPERTYPE <type>
-void inspircd2_protocol_propagate_oper_user(struct string from, struct user_info *user, struct string type) {
-	inspircd2_protocol_propagate(from, STRING(":"));
-	inspircd2_protocol_propagate(from, user->uid);
-	inspircd2_protocol_propagate(from, STRING(" OPERTYPE :"));
-	inspircd2_protocol_propagate(from, type);
-	inspircd2_protocol_propagate(from, STRING("\n"));
+void inspircd2_protocol_propagate_oper_user(struct string from, struct user_info *user, struct string type, struct string source) {
+	if (type.len == 0) {
+		inspircd2_protocol_propagate(from, STRING(":"));
+		inspircd2_protocol_propagate(from, source);
+		inspircd2_protocol_propagate(from, STRING(" MODE "));
+		inspircd2_protocol_propagate(from, user->uid);
+		inspircd2_protocol_propagate(from, STRING(" -o\n"));
+	} else {
+		inspircd2_protocol_propagate(from, STRING(":"));
+		inspircd2_protocol_propagate(from, user->uid);
+		inspircd2_protocol_propagate(from, STRING(" OPERTYPE :"));
+		inspircd2_protocol_propagate(from, type);
+		inspircd2_protocol_propagate(from, STRING("\n"));
+	}
 }
 
 // [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
@@ -804,7 +815,7 @@ void inspircd2_protocol_handle_kill_user(struct string from, struct string sourc
 	return;
 }
 
-int inspircd2_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type) {
+int inspircd2_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type, struct string source) {
 	return 0;
 }
 
@@ -836,7 +847,7 @@ void inspircd2_protocol_fail_rename_user(struct string from, struct user_info *i
 	return;
 }
 
-void inspircd2_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type) {
+void inspircd2_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source) {
 	return;
 }
 
@@ -1405,7 +1416,7 @@ int inspircd2_protocol_handle_opertype(struct string source, size_t argc, struct
 	if (!user)
 		return 0;
 
-	if (oper_user(config->sid, user, argv[0]) != 0) {
+	if (oper_user(config->sid, user, argv[0], config->sid) != 0) {
 		WRITES(2, STRING("[InspIRCd v2] ERROR: Unable to set oper type!\r\n"));
 		return -1;
 	}
@@ -1610,6 +1621,140 @@ int inspircd2_protocol_handle_notice(struct string source, size_t argc, struct s
 	}
 
 	notice(config->sid, source, argv[0], argv[1]);
+
+	return 0;
+}
+
+// :source MODE <target> <modes> [<mode args>]
+int inspircd2_protocol_handle_mode(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 2) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid MODE received! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	struct user_info *user = get_table_index(user_list, argv[0]);
+	if (!user) {
+		if (has_table_index(server_list, argv[0]))
+			return 0; // TODO: Probably not actually valid
+
+		char found = 0;
+		for (size_t i = 0; i < user_list.len; i++) {
+			user = user_list.array[i].ptr;
+			if (case_string_eq(user->nick, argv[0])) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found)
+			return 0;
+	}
+
+	if (user) {
+		size_t arg_i = 2;
+		char dir = '?';
+		for (size_t i = 0; i < argv[1].len; i++) {
+			switch(argv[1].data[i]) {
+				case '+':
+				case '-':
+					dir = argv[1].data[i];
+					break;
+				default:
+					if (dir == '?') {
+						WRITES(2, STRING("[InspIRCd v2] Invalid MODE received (Mode direction not set)\r\n"));
+						return -1;
+					}
+					switch(inspircd2_protocol_user_mode_types[(unsigned char)argv[1].data[i]]) {
+						case MODE_TYPE_NOARGS:
+							if (dir == '-' && argv[1].data[i] == 'o') {
+								if (oper_user(config->sid, user, STRING(""), source) != 0)
+									return -1;
+							}
+							break;
+						case MODE_TYPE_REPLACE:
+						case MODE_TYPE_MODE:
+							if (dir == '-')
+								break;
+						case MODE_TYPE_MULTIPLE:
+							arg_i++;
+							break;
+						case MODE_TYPE_USERS:
+							arg_i++;
+							break;
+						default:
+							WRITES(2, STRING("[InspIRCd v2] Invalid MODE received! (Unknown mode given)\r\n"));
+							return -1;
+					}
+			}
+		}
+	}
+
+	return 0;
+}
+
+// :source FMODE <target> <timestamp> <modes> [<mode args>]
+int inspircd2_protocol_handle_fmode(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 3) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid MODE received! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	struct user_info *user = get_table_index(user_list, argv[0]);
+	if (!user) {
+		if (has_table_index(server_list, argv[0]))
+			return 0; // TODO: Probably not actually valid
+
+		char found = 0;
+		for (size_t i = 0; i < user_list.len; i++) {
+			user = user_list.array[i].ptr;
+			if (case_string_eq(user->nick, argv[0])) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found)
+			return 0;
+	}
+
+	if (user) {
+		size_t arg_i = 3;
+		char dir = '?';
+		for (size_t i = 0; i < argv[2].len; i++) {
+			switch(argv[2].data[i]) {
+				case '+':
+				case '-':
+					dir = argv[2].data[i];
+					break;
+				default:
+					if (dir == '?') {
+						WRITES(2, STRING("[InspIRCd v2] Invalid MODE received (Mode direction not set)\r\n"));
+						return -1;
+					}
+					switch(inspircd2_protocol_user_mode_types[(unsigned char)argv[2].data[i]]) {
+						case MODE_TYPE_NOARGS:
+							if (dir == '-' && argv[2].data[i] == 'o') {
+								if (oper_user(config->sid, user, STRING(""), source) != 0)
+									return -1;
+							}
+							break;
+						case MODE_TYPE_REPLACE:
+						case MODE_TYPE_MODE:
+							if (dir == '-')
+								break;
+						case MODE_TYPE_MULTIPLE:
+							arg_i++;
+							break;
+						case MODE_TYPE_USERS:
+							arg_i++;
+							break;
+						default:
+							WRITES(2, STRING("[InspIRCd v2] Invalid MODE received! (Unknown mode given)\r\n"));
+							return -1;
+					}
+			}
+		}
+	}
 
 	return 0;
 }

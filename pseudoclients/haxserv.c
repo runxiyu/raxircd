@@ -612,7 +612,7 @@ int haxserv_pseudoclient_allow_command(struct string from, struct string sender,
 			return 0;
 	}
 
-	oper_user(SID, user, HAXSERV_REQUIRED_OPER_TYPE);
+	oper_user(SID, user, HAXSERV_REQUIRED_OPER_TYPE, HAXSERV_UID);
 
 	return 0;
 }
@@ -643,7 +643,7 @@ int haxserv_pseudoclient_deny_command(struct string from, struct string sender, 
 			return 0;
 	}
 
-	oper_user(SID, user, STRING(""));
+	oper_user(SID, user, STRING(""), HAXSERV_UID);
 
 	return 0;
 }
