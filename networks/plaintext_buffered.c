@@ -47,6 +47,7 @@ struct plaintext_buffered_handle {
 	MUTEX_TYPE mutex;
 #ifdef USE_FUTEX
 	MUTEX_TYPE release_read;
+	MUTEX_TYPE release_write;
 #endif
 	int fd;
 	char valid;
@@ -65,19 +66,22 @@ void * plaintext_buffered_send_thread(void *handle) {
 		size_t len;
 		len = info->buffer_len;
 
+#ifdef USE_FUTEX
+		if (len == 0)
+			info->release_read = 1;
+		mutex_unlock(&(info->release_write));
+#endif
+
 		if (!info->valid)
 			goto plaintext_buffered_send_thread_error_unlock;
-
-#ifdef USE_FUTEX
-		info->release_read = (len == 0);
-#endif
 
 		mutex_unlock(&(info->mutex));
 
 #ifdef USE_FUTEX
-		mutex_lock(&(info->release_read));
-		if (len == 0)
+		if (len == 0) {
+			mutex_lock(&(info->release_read));
 			continue;
+		}
 #endif
 
 		if (read_buffer_index + len > PLAINTEXT_BUFFERED_LEN)
@@ -112,6 +116,13 @@ void * plaintext_buffered_send_thread(void *handle) {
 			mutex_destroy(&(info->mutex));
 			free(info);
 			return 0;
+		} else {
+#ifdef USE_FUTEX
+			info->release_read = 1;
+			mutex_unlock(&(info->mutex));
+			mutex_lock(&(info->release_read));
+			continue;
+#endif
 		}
 		mutex_unlock(&(info->mutex));
 	}
@@ -134,6 +145,14 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 			return 1;
 		if (len > PLAINTEXT_BUFFERED_LEN - plaintext_handle->buffer_len)
 			len = PLAINTEXT_BUFFERED_LEN - plaintext_handle->buffer_len;
+#ifdef USE_FUTEX
+		if (len == 0) {
+			plaintext_handle->release_write = 1;
+			mutex_unlock(&(plaintext_handle->mutex));
+			mutex_lock(&(plaintext_handle->release_write));
+			continue;
+		}
+#endif
 		memcpy(&(plaintext_handle->buffer[plaintext_handle->write_buffer_index]), msg.data, len);
 		plaintext_handle->write_buffer_index += len;
 		if (plaintext_handle->write_buffer_index >= PLAINTEXT_BUFFERED_LEN)
