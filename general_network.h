@@ -31,6 +31,7 @@
 #include <limits.h>
 #include <stddef.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include "haxstring.h"
 #include "protocol_numbers.h"
