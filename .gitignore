@@ -2,7 +2,7 @@ config.c
 *.o
 *.so
 .*.swp
-haxserv
+HaxIRCd
 core
 .makeopts
 output
