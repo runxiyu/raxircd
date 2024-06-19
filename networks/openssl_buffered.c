@@ -124,6 +124,8 @@ void * openssl_buffered_send_thread(void *handle) {
 
 		if (read_buffer_index + len > OPENSSL_BUFFERED_LEN)
 			len = OPENSSL_BUFFERED_LEN - read_buffer_index;
+		if (len > OPENSSL_BUFFERED_LEN/2 && OPENSSL_BUFFERED_LEN > 1)
+			len = OPENSSL_BUFFERED_LEN/2;
 
 		struct pollfd pollfd = {
 			.fd = info->fd,

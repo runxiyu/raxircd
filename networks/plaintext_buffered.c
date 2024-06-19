@@ -108,6 +108,8 @@ void * plaintext_buffered_send_thread(void *handle) {
 
 		if (read_buffer_index + len > PLAINTEXT_BUFFERED_LEN)
 			len = PLAINTEXT_BUFFERED_LEN - read_buffer_index;
+		if (len > PLAINTEXT_BUFFERED_LEN/2 && PLAINTEXT_BUFFERED_LEN > 1)
+			len = PLAINTEXT_BUFFERED_LEN/2;
 
 		ssize_t res;
 		do {
