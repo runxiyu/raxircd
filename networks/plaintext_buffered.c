@@ -114,7 +114,7 @@ void * plaintext_buffered_send_thread(void *handle) {
 		ssize_t res;
 		do {
 			res = send(info->fd, &(info->buffer[read_buffer_index]), len, 0);
-		} while (res == -1 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK || errno == ETIMEDOUT));
+		} while (res == -1 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK));
 		if (res < 0)
 			goto plaintext_buffered_send_thread_error;
 
@@ -332,6 +332,15 @@ int plaintext_buffered_accept(int listen_fd, void **handle, struct string *addr)
 
 	if (con_fd == -1)
 		return -1;
+
+	{
+		struct timeval timeout = {
+			.tv_sec = PING_INTERVAL,
+			.tv_usec = 0,
+		};
+
+		setsockopt(con_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	}
 
 	struct plaintext_buffered_handle *plaintext_handle = malloc(sizeof(*plaintext_handle));
 	if (!plaintext_handle)

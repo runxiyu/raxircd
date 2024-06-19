@@ -143,6 +143,15 @@ int plaintext_accept(int listen_fd, void **handle, struct string *addr) {
 	if (con_fd == -1)
 		return -1;
 
+	{
+		struct timeval timeout = {
+			.tv_sec = PING_INTERVAL,
+			.tv_usec = 0,
+		};
+
+		setsockopt(con_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	}
+
 	addr->data = malloc(address_len);
 	if (addr->data == 0 && address_len != 0) {
 		close(con_fd);
