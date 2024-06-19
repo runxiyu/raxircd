@@ -140,7 +140,6 @@ size_t openssl_recv(void *handle, char *data, size_t len, char *err) {
 			return 0;
 		}
 		res = SSL_read(openssl_handle->ssl, data, len);
-		mutex_unlock(&(openssl_handle->mutex));
 		if (res <= 0) {
 			switch(SSL_get_error(openssl_handle->ssl, res)) {
 				case SSL_ERROR_WANT_READ:
@@ -150,12 +149,14 @@ size_t openssl_recv(void *handle, char *data, size_t len, char *err) {
 					pollfd.events = POLLOUT;
 					break;
 				default:
+					mutex_unlock(&(openssl_handle->mutex));
 					*err = 3;
 					return 0;
 			}
 		} else {
 			break;
 		}
+		mutex_unlock(&(openssl_handle->mutex));
 
 		res = poll(&pollfd, 1, PING_INTERVAL*1000);
 		if (res == 0) { // Timeout
@@ -180,6 +181,7 @@ size_t openssl_recv(void *handle, char *data, size_t len, char *err) {
 			return 0;
 		}
 	} while (1);
+	mutex_unlock(&(openssl_handle->mutex));
 
 	*err = 0;
 	return (size_t)res;
