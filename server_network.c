@@ -51,6 +51,12 @@
 #ifdef USE_PLAINTEXT_BUFFERED_SERVER
 #include "networks/plaintext_buffered.h"
 #endif
+#ifdef USE_GNUTLS_BUFFERED_SERVER
+#include "networks/gnutls_buffered.h"
+#endif
+#ifdef USE_OPENSSL_BUFFERED_SERVER
+#include "networks/openssl_buffered.h"
+#endif
 
 struct table server_config = {0};
 
@@ -85,6 +91,16 @@ int start_server_network(void) {
 #ifdef USE_PLAINTEXT_BUFFERED_SERVER
 	if (start_server_network_threads(NET_TYPE_PLAINTEXT_BUFFERED) != 0)
 		return 1;
+#endif
+#ifdef USE_GNUTLS_BUFFERED_SERVER
+	if (GNUTLS_CERT_PATH && GNUTLS_KEY_PATH)
+		if (start_server_network_threads(NET_TYPE_GNUTLS_BUFFERED) != 0)
+			return 1;
+#endif
+#ifdef USE_OPENSSL_BUFFERED_SERVER
+	if (OPENSSL_CERT_PATH && OPENSSL_KEY_PATH)
+		if (start_server_network_threads(NET_TYPE_OPENSSL_BUFFERED) != 0)
+			return 1;
 #endif
 
 	pthread_t trash;

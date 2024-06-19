@@ -65,26 +65,30 @@ struct plaintext_buffered_handle {
 	size_t buffer_len;
 };
 
+int init_plaintext_buffered_network(void) {
+	return 0;
+}
+
 void * plaintext_buffered_send_thread(void *handle) {
 	struct plaintext_buffered_handle *info = handle;
 
 	size_t read_buffer_index = 0;
 	mutex_lock(&(info->mutex));
 	while (1) {
+		if (!info->valid)
+			goto plaintext_buffered_send_thread_error_unlock;
+
 		size_t len;
 		len = info->buffer_len;
 
 #ifdef USE_FUTEX
+		mutex_unlock(&(info->release_write));
 		if (len == 0)
 			info->release_read = 1;
-		mutex_unlock(&(info->release_write));
 #else
 		sem_trywait(&(info->release_write));
 		sem_post(&(info->release_write));
 #endif
-
-		if (!info->valid)
-			goto plaintext_buffered_send_thread_error_unlock;
 
 		mutex_unlock(&(info->mutex));
 
@@ -132,7 +136,6 @@ void * plaintext_buffered_send_thread(void *handle) {
 	sem_trywait(&(info->release_write));
 	sem_post(&(info->release_write));
 #endif
-	// TODO: Sane solution that works with ptread mutexes
 	while (1) {
 		mutex_lock(&(info->mutex));
 		if (info->close) {
@@ -165,10 +168,6 @@ void * plaintext_buffered_send_thread(void *handle) {
 	return 0;
 }
 
-int init_plaintext_buffered_network(void) {
-	return 0;
-}
-
 int plaintext_buffered_send(void *handle, struct string msg) {
 	struct plaintext_buffered_handle *plaintext_handle = handle;
 	while (msg.len > 0) {
@@ -197,9 +196,6 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 		}
 #endif
 		memcpy(&(plaintext_handle->buffer[plaintext_handle->write_buffer_index]), msg.data, len);
-		plaintext_handle->write_buffer_index += len;
-		if (plaintext_handle->write_buffer_index >= PLAINTEXT_BUFFERED_LEN)
-			plaintext_handle->write_buffer_index = 0;
 		plaintext_handle->buffer_len += len;
 #ifdef USE_FUTEX
 		mutex_unlock(&(plaintext_handle->release_read));
@@ -208,7 +204,11 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 		sem_post(&(plaintext_handle->release_read));
 #endif
 		mutex_unlock(&(plaintext_handle->mutex));
+		plaintext_handle->write_buffer_index += len;
+		if (plaintext_handle->write_buffer_index >= PLAINTEXT_BUFFERED_LEN)
+			plaintext_handle->write_buffer_index = 0;
 		msg.len -= len;
+		msg.data += len;
 	}
 
 	return 0;
@@ -268,6 +268,7 @@ int plaintext_buffered_connect(void **handle, struct string address, struct stri
 		goto plaintext_buffered_connect_close;
 	*handle = plaintext_handle;
 	plaintext_handle->valid = 1;
+	plaintext_handle->close = 0;
 	plaintext_handle->fd = fd;
 
 	addr_out->data = malloc(sizeof(sockaddr));
@@ -335,7 +336,7 @@ int plaintext_buffered_accept(int listen_fd, void **handle, struct string *addr)
 		goto plaintext_buffered_accept_close;
 	*handle = plaintext_handle;
 	plaintext_handle->valid = 1;
-	plaintext_handle->close = 1;
+	plaintext_handle->close = 0;
 	plaintext_handle->fd = con_fd;
 
 	addr->data = malloc(address_len);

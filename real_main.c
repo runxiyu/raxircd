@@ -43,6 +43,15 @@
 #ifdef USE_OPENSSL
 #include "networks/openssl.h"
 #endif
+#ifdef USE_PLAINTEXT_BUFFERED
+#include "networks/plaintext_buffered.h"
+#endif
+#ifdef USE_GNUTLS_BUFFERED
+#include "networks/gnutls_buffered.h"
+#endif
+#ifdef USE_OPENSSL_BUFFERED
+#include "networks/openssl_buffered.h"
+#endif
 
 #ifdef USE_SERVER
 #include "server_network.h"
@@ -82,6 +91,21 @@ int real_main(void) {
 
 #ifdef USE_OPENSSL
 	if (init_openssl_network() != 0)
+		return 1;
+#endif
+
+#ifdef USE_PLAINTEXT_BUFFERED
+	if (init_plaintext_buffered_network() != 0)
+		return 1;
+#endif
+
+#ifdef USE_GNUTLS_BUFFERED
+	if (init_gnutls_buffered_network() != 0)
+		return 1;
+#endif
+
+#ifdef USE_OPENSSL_BUFFERED
+	if (init_openssl_buffered_network() != 0)
 		return 1;
 #endif
 

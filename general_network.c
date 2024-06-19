@@ -52,6 +52,12 @@
 #ifdef USE_PLAINTEXT_BUFFERED
 #include "networks/plaintext_buffered.h"
 #endif
+#ifdef USE_GNUTLS_BUFFERED
+#include "networks/gnutls_buffered.h"
+#endif
+#ifdef USE_OPENSSL_BUFFERED
+#include "networks/openssl_buffered.h"
+#endif
 
 #ifdef USE_PROTOCOLS
 #include "protocols.h"
@@ -105,16 +111,6 @@ struct network networks[NUM_NET_TYPES] = {
 		.close = plaintext_close,
 	},
 #endif
-#ifdef USE_PLAINTEXT_BUFFERED
-	[NET_TYPE_PLAINTEXT_BUFFERED] = {
-		.send = plaintext_buffered_send,
-		.recv = plaintext_buffered_recv,
-		.connect = plaintext_buffered_connect,
-		.accept = plaintext_buffered_accept,
-		.shutdown = plaintext_buffered_shutdown,
-		.close = plaintext_buffered_close,
-	},
-#endif
 #ifdef USE_GNUTLS
 	[NET_TYPE_GNUTLS] = {
 		.send = gnutls_send,
@@ -133,6 +129,36 @@ struct network networks[NUM_NET_TYPES] = {
 		.accept = openssl_accept,
 		.shutdown = openssl_shutdown,
 		.close = openssl_close,
+	},
+#endif
+#ifdef USE_PLAINTEXT_BUFFERED
+	[NET_TYPE_PLAINTEXT_BUFFERED] = {
+		.send = plaintext_buffered_send,
+		.recv = plaintext_buffered_recv,
+		.connect = plaintext_buffered_connect,
+		.accept = plaintext_buffered_accept,
+		.shutdown = plaintext_buffered_shutdown,
+		.close = plaintext_buffered_close,
+	},
+#endif
+#ifdef USE_GNUTLS_BUFFERED
+	[NET_TYPE_GNUTLS_BUFFERED] = {
+		.send = gnutls_buffered_send,
+		.recv = gnutls_buffered_recv,
+		.connect = gnutls_buffered_connect,
+		.accept = gnutls_buffered_accept,
+		.shutdown = gnutls_buffered_shutdown,
+		.close = gnutls_buffered_close,
+	},
+#endif
+#ifdef USE_OPENSSL_BUFFERED
+	[NET_TYPE_OPENSSL_BUFFERED] = {
+		.send = openssl_buffered_send,
+		.recv = openssl_buffered_recv,
+		.connect = openssl_buffered_connect,
+		.accept = openssl_buffered_accept,
+		.shutdown = openssl_buffered_shutdown,
+		.close = openssl_buffered_close,
 	},
 #endif
 };
@@ -470,6 +496,7 @@ int set_channel(struct string from, struct string name, size_t timestamp, size_t
 			return -1;
 
 		channel->channel_ts = timestamp;
+		channel->channel_ts_str = (struct string){.data = malloc(0), .len = 0};
 
 		if (set_table_index(&channel_list, name, channel) != 0)
 			goto set_channel_free_channel;
@@ -504,6 +531,7 @@ int set_channel(struct string from, struct string name, size_t timestamp, size_t
 		goto set_channel_free_ts_str;
 #endif
 
+	free(channel->channel_ts_str.data);
 	channel->channel_ts_str = ts_str;
 	channel->channel_ts = timestamp;
 

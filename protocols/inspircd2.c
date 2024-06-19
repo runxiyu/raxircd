@@ -213,8 +213,12 @@ void * inspircd2_protocol_connection(void *type) {
 					goto inspircd2_protocol_handle_connection_close;
 				} else if (err == 1) { // Timed out
 					if (ready) {
-						if (timeout > 0)
+						if (timeout > 0) {
+							WRITES(2, STRING("[InspIRCd v2] ["));
+							WRITES(2, config->name);
+							WRITES(2, STRING("] Disconnected: Ping timeout.\r\n\n"));
 							goto inspircd2_protocol_handle_connection_close;
+						}
 						timeout++;
 
 						mutex_lock(&(state_lock));
@@ -232,6 +236,7 @@ void * inspircd2_protocol_connection(void *type) {
 
 						mutex_unlock(&(state_lock));
 					} else {
+						WRITES(2, STRING("[InspIRCd v2] [unidentified server] Disconnected: Ping timeout.\r\n\n"));
 						goto inspircd2_protocol_handle_connection_close;
 					}
 				} else {
@@ -403,10 +408,12 @@ void * inspircd2_protocol_connection(void *type) {
 				}
 
 				int res = func(source, argc, argv, net, handle, &config, is_incoming);
-				if (res < 0) // Disconnect
+				if (res < 0) { // Disconnect
+					WRITES(2, STRING("[InspIRCd v2] [unidentified server] Disconnected: Command handler returned < 0.\r\n\n"));
 					goto inspircd2_protocol_handle_connection_unlock_close;
-				else if (res > 0) // Connection is now "ready"
+				} else if (res > 0) { // Connection is now "ready"
 					ready = 1;
+				}
 			} else {
 				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 				func = get_table_index(inspircd2_protocol_commands, command);
@@ -416,8 +423,12 @@ void * inspircd2_protocol_connection(void *type) {
 				}
 
 				int res = func(source, argc, argv, net, handle, config, is_incoming);
-				if (res < 0) // Disconnect
+				if (res < 0) { // Disconnect
+					WRITES(2, STRING("[InspIRCd v2] ["));
+					WRITES(2, config->name);
+					WRITES(2, STRING("] Disconnected: Command handler returned < 0.\r\n\n"));
 					goto inspircd2_protocol_handle_connection_unlock_close;
+				}
 			}
 
 			inspircd2_protocol_handle_connection_unlock_next:
@@ -1016,6 +1027,8 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 		return -1;
 	}
 
+	WRITES(2, STRING("0\n"));
+
 	if (source.len != 0) {
 		WRITES(2, STRING("[InspIRCd v2] Server attempting to use a source without having introduced itself!\r\n"));
 		return -1;
@@ -1051,6 +1064,8 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 		networks[net].send(handle, STRING("\n"));
 	}
 
+	WRITES(2, STRING("1\n"));
+
 	time_t now = time(0);
 	if (now < 0) {
 		WRITES(2, STRING("ERROR: Negative clock!\r\n"));
@@ -1069,13 +1084,21 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 	networks[net].send(handle, time);
 	networks[net].send(handle, STRING("\n"));
 
+	WRITES(2, STRING("2\n"));
+
 	inspircd2_protocol_introduce_servers_to(net, handle);
+
+	WRITES(2, STRING("3\n"));
 
 	for (size_t i = 0; i < user_list.len; i++)
 		inspircd2_protocol_introduce_user_to(net, handle, user_list.array[i].ptr, 0);
 
+	WRITES(2, STRING("4\n"));
+
 	for (size_t i = 0; i < channel_list.len; i++)
 		inspircd2_protocol_introduce_channel_to(net, handle, channel_list.array[i].ptr);
+
+	WRITES(2, STRING("5\n"));
 
 	networks[net].send(handle, STRING(":"));
 	networks[net].send(handle, SID);
@@ -1083,13 +1106,19 @@ int inspircd2_protocol_init_handle_server(struct string source, size_t argc, str
 
 	free(time.data);
 
+	WRITES(2, STRING("6\n"));
+
 	if (add_server((*config)->sid, SID, argv[3], argv[0], argv[4], INSPIRCD2_PROTOCOL, net, handle) != 0) {
 		WRITES(2, STRING("ERROR: Unable to add server!\r\n"));
 		return -1;
 	}
 
+	WRITES(2, STRING("7\n"));
+
 	struct server_info *server = get_table_index(server_list, (*config)->sid);
 	server->awaiting_pong = 0;
+
+	WRITES(2, STRING("8\n"));
 
 	return 1;
 }

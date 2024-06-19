@@ -33,9 +33,9 @@
 #include "general_network.h"
 #include "protocols.h"
 
-// #define K 1024
-// #define M (1024 * K)
-// #define G (1024 * M)
+// #define K * 1024
+// #define M * (1024 K)
+// #define G * (1024 M)
 
 #ifdef USE_SERVER
 struct server_config {
@@ -82,6 +82,14 @@ extern char *OPENSSL_KEY_PATH; // = "/etc/keys/key.pem", or 0
 
 #ifdef USE_PLAINTEXT_BUFFERED
 extern size_t PLAINTEXT_BUFFERED_LEN; // = 1 M
+#endif
+
+#ifdef USE_GNUTLS_BUFFERED
+extern size_t GNUTLS_BUFFERED_LEN; // = 1 M
+#endif
+
+#ifdef USE_OPENSSL_BUFFERED
+extern size_t OPENSSL_BUFFERED_LEN; // = 1 M
 #endif
 
 #ifdef USE_SERVER
