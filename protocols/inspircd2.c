@@ -210,6 +210,23 @@ void * inspircd2_protocol_connection(void *type) {
 				char err;
 				new_len = networks[net].recv(handle, data, sizeof(data), &err);
 				if (err >= 2) { // Connection closed, or some uncorrected error
+					if (err == 2) {
+						if (ready) {
+							WRITES(2, STRING("[InspIRCd v2] ["));
+							WRITES(2, config->name);
+							WRITES(2, STRING("] Disconnected: recv failed (connection closed).\r\n\n"));
+						} else {
+							WRITES(2, STRING("[InspIRCd v2] [unidentified server] Disconnected: recv failed (connection closed).\r\n\n"));
+						}
+					} else {
+						if (ready) {
+							WRITES(2, STRING("[InspIRCd v2] ["));
+							WRITES(2, config->name);
+							WRITES(2, STRING("] Disconnected: recv failed (unknown network error).\r\n\n"));
+						} else {
+							WRITES(2, STRING("[InspIRCd v2] [unidentified server] Disconnected: recv failed (unknown network error).\r\n\n"));
+						}
+					}
 					goto inspircd2_protocol_handle_connection_close;
 				} else if (err == 1) { // Timed out
 					if (ready) {
