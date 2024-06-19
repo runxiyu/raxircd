@@ -8,6 +8,6 @@ steps:
     image: debian:sid
     commands:
       - apt update -y
-      - apt install --no-install-recommends -y build-essential libssl-dev pkg-config curl libgnutls*-dev ca-certificates
+      - apt install --no-install-recommends -y binutils gcc libssl-dev pkg-config curl libgnutls*-dev ca-certificates
       - curl -o config.c 'https://paste.sr.ht/blob/09d145e35ce3b058e02f5a0c664046fb66ba67e3'
       - make GNUTLS_SERVER=1 OPENSSL_SERVER=1 INSPIRCD2_PROTOCOL=1
