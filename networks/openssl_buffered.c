@@ -233,7 +233,7 @@ int openssl_buffered_send(void *handle, struct string msg) {
 		}
 #else
 		if (len == 0) {
-			mutex_unlock(&(openssl_hndle->mutex));
+			mutex_unlock(&(openssl_handle->mutex));
 			sem_wait(&(openssl_handle->release_write));
 			continue;
 		}
