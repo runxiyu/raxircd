@@ -91,12 +91,12 @@ void * openssl_buffered_send_thread(void *handle) {
 	size_t read_buffer_index = 0;
 	size_t len = 0;
 	while (1) {
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 #else
 		mutex_lock(&(info->mutex));
 #endif
 
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 		len = __sync_sub_and_fetch(&(info->buffer_len), len);
 #else
 		info->buffer_len -= len;
@@ -110,11 +110,9 @@ void * openssl_buffered_send_thread(void *handle) {
 		sem_post(&(info->release_write));
 #endif
 
-#ifdef USE_FUTEX
-		if (!__sync_fetch_and_or(&(info->valid), 0)) {
-			mutex_lock(&(info->mutex));
-			goto openssl_buffered_send_thread_error_unlock;
-		}
+#ifdef USE_ATOMICS
+		if (!__sync_fetch_and_or(&(info->valid), 0))
+			goto openssl_buffered_send_thread_error;
 #else
 		if (!info->valid)
 			goto openssl_buffered_send_thread_error_unlock;
@@ -227,14 +225,10 @@ void * openssl_buffered_send_thread(void *handle) {
 int openssl_buffered_send(void *handle, struct string msg) {
 	struct openssl_buffered_handle *openssl_handle = handle;
 	while (msg.len > 0) {
-#ifdef USE_FUTEX
-#else
-		mutex_lock(&(openssl_handle->mutex));
-#endif
-
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 		size_t len = OPENSSL_BUFFERED_LEN - __sync_fetch_and_or(&(openssl_handle->buffer_len), 0);
 #else
+		mutex_lock(&(openssl_handle->mutex));
 		size_t len = OPENSSL_BUFFERED_LEN - openssl_handle->buffer_len;
 #endif
 
@@ -244,7 +238,7 @@ int openssl_buffered_send(void *handle, struct string msg) {
 		if (len > OPENSSL_BUFFERED_LEN - openssl_handle->write_buffer_index)
 			len = OPENSSL_BUFFERED_LEN - openssl_handle->write_buffer_index;
 
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 		if (!__sync_fetch_and_or(&(openssl_handle->valid), 0))
 			return 1;
 #else
@@ -268,17 +262,17 @@ int openssl_buffered_send(void *handle, struct string msg) {
 #endif
 		memcpy(&(openssl_handle->buffer[openssl_handle->write_buffer_index]), msg.data, len);
 
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 		__sync_fetch_and_add(&(openssl_handle->buffer_len), len);
 #else
 		openssl_handle->buffer_len += len;
+
+		mutex_unlock(&(openssl_handle->mutex));
 #endif
 
 #ifdef USE_FUTEX
 		mutex_unlock(&(openssl_handle->release_read));
 #else
-		mutex_unlock(&(openssl_handle->mutex));
-
 		sem_trywait(&(openssl_handle->release_read));
 		sem_post(&(openssl_handle->release_read));
 #endif

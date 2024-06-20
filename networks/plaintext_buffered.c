@@ -75,17 +75,13 @@ void * plaintext_buffered_send_thread(void *handle) {
 	size_t read_buffer_index = 0;
 	ssize_t res = 0;
 	while (1) {
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
+		size_t len = __sync_sub_and_fetch(&(info->buffer_len), (size_t)res);
 #else
 		mutex_lock(&(info->mutex));
-#endif
 
-		size_t len;
-#ifdef USE_FUTEX
-		len = __sync_sub_and_fetch(&(info->buffer_len), (size_t)res);
-#else
 		info->buffer_len -= (size_t)res;
-		len = info->buffer_len;
+		size_t len = info->buffer_len;
 #endif
 
 #ifdef USE_FUTEX
@@ -95,7 +91,7 @@ void * plaintext_buffered_send_thread(void *handle) {
 		sem_post(&(info->release_write));
 #endif
 
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 		if (!__sync_fetch_and_or(&(info->valid), 0)) { // TODO: Clean up mutexes in exit code too
 			mutex_lock(&(info->mutex));
 			goto plaintext_buffered_send_thread_error_unlock;
@@ -183,14 +179,10 @@ void * plaintext_buffered_send_thread(void *handle) {
 int plaintext_buffered_send(void *handle, struct string msg) {
 	struct plaintext_buffered_handle *plaintext_handle = handle;
 	while (msg.len > 0) {
-#ifdef USE_FUTEX
-#else
-		mutex_lock(&(plaintext_handle->mutex));
-#endif
-
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 		size_t len = PLAINTEXT_BUFFERED_LEN - __sync_fetch_and_or(&(plaintext_handle->buffer_len), 0); // There's no fetch-only for __sync
 #else
+		mutex_lock(&(plaintext_handle->mutex));
 		size_t len = PLAINTEXT_BUFFERED_LEN - plaintext_handle->buffer_len;
 #endif
 
@@ -200,7 +192,7 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 		if (len > PLAINTEXT_BUFFERED_LEN - plaintext_handle->write_buffer_index)
 			len = PLAINTEXT_BUFFERED_LEN - plaintext_handle->write_buffer_index;
 
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 		if (!__sync_fetch_and_or(&(plaintext_handle->valid), 0))
 			return 1;
 #else
@@ -224,17 +216,17 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 #endif
 		memcpy(&(plaintext_handle->buffer[plaintext_handle->write_buffer_index]), msg.data, len);
 
-#ifdef USE_FUTEX
+#ifdef USE_ATOMICS
 		__sync_fetch_and_add(&(plaintext_handle->buffer_len), len); // No __sync add-only either
 #else
 		plaintext_handle->buffer_len += len;
+
+		mutex_unlock(&(plaintext_handle->mutex));
 #endif
 
 #ifdef USE_FUTEX
 		mutex_unlock(&(plaintext_handle->release_read));
 #else
-		mutex_unlock(&(plaintext_handle->mutex));
-
 		sem_trywait(&(plaintext_handle->release_read));
 		sem_post(&(plaintext_handle->release_read));
 #endif

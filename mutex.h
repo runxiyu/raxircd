@@ -42,11 +42,15 @@ inline int mutex_init(uint32_t *futex) {
 }
 
 inline void mutex_lock(uint32_t *futex) {
-	if (__sync_fetch_and_or(futex, 0x1) == 0)
-		return;
+	do {
+		if (__sync_fetch_and_or(futex, 0x1) == 0)
+			return;
 
-	while (__sync_fetch_and_or(futex, 0x3) != 0)
+		if (__sync_fetch_and_or(futex, 0x3) == 0)
+			return;
+
 		syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAIT, 3, 0, 0, 0);
+	} while (1);
 }
 
 inline void mutex_unlock(uint32_t *futex) {

@@ -50,6 +50,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_HAXSERV_PSEUDOCLIENT = $(HAXSERV_PSEUDOCLIENT)' >> .makeopts
 	printf '%s\n' 'LAST_SAFE_STACK = $(SAFE_STACK)' >> .makeopts
 	printf '%s\n' 'LAST_FUTEX = $(FUTEX)' >> .makeopts
+	printf '%s\n' 'LAST_ATOMICS = $(ATOMICS)' >> .makeopts
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
 
@@ -211,6 +212,14 @@ rebuild = 1
 endif
 else
 FUTEX := $(LAST_FUTEX)
+endif
+
+ifneq ($(ATOMICS),)
+ifneq ($(ATOMICS),$(LAST_ATOMICS))
+rebuild = 1
+endif
+else
+ATOMICS := $(LAST_ATOMICS)
 endif
 
 ifeq ($(rebuild),1)
@@ -388,6 +397,10 @@ endif
 
 ifeq ($(FUTEX),1)
 CFLAGS += -DUSE_FUTEX
+endif
+
+ifeq ($(ATOMICS),1)
+CFLAGS += -DUSE_ATOMICS
 endif
 
 
