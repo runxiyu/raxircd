@@ -73,12 +73,12 @@ void * plaintext_buffered_send_thread(void *handle) {
 	struct plaintext_buffered_handle *info = handle;
 
 	size_t read_buffer_index = 0;
-	mutex_lock(&(info->mutex));
+	ssize_t res = 0;
 	while (1) {
-		if (!info->valid)
-			goto plaintext_buffered_send_thread_error_unlock;
+		mutex_lock(&(info->mutex));
 
 		size_t len;
+		info->buffer_len -= (size_t)res;
 		len = info->buffer_len;
 
 #ifdef USE_FUTEX
@@ -90,18 +90,21 @@ void * plaintext_buffered_send_thread(void *handle) {
 		sem_post(&(info->release_write));
 #endif
 
+		if (!info->valid)
+			goto plaintext_buffered_send_thread_error_unlock;
+
 		mutex_unlock(&(info->mutex));
 
 #ifdef USE_FUTEX
 		if (len == 0) {
+			res = 0;
 			mutex_lock(&(info->release_read));
-			mutex_lock(&(info->mutex));
 			continue;
 		}
 #else
 		if (len == 0) {
+			res = 0;
 			sem_wait(&(info->release_read));
-			mutex_lock(&(info->mutex));
 			continue;
 		}
 #endif
@@ -111,7 +114,6 @@ void * plaintext_buffered_send_thread(void *handle) {
 		if (len > PLAINTEXT_BUFFERED_LEN/2 && PLAINTEXT_BUFFERED_LEN > 1)
 			len = PLAINTEXT_BUFFERED_LEN/2;
 
-		ssize_t res;
 		do {
 			res = send(info->fd, &(info->buffer[read_buffer_index]), len, 0);
 		} while (res == -1 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK));
@@ -121,10 +123,6 @@ void * plaintext_buffered_send_thread(void *handle) {
 		read_buffer_index += (size_t)res;
 		if (read_buffer_index >= PLAINTEXT_BUFFERED_LEN)
 			read_buffer_index = 0;
-
-		mutex_lock(&(info->mutex));
-
-		info->buffer_len -= (size_t)res;
 	}
 
 	plaintext_buffered_send_thread_error:
