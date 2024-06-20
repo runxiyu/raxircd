@@ -42,14 +42,16 @@ inline int mutex_init(uint32_t *futex) {
 }
 
 inline void mutex_lock(uint32_t *futex) {
-	uint32_t val;
-	while ((val = __sync_lock_test_and_set(futex, 1)))
-		syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAIT, val, 0, 0, 0);
+	if (__sync_fetch_and_or(futex, 0x1) == 0)
+		return;
+
+	while (__sync_fetch_and_or(futex, 0x3) != 0)
+		syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAIT, 3, 0, 0, 0);
 }
 
 inline void mutex_unlock(uint32_t *futex) {
-	__sync_lock_release(futex);
-	syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAKE, 1, 0, 0, 0);
+	if (__sync_fetch_and_and(futex, 0) & 0x2)
+		syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAKE, 1, 0, 0, 0);
 }
 
 inline void mutex_destroy(uint32_t *futex) {
