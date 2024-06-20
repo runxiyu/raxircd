@@ -82,7 +82,7 @@ void * plaintext_buffered_send_thread(void *handle) {
 
 		size_t len;
 #ifdef USE_FUTEX
-		len = __sync_sub_and_fetch(&(info->buffer_len), res);
+		len = __sync_sub_and_fetch(&(info->buffer_len), (size_t)res);
 #else
 		info->buffer_len -= (size_t)res;
 		len = info->buffer_len;
@@ -103,10 +103,7 @@ void * plaintext_buffered_send_thread(void *handle) {
 #else
 		if (!info->valid)
 			goto plaintext_buffered_send_thread_error_unlock;
-#endif
 
-#ifdef USE_FUTEX
-#else
 		mutex_unlock(&(info->mutex));
 #endif
 
@@ -204,9 +201,8 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 			len = PLAINTEXT_BUFFERED_LEN - plaintext_handle->write_buffer_index;
 
 #ifdef USE_FUTEX
-		if (!__sync_fetch_and_or(&(plaintext_handle->valid), 0)) {
+		if (!__sync_fetch_and_or(&(plaintext_handle->valid), 0))
 			return 1;
-		}
 #else
 		if (!plaintext_handle->valid) {
 			mutex_unlock(&(plaintext_handle->mutex));
