@@ -573,6 +573,9 @@ int openssl_buffered_accept(int listen_fd, void **handle, struct string *addr) {
 	} while (1);
 
 	openssl_handle->valid = 1;
+	openssl_handle->close = 0;
+	openssl_handle->write_buffer_index = 0;
+	openssl_handle->buffer_len = 0;
 
 	openssl_handle->buffer = malloc(OPENSSL_BUFFERED_LEN);
 	if (!openssl_handle->buffer)
