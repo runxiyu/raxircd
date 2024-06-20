@@ -282,8 +282,8 @@ size_t openssl_buffered_recv(void *handle, char *data, size_t len, char *err) {
 					pollfd.events = POLLOUT;
 					break;
 				default:
-					*err = 3;
 					mutex_unlock(&(openssl_handle->mutex));
+					*err = 3;
 					return 0;
 			}
 		} else {

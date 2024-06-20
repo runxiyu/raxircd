@@ -494,8 +494,10 @@ int haxserv_pseudoclient_spam_command(struct string from, struct string sender, 
 	size_t count = str_to_unsigned(argv[0], &err);
 	if (err) {
 		notice(SID, HAXSERV_UID, respond_to, STRING("Unknown number."));
-	} else if (count > 50000) {
+		return 0;
+	} else if (count > 1048576) {
 		notice(SID, HAXSERV_UID, respond_to, STRING("Number exceeds the limit."));
+		return 0;
 	}
 
 	size_t offset = (size_t)(argv[1].data - original_message.data);
