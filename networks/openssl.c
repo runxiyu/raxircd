@@ -237,9 +237,7 @@ int openssl_connect(void **handle, struct string address, struct string port, st
 		goto openssl_connect_free_openssl_handle;
 	SSL_set_fd(openssl_handle->ssl, fd);
 
-	res = mutex_init(&(openssl_handle->mutex));
-	if (res != 0)
-		goto openssl_connect_free_ssl;
+	mutex_init(&(openssl_handle->mutex));
 
 	struct pollfd pollfd = {
 		.fd = fd,
@@ -283,7 +281,6 @@ int openssl_connect(void **handle, struct string address, struct string port, st
 
 	openssl_connect_destroy_mutex:
 	mutex_destroy(&(openssl_handle->mutex));
-	openssl_connect_free_ssl:
 	SSL_free(openssl_handle->ssl);
 	openssl_connect_free_openssl_handle:
 	free(openssl_handle);
@@ -338,13 +335,12 @@ int openssl_accept(int listen_fd, void **handle, struct string *addr) {
 
 	SSL_set_fd(openssl_handle->ssl, con_fd);
 
-	int res = mutex_init(&(openssl_handle->mutex));
-	if (res != 0)
-		goto openssl_accept_free_ssl;
+	mutex_init(&(openssl_handle->mutex));
 
 	struct pollfd pollfd = {
 		.fd = con_fd,
 	};
+	int res;
 	do {
 		res = SSL_accept(openssl_handle->ssl);
 		if (res == 0)
@@ -384,7 +380,6 @@ int openssl_accept(int listen_fd, void **handle, struct string *addr) {
 
 	openssl_accept_destroy_mutex:
 	mutex_destroy(&(openssl_handle->mutex));
-	openssl_accept_free_ssl:
 	SSL_free(openssl_handle->ssl);
 	openssl_accept_free_openssl_handle:
 	free(openssl_handle);

@@ -36,11 +36,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#ifdef USE_FUTEX
-#else
-#include <semaphore.h>
-#endif
-
 #include "../config.h"
 #include "../general_network.h"
 #include "../haxstring.h"
@@ -50,13 +45,8 @@
 
 struct plaintext_buffered_handle {
 	MUTEX_TYPE mutex;
-#ifdef USE_FUTEX
 	MUTEX_TYPE release_read;
 	MUTEX_TYPE release_write;
-#else
-	sem_t release_read;
-	sem_t release_write;
-#endif
 	int fd;
 	char valid;
 	char close;
@@ -84,12 +74,7 @@ void * plaintext_buffered_send_thread(void *handle) {
 		size_t len = info->buffer_len;
 #endif
 
-#ifdef USE_FUTEX
 		mutex_unlock(&(info->release_write));
-#else
-		sem_trywait(&(info->release_write));
-		sem_post(&(info->release_write));
-#endif
 
 #ifdef USE_ATOMICS
 		if (!__sync_fetch_and_or(&(info->valid), 0)) { // TODO: Clean up mutexes in exit code too
@@ -103,19 +88,11 @@ void * plaintext_buffered_send_thread(void *handle) {
 		mutex_unlock(&(info->mutex));
 #endif
 
-#ifdef USE_FUTEX
 		if (len == 0) {
 			res = 0;
 			mutex_lock(&(info->release_read));
 			continue;
 		}
-#else
-		if (len == 0) {
-			res = 0;
-			sem_wait(&(info->release_read));
-			continue;
-		}
-#endif
 
 		if (read_buffer_index + len > PLAINTEXT_BUFFERED_LEN)
 			len = PLAINTEXT_BUFFERED_LEN - read_buffer_index;
@@ -138,12 +115,7 @@ void * plaintext_buffered_send_thread(void *handle) {
 	plaintext_buffered_send_thread_error_unlock:
 	info->valid = 0;
 	mutex_unlock(&(info->mutex));
-#ifdef USE_FUTEX
 	mutex_unlock(&(info->release_write));
-#else
-	sem_trywait(&(info->release_write));
-	sem_post(&(info->release_write));
-#endif
 	while (1) {
 		mutex_lock(&(info->mutex));
 		if (info->close) {
@@ -151,24 +123,14 @@ void * plaintext_buffered_send_thread(void *handle) {
 			free(info->buffer);
 			mutex_unlock(&(info->mutex));
 			mutex_destroy(&(info->mutex));
-#ifdef USE_FUTEX
-#else
-			sem_destroy(&(info->release_read));
-			sem_destroy(&(info->release_write));
-#endif
+			mutex_destroy(&(info->release_read));
+			mutex_destroy(&(info->release_write));
 			free(info);
 			return 0;
 		} else {
-#ifdef USE_FUTEX
-			info->release_read = 1;
 			mutex_unlock(&(info->mutex));
 			mutex_lock(&(info->release_read));
 			continue;
-#else
-			mutex_unlock(&(info->mutex));
-			sem_wait(&(info->release_read));
-			continue;
-#endif
 		}
 		mutex_unlock(&(info->mutex));
 	}
@@ -202,18 +164,15 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 		}
 #endif
 
-#ifdef USE_FUTEX
 		if (len == 0) {
+#ifdef USE_ATOMICS
+#else
+			mutex_unlock(&(plaintext_handle->mutex));
+#endif
 			mutex_lock(&(plaintext_handle->release_write));
 			continue;
 		}
-#else
-		if (len == 0) {
-			mutex_unlock(&(plaintext_handle->mutex));
-			sem_wait(&(plaintext_handle->release_write));
-			continue;
-		}
-#endif
+
 		memcpy(&(plaintext_handle->buffer[plaintext_handle->write_buffer_index]), msg.data, len);
 
 #ifdef USE_ATOMICS
@@ -224,12 +183,7 @@ int plaintext_buffered_send(void *handle, struct string msg) {
 		mutex_unlock(&(plaintext_handle->mutex));
 #endif
 
-#ifdef USE_FUTEX
 		mutex_unlock(&(plaintext_handle->release_read));
-#else
-		sem_trywait(&(plaintext_handle->release_read));
-		sem_post(&(plaintext_handle->release_read));
-#endif
 
 		plaintext_handle->write_buffer_index += len;
 		if (plaintext_handle->write_buffer_index >= PLAINTEXT_BUFFERED_LEN)
@@ -310,16 +264,10 @@ int plaintext_buffered_connect(void **handle, struct string address, struct stri
 	plaintext_handle->write_buffer_index = 0;
 	plaintext_handle->buffer_len = 0;
 
-	if (mutex_init(&(plaintext_handle->mutex)) != 0)
-		goto plaintext_buffered_connect_free_buffer;
+	mutex_init(&(plaintext_handle->mutex));
 
-#ifdef USE_FUTEX
-	plaintext_handle->release_read = 0;
-	plaintext_handle->release_write = 0;
-#else
-	sem_init(&(plaintext_handle->release_read), 0, 0);
-	sem_init(&(plaintext_handle->release_write), 0, 0);
-#endif
+	mutex_init(&(plaintext_handle->release_read));
+	mutex_init(&(plaintext_handle->release_write));
 
 	pthread_t trash;
 	if (pthread_create(&trash, &pthread_attr, plaintext_buffered_send_thread, plaintext_handle) != 0)
@@ -329,12 +277,8 @@ int plaintext_buffered_connect(void **handle, struct string address, struct stri
 
 	plaintext_buffered_connect_destroy_mutex:
 	mutex_destroy(&(plaintext_handle->mutex));
-#ifdef USE_FUTEX
-#else
-	sem_destroy(&(plaintext_handle->release_read));
-	sem_destroy(&(plaintext_handle->release_write));
-#endif
-	plaintext_buffered_connect_free_buffer:
+	mutex_destroy(&(plaintext_handle->release_read));
+	mutex_destroy(&(plaintext_handle->release_write));
 	free(plaintext_handle->buffer);
 	plaintext_buffered_connect_free_addr:
 	free(addr_out->data);
@@ -388,16 +332,10 @@ int plaintext_buffered_accept(int listen_fd, void **handle, struct string *addr)
 	plaintext_handle->write_buffer_index = 0;
 	plaintext_handle->buffer_len = 0;
 
-	if (mutex_init(&(plaintext_handle->mutex)) != 0)
-		goto plaintext_buffered_accept_free_buffer;
+	mutex_init(&(plaintext_handle->mutex));
 
-#ifdef USE_FUTEX
-	plaintext_handle->release_read = 0;
-	plaintext_handle->release_write = 0;
-#else
-	sem_init(&(plaintext_handle->release_read), 0, 0);
-	sem_init(&(plaintext_handle->release_write), 0, 0);
-#endif
+	mutex_init(&(plaintext_handle->release_read));
+	mutex_init(&(plaintext_handle->release_write));
 
 	pthread_t trash;
 	if (pthread_create(&trash, &pthread_attr, plaintext_buffered_send_thread, plaintext_handle) != 0)
@@ -407,12 +345,8 @@ int plaintext_buffered_accept(int listen_fd, void **handle, struct string *addr)
 
 	plaintext_buffered_accept_destroy_mutex:
 	mutex_destroy(&(plaintext_handle->mutex));
-#ifdef USE_FUTEX
-#else
-	sem_destroy(&(plaintext_handle->release_read));
-	sem_destroy(&(plaintext_handle->release_write));
-#endif
-	plaintext_buffered_accept_free_buffer:
+	mutex_destroy(&(plaintext_handle->release_read));
+	mutex_destroy(&(plaintext_handle->release_write));
 	free(plaintext_handle->buffer);
 	plaintext_buffered_accept_free_addr:
 	free(addr->data);
@@ -428,12 +362,7 @@ void plaintext_buffered_shutdown(void *handle) {
 	struct plaintext_buffered_handle *plaintext_handle = handle;
 	mutex_lock(&(plaintext_handle->mutex));
 	plaintext_handle->valid = 0;
-#ifdef USE_FUTEX
 	mutex_unlock(&(plaintext_handle->release_read));
-#else
-	sem_trywait(&(plaintext_handle->release_read));
-	sem_post(&(plaintext_handle->release_read));
-#endif
 	mutex_unlock(&(plaintext_handle->mutex));
 	shutdown(plaintext_handle->fd, SHUT_RDWR);
 }
@@ -442,12 +371,7 @@ void plaintext_buffered_close(int fd, void *handle) {
 	struct plaintext_buffered_handle *plaintext_handle = handle;
 	mutex_lock(&(plaintext_handle->mutex));
 	plaintext_handle->valid = 0;
-#ifdef USE_FUTEX
 	mutex_unlock(&(plaintext_handle->release_read));
-#else
-	sem_trywait(&(plaintext_handle->release_read));
-	sem_post(&(plaintext_handle->release_read));
-#endif
 	plaintext_handle->close = 1;
 	mutex_unlock(&(plaintext_handle->mutex));
 }

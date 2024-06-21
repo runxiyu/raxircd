@@ -28,12 +28,7 @@
 
 #include "mutex.h"
 
-#ifdef USE_FUTEX
-#else
-pthread_mutexattr_t pthread_mutexattr;
-#endif
-
-extern inline int mutex_init(MUTEX_TYPE *);
+extern inline void mutex_init(MUTEX_TYPE *);
 extern inline void mutex_lock(MUTEX_TYPE *);
 extern inline void mutex_unlock(MUTEX_TYPE *);
 extern inline void mutex_destroy(MUTEX_TYPE *);

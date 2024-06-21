@@ -35,11 +35,6 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#ifdef USE_FUTEX
-#else
-#include <semaphore.h>
-#endif
-
 #include "../config.h"
 #include "../main.h"
 #include "../mutex.h"
@@ -51,13 +46,8 @@ struct openssl_buffered_handle {
 	int fd;
 	char valid;
 	char close;
-#ifdef USE_FUTEX
 	MUTEX_TYPE release_read;
 	MUTEX_TYPE release_write;
-#else
-	sem_t release_read;
-	sem_t release_write;
-#endif
 	char *buffer;
 	size_t write_buffer_index;
 	size_t buffer_len;
@@ -103,12 +93,7 @@ void * openssl_buffered_send_thread(void *handle) {
 		len = info->buffer_len;
 #endif
 
-#ifdef USE_FUTEX
 		mutex_unlock(&(info->release_write));
-#else
-		sem_trywait(&(info->release_write));
-		sem_post(&(info->release_write));
-#endif
 
 #ifdef USE_ATOMICS
 		if (!__sync_fetch_and_or(&(info->valid), 0))
@@ -125,17 +110,10 @@ void * openssl_buffered_send_thread(void *handle) {
 		if (len > OPENSSL_BUFFERED_LEN/2 && OPENSSL_BUFFERED_LEN > 1)
 			len = OPENSSL_BUFFERED_LEN/2;
 
-#ifdef USE_FUTEX
 		if (len == 0) {
 			mutex_lock(&(info->release_read));
 			continue;
 		}
-#else
-		if (len == 0) {
-			sem_wait(&(info->release_read));
-			continue;
-		}
-#endif
 
 		struct pollfd pollfd = {
 			.fd = info->fd,
@@ -185,12 +163,7 @@ void * openssl_buffered_send_thread(void *handle) {
 	info->valid = 0;
 	mutex_unlock(&(info->mutex));
 
-#ifdef USE_FUTEX
 	mutex_unlock(&(info->release_write));
-#else
-	sem_trywait(&(info->release_write));
-	sem_post(&(info->release_write));
-#endif
 	while (1) {
 		mutex_lock(&(info->mutex));
 		if (info->close) {
@@ -199,24 +172,14 @@ void * openssl_buffered_send_thread(void *handle) {
 			SSL_free(info->ssl);
 			close(info->fd);
 			free(info->buffer);
-#ifdef USE_FUTEX
-#else
-			sem_destroy(&(info->release_read));
-			sem_destroy(&(info->release_write));
-#endif
+			mutex_destroy(&(info->release_read));
+			mutex_destroy(&(info->release_write));
 			free(info);
 			return 0;
 		} else {
-#ifdef USE_FUTEX
-			info->release_read = 1;
 			mutex_unlock(&(info->mutex));
 			mutex_lock(&(info->release_read));
 			continue;
-#else
-			mutex_unlock(&(info->mutex));
-			sem_wait(&(info->release_read));
-			continue;
-#endif
 		}
 		mutex_unlock(&(info->mutex));
 	}
@@ -248,18 +211,14 @@ int openssl_buffered_send(void *handle, struct string msg) {
 		}
 #endif
 
-#ifdef USE_FUTEX
 		if (len == 0) {
+#ifdef USE_ATOMICS
+#else
+			mutex_unlock(&(openssl_handle->mutex));
+#endif
 			mutex_lock(&(openssl_handle->release_write));
 			continue;
 		}
-#else
-		if (len == 0) {
-			mutex_unlock(&(openssl_handle->mutex));
-			sem_wait(&(openssl_handle->release_write));
-			continue;
-		}
-#endif
 		memcpy(&(openssl_handle->buffer[openssl_handle->write_buffer_index]), msg.data, len);
 
 #ifdef USE_ATOMICS
@@ -270,12 +229,7 @@ int openssl_buffered_send(void *handle, struct string msg) {
 		mutex_unlock(&(openssl_handle->mutex));
 #endif
 
-#ifdef USE_FUTEX
 		mutex_unlock(&(openssl_handle->release_read));
-#else
-		sem_trywait(&(openssl_handle->release_read));
-		sem_post(&(openssl_handle->release_read));
-#endif
 
 		openssl_handle->write_buffer_index += len;
 		if (openssl_handle->write_buffer_index >= OPENSSL_BUFFERED_LEN)
@@ -317,6 +271,7 @@ size_t openssl_buffered_recv(void *handle, char *data, size_t len, char *err) {
 					return 0;
 			}
 		} else {
+			mutex_unlock(&(openssl_handle->mutex));
 			break;
 		}
 		mutex_unlock(&(openssl_handle->mutex));
@@ -344,7 +299,6 @@ size_t openssl_buffered_recv(void *handle, char *data, size_t len, char *err) {
 			return 0;
 		}
 	} while (1);
-	mutex_unlock(&(openssl_handle->mutex));
 
 	*err = 0;
 	return (size_t)res;
@@ -400,9 +354,7 @@ int openssl_buffered_connect(void **handle, struct string address, struct string
 		goto openssl_connect_free_openssl_handle;
 	SSL_set_fd(openssl_handle->ssl, fd);
 
-	res = mutex_init(&(openssl_handle->mutex));
-	if (res != 0)
-		goto openssl_connect_free_ssl;
+	mutex_init(&(openssl_handle->mutex));
 
 	struct pollfd pollfd = {
 		.fd = fd,
@@ -449,13 +401,8 @@ int openssl_buffered_connect(void **handle, struct string address, struct string
 	if (!openssl_handle->buffer)
 		goto openssl_connect_destroy_mutex;
 
-#ifdef USE_FUTEX
-	openssl_handle->release_read = 0;
-	openssl_handle->release_write = 0;
-#else
-	sem_init(&(openssl_handle->release_read), 0, 0);
-	sem_init(&(openssl_handle->release_write), 0, 0);
-#endif
+	mutex_init(&(openssl_handle->release_read));
+	mutex_init(&(openssl_handle->release_write));
 
 	pthread_t trash;
 	if (pthread_create(&trash, &pthread_attr, openssl_buffered_send_thread, openssl_handle) != 0)
@@ -464,14 +411,10 @@ int openssl_buffered_connect(void **handle, struct string address, struct string
 	return fd;
 
 	openssl_connect_destroy_releases:
-#ifdef USE_FUTEX
-#else
-	sem_destroy(&(openssl_handle->release_read));
-	sem_destroy(&(openssl_handle->release_write));
-#endif
+	mutex_destroy(&(openssl_handle->release_read));
+	mutex_destroy(&(openssl_handle->release_write));
 	openssl_connect_destroy_mutex:
 	mutex_destroy(&(openssl_handle->mutex));
-	openssl_connect_free_ssl:
 	SSL_free(openssl_handle->ssl);
 	openssl_connect_free_openssl_handle:
 	free(openssl_handle);
@@ -526,13 +469,12 @@ int openssl_buffered_accept(int listen_fd, void **handle, struct string *addr) {
 
 	SSL_set_fd(openssl_handle->ssl, con_fd);
 
-	int res = mutex_init(&(openssl_handle->mutex));
-	if (res != 0)
-		goto openssl_accept_free_ssl;
+	mutex_init(&(openssl_handle->mutex));
 
 	struct pollfd pollfd = {
 		.fd = con_fd,
 	};
+	int res;
 	do {
 		res = SSL_accept(openssl_handle->ssl);
 		if (res == 0)
@@ -575,13 +517,8 @@ int openssl_buffered_accept(int listen_fd, void **handle, struct string *addr) {
 	if (!openssl_handle->buffer)
 		goto openssl_accept_destroy_mutex;
 
-#ifdef USE_FUTEX
-	openssl_handle->release_read = 0;
-	openssl_handle->release_write = 0;
-#else
-	sem_init(&(openssl_handle->release_read), 0, 0);
-	sem_init(&(openssl_handle->release_write), 0, 0);
-#endif
+	mutex_init(&(openssl_handle->release_read));
+	mutex_init(&(openssl_handle->release_write));
 
 	pthread_t trash;
 	if (pthread_create(&trash, &pthread_attr, openssl_buffered_send_thread, openssl_handle) != 0)
@@ -590,14 +527,10 @@ int openssl_buffered_accept(int listen_fd, void **handle, struct string *addr) {
 	return con_fd;
 
 	openssl_accept_destroy_releases:
-#ifdef USE_FUTEX
-#else
-	sem_destroy(&(openssl_handle->release_read));
-	sem_destroy(&(openssl_handle->release_write));
-#endif
+	mutex_destroy(&(openssl_handle->release_read));
+	mutex_destroy(&(openssl_handle->release_write));
 	openssl_accept_destroy_mutex:
 	mutex_destroy(&(openssl_handle->mutex));
-	openssl_accept_free_ssl:
 	SSL_free(openssl_handle->ssl);
 	openssl_accept_free_openssl_handle:
 	free(openssl_handle);
@@ -613,12 +546,7 @@ void openssl_buffered_shutdown(void *handle) {
 	struct openssl_buffered_handle *openssl_handle = handle;
 	mutex_lock(&(openssl_handle->mutex));
 	openssl_handle->valid = 0;
-#ifdef USE_FUTEX
 	mutex_unlock(&(openssl_handle->release_read));
-#else
-	sem_trywait(&(openssl_handle->release_read));
-	sem_post(&(openssl_handle->release_read));
-#endif
 	mutex_unlock(&(openssl_handle->mutex));
 	shutdown(openssl_handle->fd, SHUT_RDWR);
 }
@@ -627,12 +555,7 @@ void openssl_buffered_close(int fd, void *handle) {
 	struct openssl_buffered_handle *openssl_handle = handle;
 	mutex_lock(&(openssl_handle->mutex));
 	openssl_handle->valid = 0;
-#ifdef USE_FUTEX
 	mutex_unlock(&(openssl_handle->release_read));
-#else
-	sem_trywait(&(openssl_handle->release_read));
-	sem_post(&(openssl_handle->release_read));
-#endif
 	openssl_handle->close = 1;
 	mutex_unlock(&(openssl_handle->mutex));
 }

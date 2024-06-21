@@ -33,29 +33,28 @@
 #include <stdint.h>
 #include <linux/futex.h>
 
-#define SETUP_MUTEX() 0
 #define MUTEX_TYPE uint32_t
 
-inline int mutex_init(uint32_t *futex) {
+inline void mutex_init(uint32_t *futex) {
 	*futex = 0;
-	return 0;
 }
 
 inline void mutex_lock(uint32_t *futex) {
-	do {
-		if (__sync_fetch_and_or(futex, 0x1) == 0)
-			return;
+	if ((__sync_fetch_and_or(futex, 0x1) & 0x1) == 0)
+		return;
 
-		if (__sync_fetch_and_or(futex, 0x3) == 0)
-			return;
+	__sync_fetch_and_add(futex, 0x2);
 
-		syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAIT, 3, 0, 0, 0);
-	} while (1);
+	uint32_t val;
+	while ((val = __sync_fetch_and_or(futex, 0x1)) & 0x1)
+		syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAIT, val | 0x1, NULL, 0, 0);
+
+	__sync_fetch_and_sub(futex, 0x2);
 }
 
 inline void mutex_unlock(uint32_t *futex) {
-	if (__sync_fetch_and_and(futex, 0) & 0x2)
-		syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAKE, 1, 0, 0, 0);
+	if (__sync_and_and_fetch(futex, 0xFFFFFFFE))
+		syscall(SYS_futex, futex, FUTEX_PRIVATE_FLAG | FUTEX_WAKE, 1, NULL, 0, 0);
 }
 
 inline void mutex_destroy(uint32_t *futex) {
@@ -64,26 +63,25 @@ inline void mutex_destroy(uint32_t *futex) {
 
 #else
 
-#include <pthread.h>
+#include <semaphore.h>
 
-#define SETUP_MUTEX() pthread_mutexattr_init(&pthread_mutexattr)
-#define MUTEX_TYPE pthread_mutex_t
+#define MUTEX_TYPE sem_t
 
-extern pthread_mutexattr_t pthread_mutexattr;
-inline int mutex_init(pthread_mutex_t *mutex) {
-	return pthread_mutex_init(mutex, &pthread_mutexattr);
+inline void mutex_init(sem_t *mutex) {
+	sem_init(mutex, 0, 1);
 }
 
-inline void mutex_lock(pthread_mutex_t *mutex) {
-	pthread_mutex_lock(mutex);
+inline void mutex_lock(sem_t *mutex) {
+	while (sem_wait(mutex) == -1);
 }
 
-inline void mutex_unlock(pthread_mutex_t *mutex) {
-	pthread_mutex_unlock(mutex);
+inline void mutex_unlock(sem_t *mutex) {
+	sem_trywait(mutex);
+	sem_post(mutex);
 }
 
-inline void mutex_destroy(pthread_mutex_t *mutex) {
-	pthread_mutex_destroy(mutex);
+inline void mutex_destroy(sem_t *mutex) {
+	sem_destroy(mutex);
 }
 
 #endif

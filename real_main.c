@@ -73,8 +73,7 @@ pthread_attr_t pthread_attr;
 MUTEX_TYPE state_lock;
 
 int real_main(void) {
-	if (mutex_init(&state_lock) != 0)
-		return 1;
+	mutex_init(&state_lock);
 
 	if (init_general_network() != 0)
 		return 1;
@@ -132,9 +131,6 @@ int real_main(void) {
 	}
 
 	if (pthread_attr_init(&pthread_attr) != 0)
-		return 1;
-
-	if (SETUP_MUTEX() != 0)
 		return 1;
 
 	if (pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED) != 0) // shouldn't actually happen
