@@ -61,6 +61,8 @@ int haxserv_pseudoclient_init(void) {
 
 	if (add_user(SID, SID, HAXSERV_UID, HAXSERV_NICK, HAXSERV_FULLNAME, HAXSERV_IDENT, HAXSERV_VHOST, HAXSERV_HOST, HAXSERV_ADDRESS, now, now, 0, 0, 0, 1, HAXSERV_PSEUDOCLIENT) != 0)
 		return 1;
+	if (oper_user(SID, get_table_index(user_list, HAXSERV_UID), HAXSERV_REQUIRED_OPER_TYPE, HAXSERV_UID) != 0)
+		return 1;
 
 	struct user_info *user = get_table_index(user_list, HAXSERV_UID);
 	for (size_t i = 0; i < HAXSERV_NUM_PREJOIN_CHANNELS; i++) {
@@ -750,7 +752,7 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 		} else {
 			notice(SID, HAXSERV_UID, respond_to, STRING("User is unknown."));
 		}
-	} else if (STRING_EQ(argv[0], STRING("info"))) {
+	} else if (STRING_EQ(argv[0], STRING("info")) || STRING_EQ(argv[0], STRING("l_info"))) {
 		if (argc < 2) {
 			notice(SID, HAXSERV_UID, respond_to, STRING("Missing arguments."));
 			return 0;
@@ -847,7 +849,7 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 			}
 		}
 
-		{
+		if (STRING_EQ(argv[0], STRING("info"))) {
 			struct string msg_parts[] = {
 				STRING("Host:           "),
 				user->host,
@@ -862,7 +864,7 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 			}
 		}
 
-		{
+		if (STRING_EQ(argv[0], STRING("info"))) {
 			struct string msg_parts[] = {
 				STRING("Address:        "),
 				user->address,
@@ -942,7 +944,7 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 }
 struct command_def haxserv_pseudoclient_get_command_def = {
 	.func = haxserv_pseudoclient_get_command,
-	.summary = STRING("[uid | name | info] <target>"),
+	.summary = STRING("[uid | name | info | l_info] <target>"),
 	.aligned_name = STRING("get         "),
 	.name = STRING("get"),
 };

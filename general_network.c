@@ -400,6 +400,9 @@ int rename_user(struct string from, struct user_info *user, struct string nick, 
 	memcpy(user->nick.data, nick.data, nick.len);
 	user->nick.len = nick.len;
 
+	user->nick_ts_str = timestamp_str;
+	user->nick_ts = timestamp;
+
 	return 0;
 }
 
