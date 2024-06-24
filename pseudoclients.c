@@ -50,6 +50,8 @@ int init_pseudoclients(void) {
 
 		if (pseudoclients[HAXSERV_PSEUDOCLIENT].init() != 0)
 			return 1;
+
+		pseudoclients[HAXSERV_PSEUDOCLIENT].active = 1;
 	}
 #endif
 #ifdef USE_SERVICES_PSEUDOCLIENT
@@ -65,8 +67,50 @@ int init_pseudoclients(void) {
 
 		if (pseudoclients[SERVICES_PSEUDOCLIENT].init() != 0)
 			return 1;
+
+		pseudoclients[SERVICES_PSEUDOCLIENT].active = 1;
 	}
 #endif
 
 	return 0;
+}
+
+void pseudoclients_handle_privmsg(struct string from, struct string sender, struct string target, struct string msg) {
+	struct user_info *user = get_table_index(user_list, target);
+
+	if (user) {
+		if (user->is_pseudoclient) {
+			pseudoclients[user->pseudoclient].handle_privmsg(from, sender, target, msg);
+		} else {
+			return;
+		}
+	} else if (!user && !has_table_index(server_list, sender)) {
+		struct channel_info *channel = get_table_index(channel_list, target);
+		if (channel) {
+			char send_to[NUM_PSEUDOCLIENTS] = {0};
+			for (size_t i = 0; i < channel->user_list.len; i++) {
+				struct user_info *user = channel->user_list.array[i].ptr;
+				if (user->is_pseudoclient && !STRING_EQ(user->uid, sender))
+					send_to[user->pseudoclient] = 1;
+			}
+			for (size_t i = 0; i < NUM_PSEUDOCLIENTS; i++) {
+				if (send_to[i] && pseudoclients[i].active)
+					pseudoclients[i].handle_privmsg(from, sender, target, msg);
+			}
+		}
+	}
+}
+
+void psuedoclients_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+	for (size_t i = 0; i < NUM_PSEUDOCLIENTS; i++) {
+		if (pseudoclients[i].active)
+			pseudoclients[i].handle_rename_user(from, user, nick, timestamp);
+	}
+}
+
+void psuedoclients_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
+	for (size_t i = 0; i < NUM_PSEUDOCLIENTS; i++) {
+		if (pseudoclients[i].active)
+			pseudoclients[i].handle_set_cert(from, user, cert, source);
+	}
 }

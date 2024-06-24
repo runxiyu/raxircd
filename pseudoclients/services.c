@@ -63,6 +63,8 @@ int services_pseudoclient_post_reload(void) {
 	pseudoclients[SERVICES_PSEUDOCLIENT].allow_kick = services_pseudoclient_allow_kick;
 
 	pseudoclients[SERVICES_PSEUDOCLIENT].handle_privmsg = services_pseudoclient_handle_privmsg;
+	pseudoclients[SERVICES_PSEUDOCLIENT].handle_rename_user = services_pseudoclient_handle_rename_user;
+	pseudoclients[SERVICES_PSEUDOCLIENT].handle_set_cert = services_pseudoclient_handle_set_cert;
 
 	return 0;
 }
@@ -80,4 +82,13 @@ int services_pseudoclient_allow_kick(struct string from, struct string source, s
 }
 
 void services_pseudoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg) {
+	return;
+}
+
+void services_pseudoclient_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+	return;
+}
+
+void services_pseudoclient_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
+	return;
 }

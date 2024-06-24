@@ -30,6 +30,8 @@
 #include "general_network.h"
 
 struct pseudoclient {
+	char active;
+
 	void *dl_handle;
 
 	int (*init)(void);
@@ -41,6 +43,10 @@ struct pseudoclient {
 	int (*allow_kick)(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
 
 	void (*handle_privmsg)(struct string from, struct string source, struct string target, struct string msg);
+
+	void (*handle_rename_user)(struct string from, struct user_info *user, struct string nick, size_t timestamp);
+
+	void (*handle_set_cert)(struct string from, struct user_info *user, struct string cert, struct string source);
 };
 
 int init_pseudoclients(void);
@@ -59,3 +65,5 @@ extern struct pseudoclient pseudoclients[NUM_PSEUDOCLIENTS];
 extern char reload_pseudoclients[NUM_PSEUDOCLIENTS];
 
 void pseudoclients_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);
+void psuedoclients_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp);
+void psuedoclients_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source);

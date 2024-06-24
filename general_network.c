@@ -333,6 +333,8 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 
 	new_info->account_name = (struct string){.data = malloc(0), .len = 0};
 	new_info->oper_type = (struct string){.data = malloc(0), .len = 0};
+	new_info->cert = (struct string){.data = malloc(0), .len = 0};
+	new_info->cert_ready = 0;
 
 #ifdef USE_SERVER
 	if (protocols_handle_new_user(from, new_info) != 0)
@@ -435,6 +437,7 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 	free(user->address.data);
 	free(user->oper_type.data);
 	free(user->account_name.data);
+	free(user->cert.data);
 	free(user);
 }
 
@@ -499,6 +502,31 @@ int set_account(struct string from, struct user_info *user, struct string accoun
 
 	free(user->account_name.data);
 	user->account_name = tmp;
+
+	return 0;
+}
+
+int set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
+	if (STRING_EQ(user->cert, cert) && user->cert_ready != 0)
+		return 0;
+
+	struct string tmp;
+	if (str_clone(&tmp, cert) != 0)
+		return 1;
+
+#ifdef USE_SERVER
+	if (protocols_handle_set_cert(from, user, cert, source) != 0) {
+		free(tmp.data);
+		return 1;
+	}
+
+	protocols_propagate_set_cert(from, user, cert, source);
+#endif
+
+	user->cert_ready = 1;
+
+	free(user->cert.data);
+	user->cert = tmp;
 
 	return 0;
 }
@@ -709,23 +737,7 @@ int privmsg(struct string from, struct string sender, struct string target, stru
 #endif
 
 #ifdef USE_PSEUDOCLIENTS
-	if ((user && user->is_pseudoclient && user->pseudoclient == HAXSERV_PSEUDOCLIENT) || (!user && !server)) {
-		char send;
-		if (!user && !server) {
-			send = 0;
-			for (size_t i = 0; i < channel->user_list.len; i++) {
-				struct user_info *user = channel->user_list.array[i].ptr;
-				if (user->is_pseudoclient && user->pseudoclient == HAXSERV_PSEUDOCLIENT && !STRING_EQ(sender, user->uid)) {
-					send = 1;
-					break;
-				}
-			}
-		} else {
-			send = 1;
-		}
-		if (send)
-			pseudoclients[HAXSERV_PSEUDOCLIENT].handle_privmsg(from, sender, target, msg);
-	}
+	pseudoclients_handle_privmsg(from, sender, target, msg);
 #endif
 
 	return 0;

@@ -55,6 +55,7 @@ void inspircd2_protocol_propagate_kill_user(struct string from, struct string so
 void inspircd2_protocol_propagate_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
 void inspircd2_protocol_propagate_set_account(struct string from, struct user_info *info, struct string account, struct string source);
+void inspircd2_protocol_propagate_set_cert(struct string from, struct user_info *info, struct string cert, struct string source);
 
 void inspircd2_protocol_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 void inspircd2_protocol_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
@@ -74,6 +75,7 @@ void inspircd2_protocol_handle_kill_user(struct string from, struct string sourc
 int inspircd2_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
 int inspircd2_protocol_handle_set_account(struct string from, struct user_info *info, struct string account, struct string source);
+int inspircd2_protocol_handle_set_cert(struct string from, struct user_info *info, struct string cert, struct string source);
 
 int inspircd2_protocol_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 int inspircd2_protocol_handle_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
@@ -87,6 +89,7 @@ void inspircd2_protocol_fail_rename_user(struct string from, struct user_info *i
 void inspircd2_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
 void inspircd2_protocol_fail_set_account(struct string from, struct user_info *info, struct string account, struct string source);
+void inspircd2_protocol_fail_set_cert(struct string from, struct user_info *info, struct string cert, struct string source);
 
 void inspircd2_protocol_fail_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 void inspircd2_protocol_fail_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);

@@ -57,6 +57,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate_oper_user = inspircd2_protocol_propagate_oper_user,
 
 		.propagate_set_account = inspircd2_protocol_propagate_set_account,
+		.propagate_set_cert = inspircd2_protocol_propagate_set_cert,
 
 		.propagate_set_channel = inspircd2_protocol_propagate_set_channel,
 		.propagate_join_channel = inspircd2_protocol_propagate_join_channel,
@@ -76,6 +77,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.handle_oper_user = inspircd2_protocol_handle_oper_user,
 
 		.handle_set_account = inspircd2_protocol_handle_set_account,
+		.handle_set_cert = inspircd2_protocol_handle_set_cert,
 
 		.handle_set_channel = inspircd2_protocol_handle_set_channel,
 		.handle_join_channel = inspircd2_protocol_handle_join_channel,
@@ -89,6 +91,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.fail_oper_user = inspircd2_protocol_fail_oper_user,
 
 		.fail_set_account = inspircd2_protocol_fail_set_account,
+		.fail_set_cert = inspircd2_protocol_fail_set_cert,
 
 		.fail_set_channel = inspircd2_protocol_fail_set_channel,
 		.fail_join_channel = inspircd2_protocol_fail_join_channel,
@@ -257,6 +260,14 @@ void protocols_propagate_set_account(struct string from, struct user_info *info,
 		if (!active_protocols[i])
 			continue;
 		protocols[i].propagate_set_account(from, info, account, source);
+	}
+}
+
+void protocols_propagate_set_cert(struct string from, struct user_info *info, struct string cert, struct string source) {
+	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
+		if (!active_protocols[i])
+			continue;
+		protocols[i].propagate_set_cert(from, info, cert, source);
 	}
 }
 
@@ -442,6 +453,28 @@ int protocols_handle_set_account(struct string from, struct user_info *info, str
 	return 1;
 }
 
+int protocols_handle_set_cert(struct string from, struct user_info *info, struct string cert, struct string source) {
+	size_t i;
+	for (i = 0; i < NUM_PROTOCOLS; i++) {
+		if (!active_protocols[i])
+			continue;
+		if (protocols[i].handle_set_cert(from, info, cert, source) != 0)
+			goto protocols_handle_set_cert_fail;
+	}
+
+	return 0;
+
+	protocols_handle_set_cert_fail:
+	while (i > 0) {
+		i--;
+		if (!active_protocols[i])
+			continue;
+		protocols[i].fail_set_cert(from, info, cert, source);
+	}
+
+	return 1;
+}
+
 int protocols_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users) {
 	size_t i;
 	for (i = 0; i < NUM_PROTOCOLS; i++) {
@@ -539,6 +572,14 @@ void protocols_fail_set_account(struct string from, struct user_info *info, stru
 		if (!active_protocols[i])
 			continue;
 		protocols[i].fail_set_account(from, info, account, source);
+	}
+}
+
+void protocols_fail_set_cert(struct string from, struct user_info *info, struct string cert, struct string source) {
+	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
+		if (!active_protocols[i])
+			continue;
+		protocols[i].fail_set_cert(from, info, cert, source);
 	}
 }
 

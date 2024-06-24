@@ -6,3 +6,4 @@ HaxIRCd
 core
 .makeopts
 output
+pseudoclients/services.db

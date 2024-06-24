@@ -127,6 +127,8 @@ int haxserv_pseudoclient_post_reload(void) {
 	pseudoclients[HAXSERV_PSEUDOCLIENT].allow_kick = haxserv_pseudoclient_allow_kick;
 
 	pseudoclients[HAXSERV_PSEUDOCLIENT].handle_privmsg = haxserv_pseudoclient_handle_privmsg;
+	pseudoclients[HAXSERV_PSEUDOCLIENT].handle_rename_user = haxserv_pseudoclient_handle_rename_user;
+	pseudoclients[HAXSERV_PSEUDOCLIENT].handle_set_cert = haxserv_pseudoclient_handle_set_cert;
 
 	return 0;
 }
@@ -298,6 +300,14 @@ void haxserv_pseudoclient_handle_privmsg(struct string from, struct string sourc
 
 		free(full_msg.data);
 	}
+}
+
+void haxserv_pseudoclient_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+	return;
+}
+
+void haxserv_pseudoclient_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
+	return;
 }
 
 int haxserv_pseudoclient_help_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
@@ -586,6 +596,9 @@ struct command_def haxserv_pseudoclient_spam_command_def = {
 
 int haxserv_pseudoclient_reload_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
 	reload_pseudoclients[HAXSERV_PSEUDOCLIENT] = 1;
+#ifdef USE_SERVICES_PSUEDOCLIENT
+	reload_pseudoclients[SERVICES_PSEUDOCLIENT] = 1;
+#endif
 
 	return 0;
 }

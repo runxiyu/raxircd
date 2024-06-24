@@ -697,6 +697,21 @@ void inspircd2_protocol_propagate_set_account(struct string from, struct user_in
 	inspircd2_protocol_propagate(from, STRING("\n"));
 }
 
+// [:source] METADATA <user> ssl_cert <vtrsE (none) | vTrse <cert>>
+void inspircd2_protocol_propagate_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
+	inspircd2_protocol_propagate(from, STRING(":"));
+	inspircd2_protocol_propagate(from, source);
+	inspircd2_protocol_propagate(from, STRING(" METADATA "));
+	inspircd2_protocol_propagate(from, user->uid);
+	if (cert.len != 0) {
+		inspircd2_protocol_propagate(from, STRING(" ssl_cert :vTrse "));
+		inspircd2_protocol_propagate(from, cert);
+		inspircd2_protocol_propagate(from, STRING("\n"));
+	} else {
+		inspircd2_protocol_propagate(from, STRING(" ssl_cert :vtrsE No certificate was found.\n"));
+	}
+}
+
 // [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
 void inspircd2_protocol_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_server, size_t user_count, struct user_info **users) {
 	inspircd2_protocol_propagate(from, STRING(":"));
@@ -865,6 +880,10 @@ int inspircd2_protocol_handle_set_account(struct string from, struct user_info *
 	return 0;
 }
 
+int inspircd2_protocol_handle_set_cert(struct string from, struct user_info *info, struct string cert, struct string source) {
+	return 0;
+}
+
 int inspircd2_protocol_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users) {
 	return 0;
 }
@@ -898,6 +917,10 @@ void inspircd2_protocol_fail_oper_user(struct string from, struct user_info *inf
 }
 
 void inspircd2_protocol_fail_set_account(struct string from, struct user_info *info, struct string account, struct string source) {
+	return;
+}
+
+void inspircd2_protocol_fail_set_cert(struct string from, struct user_info *info, struct string cert, struct string source) {
 	return;
 }
 
@@ -1828,6 +1851,23 @@ int inspircd2_protocol_handle_metadata(struct string source, size_t argc, struct
 	if (STRING_EQ(argv[1], STRING("accountname"))) {
 		if (set_account(config->sid, info, argv[2], source) != 0)
 			return -1;
+	} else if (STRING_EQ(argv[1], STRING("ssl_cert"))) {
+		struct string no_cert = STRING("vtrsE ");
+		if (argv[2].len < no_cert.len)
+			return -1;
+		struct string start = {.data = argv[2].data, .len = no_cert.len};
+		if (STRING_EQ(start, no_cert)) {
+			if (set_cert(config->sid, info, STRING(""), source) != 0)
+				return -1;
+		} else if (STRING_EQ(start, STRING("vTrse "))) {
+			struct string cert = {.data = argv[2].data + no_cert.len, .len = argv[2].len - no_cert.len};
+			size_t len;
+			for (len = 0; len < cert.len && cert.data[len] != ' '; len++)
+				;
+			cert.len = len;
+			if (set_cert(config->sid, info, cert, source) != 0)
+				return -1;
+		}
 	}
 
 	return 0;

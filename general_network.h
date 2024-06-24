@@ -93,6 +93,9 @@ struct user_info {
 	struct string oper_type;
 	struct string account_name;
 
+	struct string cert;
+	char cert_ready;
+
 	struct string server;
 
 	struct table channel_list;
@@ -135,6 +138,7 @@ int kill_user(struct string from, struct string source, struct user_info *user, 
 int oper_user(struct string from, struct user_info *user, struct string type, struct string source);
 
 int set_account(struct string from, struct user_info *user, struct string account, struct string source);
+int set_cert(struct string from, struct user_info *user, struct string cert, struct string source);
 
 int set_channel(struct string from, struct string name, size_t timestamp, size_t user_count, struct user_info **users);
 int join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
