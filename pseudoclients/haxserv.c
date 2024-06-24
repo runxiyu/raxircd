@@ -939,6 +939,36 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 
 		{
 			struct string msg_parts[] = {
+				STRING("Account name:   "),
+				user->account_name,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
+				STRING("TLS Cert:       "),
+				user->cert,
+			};
+
+			struct string full_msg;
+			if (str_combine(&full_msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
+				notice(SID, HAXSERV_UID, respond_to, full_msg);
+				free(full_msg.data);
+			} else {
+				notice(SID, HAXSERV_UID, respond_to, STRING("<Allocation failure>"));
+			}
+		}
+
+		{
+			struct string msg_parts[] = {
 				STRING("Server:         "),
 				user->server,
 			};

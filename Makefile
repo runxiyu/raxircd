@@ -341,7 +341,8 @@ endif
 
 ifeq ($(SERVICES_PSEUDOCLIENT),1)
 SOFILES += pseudoclients/services.so
-CFLAGS += -DUSE_SERVICES_PSEUDOCLIENT
+CFLAGS += -DUSE_SERVICES_PSEUDOCLIENT $(shell pkg-config --cflags lmdb)
+LDFLAGS += $(shell pkg-config --libs lmdb)
 USE_PSEUDOCLIENTS = 1
 endif
 
@@ -442,7 +443,7 @@ HaxIRCd.so: $(OFILES) .makeopts Makefile
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
 %.so: %.c
-	$(CC) $(CFLAGS) -shared -fPIC $< -o $@
+	$(CC) $(CFLAGS) -shared -fPIC $< -o $@ $(LDFLAGS)
 
 $(call DEPS,config,o)
 

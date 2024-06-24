@@ -101,14 +101,14 @@ void pseudoclients_handle_privmsg(struct string from, struct string sender, stru
 	}
 }
 
-void psuedoclients_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+void pseudoclients_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
 	for (size_t i = 0; i < NUM_PSEUDOCLIENTS; i++) {
 		if (pseudoclients[i].active)
 			pseudoclients[i].handle_rename_user(from, user, nick, timestamp);
 	}
 }
 
-void psuedoclients_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
+void pseudoclients_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
 	for (size_t i = 0; i < NUM_PSEUDOCLIENTS; i++) {
 		if (pseudoclients[i].active)
 			pseudoclients[i].handle_set_cert(from, user, cert, source);

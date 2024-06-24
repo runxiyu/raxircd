@@ -24,11 +24,23 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+#include <lmdb.h>
+#include <stdlib.h>
+
 #include "../config.h"
 #include "../haxstring.h"
+#include "../haxstring_utils.h"
 #include "../general_network.h"
 #include "../pseudoclients.h"
 #include "services.h"
+
+MDB_env *services_db_env;
+
+MDB_dbi services_nick_to_account;
+MDB_dbi services_cert_to_account;
+MDB_dbi services_account_to_nicks;
+MDB_dbi services_account_to_certs;
+MDB_dbi services_account_to_name;
 
 int services_pseudoclient_init(void) {
 	return services_pseudoclient_post_reload();
@@ -54,6 +66,45 @@ int services_pseudoclient_post_reload(void) {
 			return 1;
 	}
 
+	if (mdb_env_create(&services_db_env) != 0)
+		return 1;
+	if (mdb_env_set_mapsize(services_db_env, SERVICES_DB_MAX_SIZE) != 0)
+		return 1;
+	if (mdb_env_set_maxdbs(services_db_env, 5) != 0) // nick->account + cert->account + account->nicks (also used for account list) + account->certs + account->name
+		return 1;
+	if (mdb_env_open(services_db_env, "./pseudoclients/services.db", MDB_NOSUBDIR | MDB_NOTLS | MDB_NORDAHEAD, 0600) != 0)
+		return 1;
+	{
+		int discard;
+		if (mdb_reader_check(services_db_env, &discard) != 0)
+			return 1;
+	}
+
+	MDB_txn *txn;
+	if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0)
+		return 1;
+	if (mdb_dbi_open(txn, "nick_to_account", MDB_CREATE, &services_nick_to_account) != 0) {
+		mdb_txn_abort(txn);
+		return 1;
+	}
+	if (mdb_dbi_open(txn, "cert_to_account", MDB_CREATE, &services_cert_to_account) != 0) {
+		mdb_txn_abort(txn);
+		return 1;
+	}
+	if (mdb_dbi_open(txn, "account_to_nicks", MDB_CREATE | MDB_DUPSORT, &services_account_to_nicks) != 0) {
+		mdb_txn_abort(txn);
+		return 1;
+	}
+	if (mdb_dbi_open(txn, "account_to_certs", MDB_CREATE | MDB_DUPSORT, &services_account_to_certs) != 0) {
+		mdb_txn_abort(txn);
+		return 1;
+	}
+	if (mdb_dbi_open(txn, "account_to_name", MDB_CREATE, &services_account_to_name) != 0) {
+		mdb_txn_abort(txn);
+		return 1;
+	}
+	mdb_txn_commit(txn);
+
 	pseudoclients[SERVICES_PSEUDOCLIENT].init = services_pseudoclient_init;
 
 	pseudoclients[SERVICES_PSEUDOCLIENT].post_reload = services_pseudoclient_post_reload;
@@ -70,6 +121,8 @@ int services_pseudoclient_post_reload(void) {
 }
 
 int services_pseudoclient_pre_reload(void) {
+	mdb_env_close(services_db_env);
+
 	return 0;
 }
 
@@ -82,6 +135,74 @@ int services_pseudoclient_allow_kick(struct string from, struct string source, s
 }
 
 void services_pseudoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg) {
+	struct user_info *user = get_table_index(user_list, source);
+	if (!user)
+		return;
+
+	if (STRING_EQ(target, NICKSERV_UID)) {
+		if (STRING_EQ(msg, STRING("REGISTER")) && user->cert.len != 0) {
+			struct string nick_upper;
+			if (str_clone(&nick_upper, user->nick) != 0)
+				return;
+			for (size_t i = 0; i < nick_upper.len; i++)
+				nick_upper.data[i] = CASEMAP(nick_upper.data[i]);
+
+			MDB_txn *txn;
+			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0) {
+				free(nick_upper.data);
+				return;
+			}
+
+			MDB_val key = {
+				.mv_data = nick_upper.data,
+				.mv_size = nick_upper.len,
+			};
+			MDB_val data = key;
+
+			if (mdb_put(txn, services_account_to_nicks, &key, &data, MDB_NOOVERWRITE) != 0) {
+				mdb_txn_abort(txn);
+				free(nick_upper.data);
+				return;
+			}
+			if (mdb_put(txn, services_nick_to_account, &key, &data, MDB_NOOVERWRITE) != 0) {
+				mdb_txn_abort(txn);
+				free(nick_upper.data);
+				return;
+			}
+
+			data.mv_data = user->cert.data;
+			data.mv_size = user->cert.len;
+			if (mdb_put(txn, services_account_to_certs, &key, &data, MDB_NOOVERWRITE) != 0) {
+				mdb_txn_abort(txn);
+				free(nick_upper.data);
+				return;
+			}
+
+			data = key;
+			key.mv_data = user->cert.data;
+			key.mv_size = user->cert.len;
+			if (mdb_put(txn, services_cert_to_account, &key, &data, MDB_NOOVERWRITE) != 0) {
+				mdb_txn_abort(txn);
+				free(nick_upper.data);
+				return;
+			}
+
+			key = data;
+			data.mv_data = user->nick.data;
+			data.mv_size = user->nick.len;
+			if (mdb_put(txn, services_account_to_name, &key, &data, MDB_NOOVERWRITE) != 0) {
+				mdb_txn_abort(txn);
+				free(nick_upper.data);
+				return;
+			}
+
+			mdb_txn_commit(txn);
+			free(nick_upper.data);
+
+			set_account(SID, user, user->nick, NICKSERV_UID);
+		}
+	}
+
 	return;
 }
 
@@ -90,5 +211,31 @@ void services_pseudoclient_handle_rename_user(struct string from, struct user_in
 }
 
 void services_pseudoclient_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
+	if (cert.len != 0) {
+		MDB_txn *txn;
+		if (mdb_txn_begin(services_db_env, NULL, MDB_RDONLY, &txn) != 0) {
+			return;
+		}
+
+		MDB_val key = {
+			.mv_data = cert.data,
+			.mv_size = cert.len,
+		};
+		MDB_val data;
+
+		if (mdb_get(txn, services_cert_to_account, &key, &data) != 0) {
+			mdb_txn_abort(txn);
+			return;
+		}
+		key = data;
+		if (mdb_get(txn, services_account_to_name, &key, &data) != 0) {
+			mdb_txn_abort(txn);
+			return;
+		}
+		mdb_txn_abort(txn);
+		struct string account = {.data = data.mv_data, .len = data.mv_size};
+		set_account(SID, user, account, NICKSERV_UID);
+	}
+
 	return;
 }

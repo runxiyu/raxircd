@@ -33,9 +33,9 @@
 #include "general_network.h"
 #include "protocols.h"
 
-// #define K * 1024
-// #define M * (1024 K)
-// #define G * (1024 M)
+// #define K * 1024LU
+// #define M * (1024LU K)
+// #define G * (1024LU M)
 
 #ifdef USE_SERVER
 struct server_config {
@@ -59,7 +59,7 @@ struct server_config {
 	struct string port; // = "4321",
 };
 extern struct server_config SERVER_CONFIG[]; // = {{...}, ...};
-extern size_t SERVER_CONFIG_LEN; // = sizeof(server_config)/sizeof(*server_config);
+extern size_t SERVER_CONFIG_LEN; // = sizeof(SERVER_CONFIG)/sizeof(*SERVER_CONFIG);
 #endif
 
 extern struct string SID; // = STRING("200");
@@ -127,4 +127,6 @@ extern struct string NICKSERV_HOST; // = STRING("localhost");
 extern struct string NICKSERV_ADDRESS; // = STRING("/dev/null");
 
 extern struct string SERVICES_CHANNEL; // = STRING("#services");
+
+extern size_t SERVICES_DB_MAX_SIZE; // = 100 M;
 #endif

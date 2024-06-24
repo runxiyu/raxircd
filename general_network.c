@@ -395,6 +395,10 @@ int rename_user(struct string from, struct user_info *user, struct string nick, 
 	protocols_propagate_rename_user(from, user, nick, timestamp, timestamp_str);
 #endif
 
+#ifdef USE_PSEUDOCLIENTS
+	pseudoclients_handle_rename_user(from, user, nick, timestamp);
+#endif
+
 	free(user->nick.data);
 	user->nick.data = tmp;
 	memcpy(user->nick.data, nick.data, nick.len);
@@ -521,6 +525,10 @@ int set_cert(struct string from, struct user_info *user, struct string cert, str
 	}
 
 	protocols_propagate_set_cert(from, user, cert, source);
+#endif
+
+#ifdef USE_PSEUDOCLIENTS
+	pseudoclients_handle_set_cert(from, user, cert, source);
 #endif
 
 	user->cert_ready = 1;
