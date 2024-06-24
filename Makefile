@@ -48,6 +48,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_INSPIRCD2_PROTOCOL = $(INSPIRCD2_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD3_PROTOCOL = $(INSPIRCD3_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_HAXSERV_PSEUDOCLIENT = $(HAXSERV_PSEUDOCLIENT)' >> .makeopts
+	printf '%s\n' 'LAST_SERVICES_PSEUDOCLIENT = $(SERVICES_PSEUDOCLIENT)' >> .makeopts
 	printf '%s\n' 'LAST_SAFE_STACK = $(SAFE_STACK)' >> .makeopts
 	printf '%s\n' 'LAST_FUTEX = $(FUTEX)' >> .makeopts
 	printf '%s\n' 'LAST_ATOMICS = $(ATOMICS)' >> .makeopts
@@ -179,6 +180,14 @@ rebuild = 1
 endif
 else
 HAXSERV_PSEUDOCLIENT := $(LAST_HAXSERV_PSEUDOCLIENT)
+endif
+
+ifneq ($(SERVICES_PSEUDOCLIENT),)
+ifneq ($(SERVICES_PSEUDOCLIENT),$(LAST_SERVICES_PSEUDOCLIENT))
+rebuild = 1
+endif
+else
+SERVICES_PSEUDOCLIENT := $(LAST_SERVICES_PSEUDOCLIENT)
 endif
 
 ifneq ($(SAFE_STACK),)
@@ -327,6 +336,12 @@ endif
 ifeq ($(HAXSERV_PSEUDOCLIENT),1)
 SOFILES += pseudoclients/haxserv.so
 CFLAGS += -DUSE_HAXSERV_PSEUDOCLIENT
+USE_PSEUDOCLIENTS = 1
+endif
+
+ifeq ($(SERVICES_PSEUDOCLIENT),1)
+SOFILES += pseudoclients/services.so
+CFLAGS += -DUSE_SERVICES_PSEUDOCLIENT
 USE_PSEUDOCLIENTS = 1
 endif
 
@@ -495,6 +510,10 @@ endif
 
 ifeq ($(HAXSERV_PSEUDOCLIENT),1)
 $(call DEPS,pseudoclients/haxserv,so)
+endif
+
+ifeq ($(SERVICES_PSEUDOCLIENT),1)
+$(call DEPS,pseudoclients/services,so)
 endif
 
 clean:

@@ -151,6 +151,8 @@ int init_inspircd2_protocol(void) {
 	set_table_index(&inspircd2_protocol_commands, STRING("MODE"), &inspircd2_protocol_handle_mode);
 	set_table_index(&inspircd2_protocol_commands, STRING("FMODE"), &inspircd2_protocol_handle_fmode);
 
+	set_table_index(&inspircd2_protocol_commands, STRING("METADATA"), &inspircd2_protocol_handle_metadata);
+
 	set_table_index(&inspircd2_protocol_commands, STRING("DUMP"), &inspircd2_protocol_handle_dump);
 
 	return 0;
@@ -684,6 +686,17 @@ void inspircd2_protocol_propagate_oper_user(struct string from, struct user_info
 	}
 }
 
+// [:source] METADATA <user> accountname <account>
+void inspircd2_protocol_propagate_set_account(struct string from, struct user_info *user, struct string account, struct string source) {
+	inspircd2_protocol_propagate(from, STRING(":"));
+	inspircd2_protocol_propagate(from, source);
+	inspircd2_protocol_propagate(from, STRING(" METADATA "));
+	inspircd2_protocol_propagate(from, user->uid);
+	inspircd2_protocol_propagate(from, STRING(" accountname :"));
+	inspircd2_protocol_propagate(from, account);
+	inspircd2_protocol_propagate(from, STRING("\n"));
+}
+
 // [:source] FJOIN <channel> <timestamp> <modes> [<mode args>] <userlist: modes,uid [...]>
 void inspircd2_protocol_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_server, size_t user_count, struct user_info **users) {
 	inspircd2_protocol_propagate(from, STRING(":"));
@@ -848,6 +861,10 @@ int inspircd2_protocol_handle_oper_user(struct string from, struct user_info *in
 	return 0;
 }
 
+int inspircd2_protocol_handle_set_account(struct string from, struct user_info *info, struct string account, struct string source) {
+	return 0;
+}
+
 int inspircd2_protocol_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users) {
 	return 0;
 }
@@ -877,6 +894,10 @@ void inspircd2_protocol_fail_rename_user(struct string from, struct user_info *i
 }
 
 void inspircd2_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source) {
+	return;
+}
+
+void inspircd2_protocol_fail_set_account(struct string from, struct user_info *info, struct string account, struct string source) {
 	return;
 }
 
@@ -1783,6 +1804,30 @@ int inspircd2_protocol_handle_fmode(struct string source, size_t argc, struct st
 					}
 			}
 		}
+	}
+
+	return 0;
+}
+
+// [:source] METADATA <target> <key> <value>
+int inspircd2_protocol_handle_metadata(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
+	if (argc < 3) {
+		WRITES(2, STRING("[InspIRCd v2] Invalid METADATA received! (Missing parameters)\r\n"));
+		return -1;
+	}
+
+	struct user_info *info;
+	do {
+		info = get_table_index(user_list, argv[0]);
+		if (info)
+			break;
+
+		return 0;
+	} while (0);
+
+	if (STRING_EQ(argv[1], STRING("accountname"))) {
+		if (set_account(config->sid, info, argv[2], source) != 0)
+			return -1;
 	}
 
 	return 0;

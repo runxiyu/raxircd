@@ -116,3 +116,15 @@ extern struct string HAXSERV_REQUIRED_OPER_TYPE; // = STRING("Admin");
 
 extern struct string HAXSERV_LOG_CHANNEL; // = STRING("#services");
 #endif
+
+#ifdef USE_SERVICES_PSEUDOCLIENT
+extern struct string NICKSERV_UID; // = STRING("200000001");
+extern struct string NICKSERV_NICK; // = STRING("NickServ");
+extern struct string NICKSERV_FULLNAME; // = STRING("Nickname Services");
+extern struct string NICKSERV_IDENT; // = STRING("NickServ");
+extern struct string NICKSERV_VHOST; // = STRING("services/NickServ");
+extern struct string NICKSERV_HOST; // = STRING("localhost");
+extern struct string NICKSERV_ADDRESS; // = STRING("/dev/null");
+
+extern struct string SERVICES_CHANNEL; // = STRING("#services");
+#endif

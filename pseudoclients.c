@@ -52,6 +52,21 @@ int init_pseudoclients(void) {
 			return 1;
 	}
 #endif
+#ifdef USE_SERVICES_PSEUDOCLIENT
+	{
+		void *dl_handle = dlopen("pseudoclients/services.so", RTLD_NOW | RTLD_LOCAL);
+		if (!dl_handle) {
+			puts(dlerror());
+			return 1;
+		}
+
+		pseudoclients[SERVICES_PSEUDOCLIENT].dl_handle = dl_handle;
+		pseudoclients[SERVICES_PSEUDOCLIENT].init = dlsym(dl_handle, "services_pseudoclient_init");
+
+		if (pseudoclients[SERVICES_PSEUDOCLIENT].init() != 0)
+			return 1;
+	}
+#endif
 
 	return 0;
 }

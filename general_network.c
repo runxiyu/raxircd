@@ -322,17 +322,17 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	if (str_clone(&(new_info->address), address) != 0)
 		goto add_user_free_host;
 
-	if (str_clone(&(new_info->oper_type), STRING("")) != 0)
-		goto add_user_free_address;
-
 	if (set_table_index(&user_list, uid, new_info) != 0)
-		goto add_user_free_oper_type;
+		goto add_user_free_address;
 
 	if (set_table_index(&(attached->user_list), uid, new_info) != 0)
 		goto add_user_remove_user_list;
 
 	new_info->channel_list.array = malloc(0);
 	new_info->channel_list.len = 0;
+
+	new_info->account_name = (struct string){.data = malloc(0), .len = 0};
+	new_info->oper_type = (struct string){.data = malloc(0), .len = 0};
 
 #ifdef USE_SERVER
 	if (protocols_handle_new_user(from, new_info) != 0)
@@ -348,8 +348,6 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	remove_table_index(&(attached->user_list), uid);
 	add_user_remove_user_list:
 	remove_table_index(&user_list, uid);
-	add_user_free_oper_type:
-	free(new_info->oper_type.data);
 	add_user_free_address:
 	free(new_info->address.data);
 	add_user_free_host:
@@ -436,22 +434,15 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 	free(user->host.data);
 	free(user->address.data);
 	free(user->oper_type.data);
+	free(user->account_name.data);
 	free(user);
 }
 
 int kill_user(struct string from, struct string source, struct user_info *user, struct string reason) {
 #ifdef USE_PSEUDOCLIENTS
 	if (user->is_pseudoclient) {
-		switch (user->pseudoclient) {
-#ifdef USE_HAXSERV_PSEUDOCLIENT
-			case HAXSERV_PSEUDOCLIENT:
-				if (!pseudoclients[HAXSERV_PSEUDOCLIENT].allow_kill(from, source, user, reason))
-					return 1;
-				break;
-#endif
-			default:
-				break;
-		}
+		if (!pseudoclients[user->pseudoclient].allow_kill(from, source, user, reason))
+			return 1;
 	}
 #endif
 
@@ -485,6 +476,29 @@ int oper_user(struct string from, struct user_info *user, struct string type, st
 
 	free(user->oper_type.data);
 	user->oper_type = tmp;
+
+	return 0;
+}
+
+int set_account(struct string from, struct user_info *user, struct string account, struct string source) {
+	if (STRING_EQ(user->account_name, account))
+		return 0;
+
+	struct string tmp;
+	if (str_clone(&tmp, account) != 0)
+		return 1;
+
+#ifdef USE_SERVER
+	if (protocols_handle_set_account(from, user, account, source) != 0) {
+		free(tmp.data);
+		return 1;
+	}
+
+	protocols_propagate_set_account(from, user, account, source);
+#endif
+
+	free(user->account_name.data);
+	user->account_name = tmp;
 
 	return 0;
 }
@@ -771,6 +785,25 @@ int do_trivial_reloads(void) {
 		}
 
 		reload_pseudoclients[HAXSERV_PSEUDOCLIENT] = 0;
+	}
+#endif
+#ifdef USE_SERVICES_PSEUDOCLIENT
+	if (reload_pseudoclients[SERVICES_PSEUDOCLIENT]) {
+		if (pseudoclients[SERVICES_PSEUDOCLIENT].pre_reload() != 0)
+			return 1;
+		dlclose(pseudoclients[SERVICES_PSEUDOCLIENT].dl_handle);
+		pseudoclients[SERVICES_PSEUDOCLIENT].dl_handle = dlopen("pseudoclients/services.so", RTLD_NOW | RTLD_LOCAL);
+		if (!pseudoclients[SERVICES_PSEUDOCLIENT].dl_handle) {
+			puts(dlerror());
+			abort(); // TODO: Ugh...
+		}
+
+		pseudoclients[SERVICES_PSEUDOCLIENT].post_reload = dlsym(pseudoclients[SERVICES_PSEUDOCLIENT].dl_handle, "services_pseudoclient_post_reload");
+		if (pseudoclients[SERVICES_PSEUDOCLIENT].post_reload() != 0) {
+			abort(); // TODO: Ugh...
+		}
+
+		reload_pseudoclients[SERVICES_PSEUDOCLIENT] = 0;
 	}
 #endif
 #endif

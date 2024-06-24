@@ -56,6 +56,8 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate_kill_user = inspircd2_protocol_propagate_kill_user,
 		.propagate_oper_user = inspircd2_protocol_propagate_oper_user,
 
+		.propagate_set_account = inspircd2_protocol_propagate_set_account,
+
 		.propagate_set_channel = inspircd2_protocol_propagate_set_channel,
 		.propagate_join_channel = inspircd2_protocol_propagate_join_channel,
 		.propagate_part_channel = inspircd2_protocol_propagate_part_channel,
@@ -73,6 +75,8 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.handle_kill_user = inspircd2_protocol_handle_kill_user,
 		.handle_oper_user = inspircd2_protocol_handle_oper_user,
 
+		.handle_set_account = inspircd2_protocol_handle_set_account,
+
 		.handle_set_channel = inspircd2_protocol_handle_set_channel,
 		.handle_join_channel = inspircd2_protocol_handle_join_channel,
 		.handle_part_channel = inspircd2_protocol_handle_part_channel,
@@ -83,6 +87,8 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.fail_new_user = inspircd2_protocol_fail_new_user,
 		.fail_rename_user = inspircd2_protocol_fail_rename_user,
 		.fail_oper_user = inspircd2_protocol_fail_oper_user,
+
+		.fail_set_account = inspircd2_protocol_fail_set_account,
 
 		.fail_set_channel = inspircd2_protocol_fail_set_channel,
 		.fail_join_channel = inspircd2_protocol_fail_join_channel,
@@ -110,6 +116,8 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate_kill_user = inspircd3_protocol_propagate_kill_user,
 		.propagate_oper_user = inspircd3_protocol_propagate_oper_user,
 
+		.propagate_set_account = inspircd3_protocol_propagate_set_account,
+
 		.propagate_set_channel = inspircd3_protocol_propagate_set_channel,
 		.propagate_join_channel = inspircd3_protocol_propagate_join_channel,
 		.propagate_part_channel = inspircd3_protocol_propagate_part_channel,
@@ -127,6 +135,8 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.handle_kill_user = inspircd3_protocol_handle_kill_user,
 		.handle_oper_user = inspircd3_protocol_handle_oper_user,
 
+		.handle_set_account = inspircd3_protocol_handle_set_account,
+
 		.handle_set_channel = inspircd3_protocol_handle_set_channel,
 		.handle_join_channel = inspircd3_protocol_handle_join_channel,
 		.handle_part_channel = inspircd3_protocol_handle_part_channel,
@@ -137,6 +147,8 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.fail_new_user = inspircd3_protocol_fail_new_user,
 		.fail_rename_user = inspircd3_protocol_fail_rename_user,
 		.fail_oper_user = inspircd3_protocol_fail_oper_user,
+
+		.fail_set_account = inspircd3_protocol_fail_set_account,
 
 		.fail_set_channel = inspircd3_protocol_fail_set_channel,
 		.fail_join_channel = inspircd3_protocol_fail_join_channel,
@@ -237,6 +249,14 @@ void protocols_propagate_oper_user(struct string from, struct user_info *info, s
 		if (!active_protocols[i])
 			continue;
 		protocols[i].propagate_oper_user(from, info, type, source);
+	}
+}
+
+void protocols_propagate_set_account(struct string from, struct user_info *info, struct string account, struct string source) {
+	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
+		if (!active_protocols[i])
+			continue;
+		protocols[i].propagate_set_account(from, info, account, source);
 	}
 }
 
@@ -400,6 +420,28 @@ int protocols_handle_oper_user(struct string from, struct user_info *info, struc
 	return 1;
 }
 
+int protocols_handle_set_account(struct string from, struct user_info *info, struct string account, struct string source) {
+	size_t i;
+	for (i = 0; i < NUM_PROTOCOLS; i++) {
+		if (!active_protocols[i])
+			continue;
+		if (protocols[i].handle_set_account(from, info, account, source) != 0)
+			goto protocols_handle_set_account_fail;
+	}
+
+	return 0;
+
+	protocols_handle_set_account_fail:
+	while (i > 0) {
+		i--;
+		if (!active_protocols[i])
+			continue;
+		protocols[i].fail_set_account(from, info, account, source);
+	}
+
+	return 1;
+}
+
 int protocols_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users) {
 	size_t i;
 	for (i = 0; i < NUM_PROTOCOLS; i++) {
@@ -489,6 +531,14 @@ void protocols_fail_oper_user(struct string from, struct user_info *info, struct
 		if (!active_protocols[i])
 			continue;
 		protocols[i].fail_oper_user(from, info, type, source);
+	}
+}
+
+void protocols_fail_set_account(struct string from, struct user_info *info, struct string account, struct string source) {
+	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
+		if (!active_protocols[i])
+			continue;
+		protocols[i].fail_set_account(from, info, account, source);
 	}
 }
 

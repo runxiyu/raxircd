@@ -26,36 +26,23 @@
 
 #pragma once
 
-#include "haxstring.h"
-#include "general_network.h"
+#include "../haxstring.h"
+#include "../general_network.h"
 
-struct pseudoclient {
-	void *dl_handle;
-
-	int (*init)(void);
-
-	int (*pre_reload)(void);
-	int (*post_reload)(void);
-
-	int (*allow_kill)(struct string from, struct string source, struct user_info *user, struct string reason);
-	int (*allow_kick)(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
-
-	void (*handle_privmsg)(struct string from, struct string source, struct string target, struct string msg);
+struct command_def {
+	int (*func)(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv);
+	struct string privs;
+	struct string summary;
+	struct string aligned_name;
+	struct string name;
 };
 
-int init_pseudoclients(void);
+int services_pseudoclient_init(void);
 
-#ifdef USE_HAXSERV_PSEUDOCLIENT
-#define HAXSERV_PSEUDOCLIENT 0
-#endif
-#ifdef USE_SERVICES_PSEUDOCLIENT
-#define SERVICES_PSEUDOCLIENT 1
-#endif
+int services_pseudoclient_post_reload(void);
+int services_pseudoclient_pre_reload(void);
 
-#define NUM_PSEUDOCLIENTS 2
+int services_pseudoclient_allow_kill(struct string from, struct string source, struct user_info *user, struct string reason);
+int services_pseudoclient_allow_kick(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
 
-extern struct pseudoclient pseudoclients[NUM_PSEUDOCLIENTS];
-
-extern char reload_pseudoclients[NUM_PSEUDOCLIENTS];
-
-void pseudoclients_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);
+void services_pseudoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);

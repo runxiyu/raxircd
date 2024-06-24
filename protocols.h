@@ -52,6 +52,8 @@ struct protocol {
 	void (*propagate_kill_user)(struct string from, struct string source, struct user_info *info, struct string reason);
 	void (*propagate_oper_user)(struct string from, struct user_info *info, struct string type, struct string reason);
 
+	void (*propagate_set_account)(struct string from, struct user_info *info, struct string account, struct string source);
+
 	void (*propagate_set_channel)(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 	void (*propagate_join_channel)(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
 	void (*propagate_part_channel)(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
@@ -70,6 +72,8 @@ struct protocol {
 	void (*handle_kill_user)(struct string from, struct string source, struct user_info *info, struct string reason);
 	int (*handle_oper_user)(struct string from, struct user_info *info, struct string type, struct string reason);
 
+	int (*handle_set_account)(struct string from, struct user_info *info, struct string account, struct string source);
+
 	int (*handle_set_channel)(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 	int (*handle_join_channel)(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
 	void (*handle_part_channel)(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
@@ -82,6 +86,8 @@ struct protocol {
 	void (*fail_new_user)(struct string from, struct user_info *info);
 	void (*fail_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
 	void (*fail_oper_user)(struct string from, struct user_info *info, struct string type, struct string source);
+
+	void (*fail_set_account)(struct string from, struct user_info *info, struct string account, struct string source);
 
 	void (*fail_set_channel)(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 	void (*fail_join_channel)(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
@@ -103,6 +109,8 @@ void protocols_propagate_remove_user(struct string from, struct user_info *info,
 void protocols_propagate_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 void protocols_propagate_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
+void protocols_propagate_set_account(struct string from, struct user_info *info, struct string account, struct string source);
+
 void protocols_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 void protocols_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
 void protocols_propagate_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
@@ -120,6 +128,8 @@ void protocols_handle_remove_user(struct string from, struct user_info *info, st
 void protocols_handle_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 int protocols_handle_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
+int protocols_handle_set_account(struct string from, struct user_info *info, struct string account, struct string source);
+
 int protocols_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 int protocols_handle_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
 void protocols_handle_part_channel(struct string from, struct channel_info *channel, struct user_info *user, struct string reason);
@@ -130,6 +140,8 @@ void protocols_fail_new_server(struct string from, struct string attached_to, st
 void protocols_fail_new_user(struct string from, struct user_info *info);
 void protocols_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
 void protocols_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
+
+void protocols_fail_set_account(struct string from, struct user_info *info, struct string account, struct string source);
 
 void protocols_fail_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 void protocols_fail_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
