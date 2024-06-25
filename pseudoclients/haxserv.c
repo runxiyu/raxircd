@@ -596,7 +596,7 @@ struct command_def haxserv_pseudoclient_spam_command_def = {
 
 int haxserv_pseudoclient_reload_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
 	reload_pseudoclients[HAXSERV_PSEUDOCLIENT] = 1;
-#ifdef USE_SERVICES_PSUEDOCLIENT
+#ifdef USE_SERVICES_PSEUDOCLIENT
 	reload_pseudoclients[SERVICES_PSEUDOCLIENT] = 1;
 #endif
 

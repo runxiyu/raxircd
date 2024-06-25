@@ -140,7 +140,9 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 		return;
 
 	if (STRING_EQ(target, NICKSERV_UID)) {
-		if (STRING_EQ(msg, STRING("REGISTER")) && user->cert.len != 0) {
+		if (case_string_eq(msg, STRING("REGISTER")) && user->cert.len != 0) {
+			if (user->account_name.len == 0)
+				return;
 			struct string nick_upper;
 			if (str_clone(&nick_upper, user->nick) != 0)
 				return;
@@ -200,6 +202,84 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			free(nick_upper.data);
 
 			set_account(SID, user, user->nick, NICKSERV_UID);
+
+			notice(SID, NICKSERV_UID, user->uid, STRING("Account registered."));
+		} else if (case_string_eq(msg, STRING("GROUP"))) {
+			if (user->account_name.len == 0)
+				goto group_fail;
+			struct string nick_upper;
+			if (str_clone(&nick_upper, user->nick) != 0)
+				goto group_fail;
+			for (size_t i = 0; i < nick_upper.len; i++)
+				nick_upper.data[i] = CASEMAP(nick_upper.data[i]);
+			struct string account_upper;
+			if (str_clone(&account_upper, user->account_name) != 0)
+				goto group_fail_free_nick;
+			for (size_t i = 0; i < account_upper.len; i++)
+				account_upper.data[i] = CASEMAP(account_upper.data[i]);
+
+			MDB_txn *txn;
+			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0)
+				goto group_fail_free_account;
+
+			MDB_val key = {
+				.mv_data = nick_upper.data,
+				.mv_size = nick_upper.len,
+			};
+			MDB_val data = {
+				.mv_data = account_upper.data,
+				.mv_size = account_upper.len,
+			};
+
+			if (mdb_put(txn, services_nick_to_account, &key, &data, MDB_NOOVERWRITE) != 0)
+				goto group_fail_abort;
+
+			key = data;
+			data.mv_data = nick_upper.data;
+			data.mv_size = nick_upper.len;
+			if (mdb_put(txn, services_account_to_nicks, &key, &data, 0) != 0) // DUPSORT, lack of conflict was confirmed in the previous one anyways
+				goto group_fail_abort;
+
+			mdb_txn_commit(txn);
+			free(nick_upper.data);
+			free(account_upper.data);
+
+			notice(SID, NICKSERV_UID, user->uid, STRING("Nickname grouped."));
+
+			return;
+
+			group_fail_abort:
+			mdb_txn_abort(txn);
+			group_fail_free_account:
+			free(account_upper.data);
+			group_fail_free_nick:
+			free(nick_upper.data);
+			group_fail:
+			notice(SID, NICKSERV_UID, user->uid, STRING("Unable to group nickname."));
+			return;
+		} else if (case_string_eq(msg, STRING("LIST"))) {
+			if (user->account_name.len == 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("You are not logged in."));
+			} else {
+				struct string account_upper;
+				if (str_clone(&account_upper, user->account_name) != 0)
+					goto group_fail_free_nick;
+				for (size_t i = 0; i < account_upper.len; i++)
+					account_upper.data[i] = CASEMAP(account_upper.data[i]);
+
+				notice(SID, NICKSERV_UID, user->uid, STRING("Your nicks:"));
+				notice(SID, NICKSERV_UID, user->uid, STRING("Your certs:"));
+
+				free(account_upper.data);
+			}
+		} else {
+			notice(SID, NICKSERV_UID, user->uid, STRING("Supported commands:"));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        HELP     lists commands."));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        REGISTER registers your current nick to your current TLS client cert."));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        GROUP    adds your current nick to your account."));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        ADDCERT  adds a specified cert to your account. (not yet implemented)"));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        DELCERT  removes a specified cert from your account. (not yet implemented)"));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        LIST     lists nicks and certs associated with your account. <in progress>"));
 		}
 	}
 
