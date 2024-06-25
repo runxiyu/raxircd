@@ -698,7 +698,7 @@ int haxserv_pseudoclient_deny_command(struct string from, struct string sender, 
 }
 struct command_def haxserv_pseudoclient_deny_command_def = {
 	.func = haxserv_pseudoclient_deny_command,
-	.summary = STRING("Denys a user access to the extended command set."),
+	.summary = STRING("Denies a user access to the extended command set."),
 	.aligned_name = STRING("deny        "),
 	.name = STRING("deny"),
 };

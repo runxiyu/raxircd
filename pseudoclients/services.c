@@ -267,8 +267,61 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 				for (size_t i = 0; i < account_upper.len; i++)
 					account_upper.data[i] = CASEMAP(account_upper.data[i]);
 
-				notice(SID, NICKSERV_UID, user->uid, STRING("Your nicks:"));
+				MDB_txn *txn;
+				if (mdb_txn_begin(services_db_env, NULL, MDB_RDONLY, &txn) != 0) {
+					free(account_upper.data);
+					return;
+				}
+
+				MDB_cursor *cursor;
+				if (mdb_cursor_open(txn, services_account_to_nicks, &cursor) != 0) {
+					free(account_upper.data);
+					mdb_txn_abort(txn);
+					return;
+				}
+
+				MDB_val key = {
+					.mv_data = account_upper.data,
+					.mv_size = account_upper.len,
+				};
+				MDB_val data;
+				if (mdb_cursor_get(cursor, &key, &data, MDB_SET) != 0) {
+					free(account_upper.data);
+					mdb_cursor_close(cursor);
+					mdb_txn_abort(txn);
+					return;
+				}
+
+				notice(SID, NICKSERV_UID, user->uid, STRING("Your nicks (case-insensitive, uppercased):"));
+
+				do {
+					struct string name = {.data = data.mv_data, .len = data.mv_size};
+					notice(SID, NICKSERV_UID, user->uid, name);
+				} while (mdb_cursor_get(cursor, &key, &data, MDB_NEXT_DUP) == 0);
+
+				mdb_cursor_close(cursor);
+				if (mdb_cursor_open(txn, services_account_to_certs, &cursor) != 0) {
+					free(account_upper.data);
+					mdb_txn_abort(txn);
+					return;
+				}
+
+				if (mdb_cursor_get(cursor, &key, &data, MDB_SET) != 0) {
+					free(account_upper.data);
+					mdb_cursor_close(cursor);
+					mdb_txn_abort(txn);
+					return;
+				}
+
 				notice(SID, NICKSERV_UID, user->uid, STRING("Your certs:"));
+
+				do {
+					struct string name = {.data = data.mv_data, .len = data.mv_size};
+					notice(SID, NICKSERV_UID, user->uid, name);
+				} while (mdb_cursor_get(cursor, &key, &data, MDB_NEXT_DUP) == 0);
+
+				mdb_cursor_close(cursor);
+				mdb_txn_abort(txn);
 
 				free(account_upper.data);
 			}
@@ -279,7 +332,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			notice(SID, NICKSERV_UID, user->uid, STRING("        GROUP    adds your current nick to your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        ADDCERT  adds a specified cert to your account. (not yet implemented)"));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        DELCERT  removes a specified cert from your account. (not yet implemented)"));
-			notice(SID, NICKSERV_UID, user->uid, STRING("        LIST     lists nicks and certs associated with your account. <in progress>"));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        LIST     lists nicks and certs associated with your account."));
 		}
 	}
 
