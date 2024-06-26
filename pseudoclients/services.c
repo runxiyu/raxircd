@@ -264,6 +264,62 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			group_fail:
 			notice(SID, NICKSERV_UID, user->uid, STRING("Unable to group nickname."));
 			return;
+		} else if (case_string_eq(msg, STRING("UNGROUP"))) {
+			if (user->account_name.len == 0)
+				goto ungroup_fail;
+			struct string nick_upper;
+			if (str_clone(&nick_upper, user->nick) != 0)
+				goto ungroup_fail;
+			for (size_t i = 0; i < nick_upper.len; i++)
+				nick_upper.data[i] = CASEMAP(nick_upper.data[i]);
+			struct string account_upper;
+			if (str_clone(&account_upper, user->account_name) != 0)
+				goto ungroup_fail_free_nick;
+			for (size_t i = 0; i < account_upper.len; i++)
+				account_upper.data[i] = CASEMAP(account_upper.data[i]);
+
+			if (STRING_EQ(account_upper, nick_upper)) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("This is your accountname. Please change your account name first. <not yet implemented>"));
+				goto ungroup_fail_free_account;
+			}
+
+			MDB_txn *txn;
+			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0)
+				goto ungroup_fail_free_account;
+
+			MDB_val key = {
+				.mv_data = nick_upper.data,
+				.mv_size = nick_upper.len,
+			};
+
+			if (mdb_del(txn, services_nick_to_account, &key, 0) != 0)
+				goto ungroup_fail_abort;
+
+			MDB_val data = key;
+			key.mv_data = account_upper.data;
+			key.mv_size = account_upper.len;
+
+			if (mdb_del(txn, services_account_to_nicks, &key, &data) != 0)
+				goto ungroup_fail_abort;
+
+			if (mdb_txn_commit(txn) != 0)
+				goto ungroup_fail_free_account;
+
+			notice(SID, NICKSERV_UID, user->uid, STRING("Nickname ungrouped."));
+
+			free(account_upper.data);
+			free(nick_upper.data);
+			return;
+
+			ungroup_fail_abort:
+			mdb_txn_abort(txn);
+			ungroup_fail_free_account:
+			free(account_upper.data);
+			ungroup_fail_free_nick:
+			free(nick_upper.data);
+			ungroup_fail:
+			notice(SID, NICKSERV_UID, user->uid, STRING("Unable to ungroup nickname."));
+			return;
 		} else if (case_string_eq(msg, STRING("LIST"))) {
 			if (user->account_name.len == 0) {
 				notice(SID, NICKSERV_UID, user->uid, STRING("You are not logged in."));
@@ -370,6 +426,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 
 			notice(SID, NICKSERV_UID, user->uid, STRING("Cert added."));
 
+			free(account_upper.data);
 			return;
 
 			addcert_fail_abort:
@@ -419,6 +476,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 
 			notice(SID, NICKSERV_UID, user->uid, STRING("Cert removed."));
 
+			free(account_upper.data);
 			return;
 
 			delcert_fail_abort:
@@ -433,6 +491,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			notice(SID, NICKSERV_UID, user->uid, STRING("        HELP     lists commands."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        REGISTER registers your current nick to your current TLS client cert."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        GROUP    adds your current nick to your account."));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        UNGROUP  removes your current nick from your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        ADDCERT  adds a specified cert to your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        DELCERT  removes a specified cert from your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        LIST     lists nicks and certs associated with your account."));
