@@ -103,7 +103,8 @@ int services_pseudoclient_post_reload(void) {
 		mdb_txn_abort(txn);
 		return 1;
 	}
-	mdb_txn_commit(txn);
+	if (mdb_txn_commit(txn) != 0)
+		return 1;
 
 	pseudoclients[SERVICES_PSEUDOCLIENT].init = services_pseudoclient_init;
 
@@ -198,7 +199,11 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 				return;
 			}
 
-			mdb_txn_commit(txn);
+			if (mdb_txn_commit(txn) != 0) {
+				free(nick_upper.data);
+				return;
+			}
+
 			free(nick_upper.data);
 
 			set_account(SID, user, user->nick, NICKSERV_UID);
@@ -240,7 +245,9 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			if (mdb_put(txn, services_account_to_nicks, &key, &data, 0) != 0) // DUPSORT, lack of conflict was confirmed in the previous one anyways
 				goto group_fail_abort;
 
-			mdb_txn_commit(txn);
+			if (mdb_txn_commit(txn) != 0)
+				goto group_fail_free_account;
+
 			free(nick_upper.data);
 			free(account_upper.data);
 
@@ -325,13 +332,109 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 
 				free(account_upper.data);
 			}
+		} else if (msg.len >= 8 && case_string_eq((struct string){.data = msg.data, .len = 8}, STRING("ADDCERT "))) {
+			if (user->account_name.len == 0)
+				goto addcert_fail;
+
+			struct string account_upper;
+			if (str_clone(&account_upper, user->account_name) != 0)
+				goto addcert_fail;
+			for (size_t i = 0; i < account_upper.len; i++)
+				account_upper.data[i] = CASEMAP(account_upper.data[i]);
+
+			MDB_txn *txn;
+			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0)
+				goto addcert_fail_free_account;
+
+			MDB_val key = {
+				.mv_data = msg.data + 8,
+				.mv_size = msg.len - 8,
+			};
+
+			MDB_val data = {
+				.mv_data = account_upper.data,
+				.mv_size = account_upper.len,
+			};
+
+			if (mdb_put(txn, services_cert_to_account, &key, &data, MDB_NOOVERWRITE) != 0)
+				goto addcert_fail_abort;
+
+			data = key;
+			key.mv_data = account_upper.data;
+			key.mv_size = account_upper.len;
+			if (mdb_put(txn, services_account_to_certs, &key, &data, 0) != 0)
+				goto addcert_fail_abort;
+
+			if (mdb_txn_commit(txn) != 0)
+				goto addcert_fail_free_account;
+
+			notice(SID, NICKSERV_UID, user->uid, STRING("Cert added."));
+
+			return;
+
+			addcert_fail_abort:
+			mdb_txn_abort(txn);
+			addcert_fail_free_account:
+			free(account_upper.data);
+			addcert_fail:
+			notice(SID, NICKSERV_UID, user->uid, STRING("Unable to add cert."));
+			return;
+		} else if (msg.len >= 8 && case_string_eq((struct string){.data = msg.data, .len = 8}, STRING("DELCERT "))) {
+			if (user->account_name.len == 0)
+				goto delcert_fail;
+
+			struct string account_upper;
+			if (str_clone(&account_upper, user->account_name) != 0)
+				goto delcert_fail;
+			for (size_t i = 0; i < account_upper.len; i++)
+				account_upper.data[i] = CASEMAP(account_upper.data[i]);
+
+			MDB_txn *txn;
+			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0)
+				goto delcert_fail_free_account;
+
+			MDB_val key = {
+				.mv_data = msg.data + 8,
+				.mv_size = msg.len - 8,
+			};
+
+
+			if (mdb_del(txn, services_cert_to_account, &key, 0) != 0)
+				goto delcert_fail_abort;
+
+			MDB_val data = key;
+			key.mv_data = account_upper.data;
+			key.mv_size = account_upper.len;
+
+			if (mdb_del(txn, services_account_to_certs, &key, &data) != 0)
+				goto delcert_fail_abort;
+
+			if (mdb_get(txn, services_account_to_certs, &key, &data) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("This is your last cert, you would not be able to log in if this was removed."));
+				goto delcert_fail_abort;
+			}
+
+			if (mdb_txn_commit(txn) != 0)
+				goto delcert_fail_abort;
+
+			notice(SID, NICKSERV_UID, user->uid, STRING("Cert removed."));
+
+			return;
+
+			delcert_fail_abort:
+			mdb_txn_abort(txn);
+			delcert_fail_free_account:
+			free(account_upper.data);
+			delcert_fail:
+			notice(SID, NICKSERV_UID, user->uid, STRING("Unable to remove cert."));
+			return;
 		} else {
 			notice(SID, NICKSERV_UID, user->uid, STRING("Supported commands:"));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        HELP     lists commands."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        REGISTER registers your current nick to your current TLS client cert."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        GROUP    adds your current nick to your account."));
-			notice(SID, NICKSERV_UID, user->uid, STRING("        ADDCERT  adds a specified cert to your account. (not yet implemented)"));
-			notice(SID, NICKSERV_UID, user->uid, STRING("        DELCERT  removes a specified cert from your account. (not yet implemented)"));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        ADDCERT  adds a specified cert to your account."));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        DELCERT  removes a specified cert from your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        LIST     lists nicks and certs associated with your account."));
 		}
 	}
