@@ -142,17 +142,22 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 
 	if (STRING_EQ(target, NICKSERV_UID)) {
 		if (case_string_eq(msg, STRING("REGISTER")) && user->cert.len != 0) {
-			if (user->account_name.len == 0)
+			if (user->account_name.len != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("You are already registered."));
 				return;
+			}
 			struct string nick_upper;
-			if (str_clone(&nick_upper, user->nick) != 0)
+			if (str_clone(&nick_upper, user->nick) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Account registration failed (OOM)."));
 				return;
+			}
 			for (size_t i = 0; i < nick_upper.len; i++)
 				nick_upper.data[i] = CASEMAP(nick_upper.data[i]);
 
 			MDB_txn *txn;
 			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0) {
 				free(nick_upper.data);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Account registration failed (Probably OOM)."));
 				return;
 			}
 
@@ -165,11 +170,13 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			if (mdb_put(txn, services_account_to_nicks, &key, &data, MDB_NOOVERWRITE) != 0) {
 				mdb_txn_abort(txn);
 				free(nick_upper.data);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Account already exists."));
 				return;
 			}
 			if (mdb_put(txn, services_nick_to_account, &key, &data, MDB_NOOVERWRITE) != 0) {
 				mdb_txn_abort(txn);
 				free(nick_upper.data);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Nickname already registered."));
 				return;
 			}
 
@@ -178,6 +185,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			if (mdb_put(txn, services_account_to_certs, &key, &data, MDB_NOOVERWRITE) != 0) {
 				mdb_txn_abort(txn);
 				free(nick_upper.data);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Account already exists."));
 				return;
 			}
 
@@ -187,6 +195,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			if (mdb_put(txn, services_cert_to_account, &key, &data, MDB_NOOVERWRITE) != 0) {
 				mdb_txn_abort(txn);
 				free(nick_upper.data);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Cert already in use for another account."));
 				return;
 			}
 
@@ -196,11 +205,13 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			if (mdb_put(txn, services_account_to_name, &key, &data, MDB_NOOVERWRITE) != 0) {
 				mdb_txn_abort(txn);
 				free(nick_upper.data);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Account already exists."));
 				return;
 			}
 
 			if (mdb_txn_commit(txn) != 0) {
 				free(nick_upper.data);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Account registration failed (Internal error)."));
 				return;
 			}
 
