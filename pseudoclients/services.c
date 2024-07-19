@@ -118,6 +118,8 @@ int services_pseudoclient_post_reload(void) {
 	pseudoclients[SERVICES_PSEUDOCLIENT].handle_rename_user = services_pseudoclient_handle_rename_user;
 	pseudoclients[SERVICES_PSEUDOCLIENT].handle_set_cert = services_pseudoclient_handle_set_cert;
 
+	pseudoclients[SERVICES_PSEUDOCLIENT].handle_post_rename_user = services_pseudoclient_handle_post_rename_user;
+
 	return 0;
 }
 
@@ -512,7 +514,50 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 	return;
 }
 
-void services_pseudoclient_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+void services_pseudoclient_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate) {
+	return;
+}
+
+void services_pseudoclient_handle_post_rename_user(struct string from, struct user_info *user, struct string nick, size_t old_timestamp, char forced, char immediate) {
+	if (forced)
+		return;
+
+	MDB_txn *txn;
+	if (mdb_txn_begin(services_db_env, NULL, MDB_RDONLY, &txn) != 0)
+		return;
+
+	struct string account_upper;
+	if (str_clone(&account_upper, nick) != 0)
+		return;
+	for (size_t i = 0; i < account_upper.len; i++)
+		account_upper.data[i] = CASEMAP(account_upper.data[i]);
+
+	MDB_val key = {
+		.mv_data = account_upper.data,
+		.mv_size = account_upper.len,
+	};
+	MDB_val data;
+
+	if (mdb_get(txn, services_nick_to_account, &key, &data) != 0) {
+		free(account_upper.data);
+		mdb_txn_abort(txn);
+		return;
+	}
+	free(account_upper.data);
+
+	key = data;
+	if (mdb_get(txn, services_account_to_name, &key, &data) != 0) {
+		mdb_txn_abort(txn);
+		return;
+	}
+
+	struct string required_account_name = {.data = data.mv_data, .len = data.mv_size};
+	if (!STRING_EQ(required_account_name, user->account_name)) {
+		rename_user(SID, user, user->uid, 100, 1, 1);
+	}
+
+	mdb_txn_abort(txn);
+
 	return;
 }
 
@@ -538,9 +583,9 @@ void services_pseudoclient_handle_set_cert(struct string from, struct user_info 
 			mdb_txn_abort(txn);
 			return;
 		}
-		mdb_txn_abort(txn);
 		struct string account = {.data = data.mv_data, .len = data.mv_size};
 		set_account(SID, user, account, NICKSERV_UID);
+		mdb_txn_abort(txn);
 	}
 
 	return;

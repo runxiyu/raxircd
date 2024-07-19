@@ -132,7 +132,7 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 int init_general_network(void);
 
 int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net, char is_pseudoclient, size_t pseudoclient);
-int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp);
+int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate);
 void remove_user(struct string from, struct user_info *user, struct string reason, char propagate);
 int kill_user(struct string from, struct string source, struct user_info *user, struct string reason);
 int oper_user(struct string from, struct user_info *user, struct string type, struct string source);

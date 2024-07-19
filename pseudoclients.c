@@ -101,10 +101,10 @@ void pseudoclients_handle_privmsg(struct string from, struct string sender, stru
 	}
 }
 
-void pseudoclients_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+void pseudoclients_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate) {
 	for (size_t i = 0; i < NUM_PSEUDOCLIENTS; i++) {
 		if (pseudoclients[i].active)
-			pseudoclients[i].handle_rename_user(from, user, nick, timestamp);
+			pseudoclients[i].handle_rename_user(from, user, nick, timestamp, forced, immediate);
 	}
 }
 
@@ -112,5 +112,12 @@ void pseudoclients_handle_set_cert(struct string from, struct user_info *user, s
 	for (size_t i = 0; i < NUM_PSEUDOCLIENTS; i++) {
 		if (pseudoclients[i].active)
 			pseudoclients[i].handle_set_cert(from, user, cert, source);
+	}
+}
+
+void pseudoclients_handle_post_rename_user(struct string from, struct user_info *user, struct string nick, size_t old_timestamp, char forced, char immediate) {
+	for (size_t i = 0; i < NUM_PSEUDOCLIENTS; i++) {
+		if (pseudoclients[i].active)
+			pseudoclients[i].handle_post_rename_user(from, user, nick, old_timestamp, forced, immediate);
 	}
 }

@@ -223,11 +223,11 @@ void protocols_propagate_new_user(struct string from, struct user_info *info) {
 	}
 }
 
-void protocols_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str) {
+void protocols_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate) {
 	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
 		if (!active_protocols[i])
 			continue;
-		protocols[i].propagate_rename_user(from, info, nick, timestamp, timestamp_str);
+		protocols[i].propagate_rename_user(from, info, nick, timestamp, timestamp_str, forced, immediate);
 	}
 }
 
@@ -371,12 +371,12 @@ int protocols_handle_new_user(struct string from, struct user_info *info) {
 	return 1;
 }
 
-int protocols_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str) {
+int protocols_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate) {
 	size_t i;
 	for (i = 0; i < NUM_PROTOCOLS; i++) {
 		if (!active_protocols[i])
 			continue;
-		if (protocols[i].handle_rename_user(from, info, nick, timestamp, timestamp_str) != 0)
+		if (protocols[i].handle_rename_user(from, info, nick, timestamp, timestamp_str, forced, immediate) != 0)
 			goto protocols_handle_rename_user_fail;
 	}
 
@@ -387,7 +387,7 @@ int protocols_handle_rename_user(struct string from, struct user_info *info, str
 		i--;
 		if (!active_protocols[i])
 			continue;
-		protocols[i].fail_rename_user(from, info, nick, timestamp, timestamp_str);
+		protocols[i].fail_rename_user(from, info, nick, timestamp, timestamp_str, forced, immediate);
 	}
 
 	return 1;
@@ -551,11 +551,11 @@ void protocols_fail_new_user(struct string from, struct user_info *info) {
 	}
 }
 
-void protocols_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str) {
+void protocols_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate) {
 	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
 		if (!active_protocols[i])
 			continue;
-		protocols[i].fail_rename_user(from, info, nick, timestamp, timestamp_str);
+		protocols[i].fail_rename_user(from, info, nick, timestamp, timestamp_str, forced, immediate);
 	}
 }
 

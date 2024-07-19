@@ -47,7 +47,7 @@ struct protocol {
 	void (*propagate_unlink_server)(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 	void (*propagate_new_user)(struct string from, struct user_info *info);
-	void (*propagate_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+	void (*propagate_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 	void (*propagate_remove_user)(struct string from, struct user_info *info, struct string reason);
 	void (*propagate_kill_user)(struct string from, struct string source, struct user_info *info, struct string reason);
 	void (*propagate_oper_user)(struct string from, struct user_info *info, struct string type, struct string reason);
@@ -68,7 +68,7 @@ struct protocol {
 	void (*handle_unlink_server)(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 	int (*handle_new_user)(struct string from, struct user_info *info);
-	int (*handle_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+	int (*handle_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 	void (*handle_remove_user)(struct string from, struct user_info *info, struct string reason, char propagate);
 	void (*handle_kill_user)(struct string from, struct string source, struct user_info *info, struct string reason);
 	int (*handle_oper_user)(struct string from, struct user_info *info, struct string type, struct string reason);
@@ -86,7 +86,7 @@ struct protocol {
 	void (*fail_new_server)(struct string from, struct string attached_to, struct server_info *info);
 
 	void (*fail_new_user)(struct string from, struct user_info *info);
-	void (*fail_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+	void (*fail_rename_user)(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 	void (*fail_oper_user)(struct string from, struct user_info *info, struct string type, struct string source);
 
 	void (*fail_set_account)(struct string from, struct user_info *info, struct string account, struct string source);
@@ -107,7 +107,7 @@ void protocols_propagate_new_server(struct string from, struct string attached_t
 void protocols_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 void protocols_propagate_new_user(struct string from, struct user_info *info);
-void protocols_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void protocols_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void protocols_propagate_remove_user(struct string from, struct user_info *info, struct string reason);
 void protocols_propagate_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 void protocols_propagate_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
@@ -127,7 +127,7 @@ int protocols_handle_new_server(struct string from, struct string attached_to, s
 void protocols_handle_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 int protocols_handle_new_user(struct string from, struct user_info *info);
-int protocols_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+int protocols_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void protocols_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate);
 void protocols_handle_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 int protocols_handle_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
@@ -143,7 +143,7 @@ void protocols_handle_kick_channel(struct string from, struct string source, str
 void protocols_fail_new_server(struct string from, struct string attached_to, struct server_info *info);
 
 void protocols_fail_new_user(struct string from, struct user_info *info);
-void protocols_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void protocols_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void protocols_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
 void protocols_fail_set_account(struct string from, struct user_info *info, struct string account, struct string source);

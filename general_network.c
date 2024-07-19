@@ -374,38 +374,54 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	return 1;
 }
 
-int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+int rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate) {
 	struct string timestamp_str;
 	if (unsigned_to_str(timestamp, &timestamp_str) != 0)
 		return 1;
 
-	void *tmp = malloc(nick.len);
-	if (!tmp) {
-		free(timestamp_str.data);
-		return 1;
+	if (forced && !immediate && STRING_EQ(user->server, SID))
+		immediate = 1;
+
+	void *tmp;
+	if (immediate) {
+		tmp = malloc(nick.len);
+		if (!tmp) {
+			free(timestamp_str.data);
+			return 1;
+		}
 	}
 
 #ifdef USE_SERVER
-	if (protocols_handle_rename_user(from, user, nick, timestamp, timestamp_str) != 0) {
-		free(tmp);
-		free(timestamp_str.data);
+	if (protocols_handle_rename_user(from, user, nick, timestamp, timestamp_str, forced, immediate) != 0) {
+		if (immediate) {
+			free(tmp);
+			free(timestamp_str.data);
+		}
 		return 1;
 	}
 
-	protocols_propagate_rename_user(from, user, nick, timestamp, timestamp_str);
+	protocols_propagate_rename_user(from, user, nick, timestamp, timestamp_str, forced, immediate);
 #endif
 
 #ifdef USE_PSEUDOCLIENTS
-	pseudoclients_handle_rename_user(from, user, nick, timestamp);
+	pseudoclients_handle_rename_user(from, user, nick, timestamp, forced, immediate);
+
+	size_t old_timestamp = user->nick_ts;
 #endif
 
-	free(user->nick.data);
-	user->nick.data = tmp;
-	memcpy(user->nick.data, nick.data, nick.len);
-	user->nick.len = nick.len;
+	if (immediate) {
+		free(user->nick.data);
+		user->nick.data = tmp;
+		memcpy(user->nick.data, nick.data, nick.len);
+		user->nick.len = nick.len;
 
-	user->nick_ts_str = timestamp_str;
-	user->nick_ts = timestamp;
+		user->nick_ts_str = timestamp_str;
+		user->nick_ts = timestamp;
+	}
+
+#ifdef USE_PSEUDOCLIENTS
+	pseudoclients_handle_post_rename_user(from, user, nick, old_timestamp, forced, immediate);
+#endif
 
 	return 0;
 }

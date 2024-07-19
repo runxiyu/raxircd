@@ -639,14 +639,34 @@ void inspircd2_protocol_propagate_new_user(struct string from, struct user_info 
 }
 
 // :source NICK <nick> <timestamp>
-void inspircd2_protocol_propagate_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, struct string timestamp_str) {
-	inspircd2_protocol_propagate(from, STRING(":"));
-	inspircd2_protocol_propagate(from, user->uid);
-	inspircd2_protocol_propagate(from, STRING(" NICK "));
-	inspircd2_protocol_propagate(from, nick);
-	inspircd2_protocol_propagate(from, STRING(" "));
-	inspircd2_protocol_propagate(from, timestamp_str);
-	inspircd2_protocol_propagate(from, STRING("\n"));
+void inspircd2_protocol_propagate_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate) {
+	if (forced) {
+		if (STRING_EQ(user->uid, nick)) {
+			inspircd2_protocol_propagate(from, STRING(":"));
+			inspircd2_protocol_propagate(from, from);
+			inspircd2_protocol_propagate(from, STRING(" SAVE "));
+			inspircd2_protocol_propagate(from, user->uid);
+			inspircd2_protocol_propagate(from, STRING(" :"));
+			inspircd2_protocol_propagate(from, user->nick_ts_str);
+			inspircd2_protocol_propagate(from, STRING("\n"));
+		} else {
+			inspircd2_protocol_propagate(from, STRING(":"));
+			inspircd2_protocol_propagate(from, from);
+			inspircd2_protocol_propagate(from, STRING(" SANICK "));
+			inspircd2_protocol_propagate(from, user->uid);
+			inspircd2_protocol_propagate(from, STRING(" :"));
+			inspircd2_protocol_propagate(from, nick);
+			inspircd2_protocol_propagate(from, STRING("\n"));
+		}
+	} else {
+		inspircd2_protocol_propagate(from, STRING(":"));
+		inspircd2_protocol_propagate(from, user->uid);
+		inspircd2_protocol_propagate(from, STRING(" NICK "));
+		inspircd2_protocol_propagate(from, nick);
+		inspircd2_protocol_propagate(from, STRING(" "));
+		inspircd2_protocol_propagate(from, timestamp_str);
+		inspircd2_protocol_propagate(from, STRING("\n"));
+	}
 }
 
 // :source QUIT [<reason>?]
@@ -860,7 +880,7 @@ int inspircd2_protocol_handle_new_user(struct string from, struct user_info *inf
 	return 0;
 }
 
-int inspircd2_protocol_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str) {
+int inspircd2_protocol_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate) {
 	return 0;
 }
 
@@ -908,7 +928,7 @@ void inspircd2_protocol_fail_new_user(struct string from, struct user_info *info
 	return;
 }
 
-void inspircd2_protocol_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str) {
+void inspircd2_protocol_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate) {
 	return;
 }
 
@@ -1404,7 +1424,7 @@ int inspircd2_protocol_handle_nick(struct string source, size_t argc, struct str
 	if (!user)
 		return 0; // KILL timings, etc
 
-	if (rename_user(config->sid, user, argv[0], nick_ts) != 0)
+	if (rename_user(config->sid, user, argv[0], nick_ts, 0, 1) != 0)
 		return -1;
 
 	return 0;

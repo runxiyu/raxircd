@@ -44,9 +44,11 @@ struct pseudoclient {
 
 	void (*handle_privmsg)(struct string from, struct string source, struct string target, struct string msg);
 
-	void (*handle_rename_user)(struct string from, struct user_info *user, struct string nick, size_t timestamp);
+	void (*handle_rename_user)(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate);
 
 	void (*handle_set_cert)(struct string from, struct user_info *user, struct string cert, struct string source);
+
+	void (*handle_post_rename_user)(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate);
 };
 
 int init_pseudoclients(void);
@@ -65,5 +67,7 @@ extern struct pseudoclient pseudoclients[NUM_PSEUDOCLIENTS];
 extern char reload_pseudoclients[NUM_PSEUDOCLIENTS];
 
 void pseudoclients_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);
-void pseudoclients_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp);
+void pseudoclients_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate);
 void pseudoclients_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source);
+
+void pseudoclients_handle_post_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate);

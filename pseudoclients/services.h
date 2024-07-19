@@ -46,5 +46,7 @@ int services_pseudoclient_allow_kill(struct string from, struct string source, s
 int services_pseudoclient_allow_kick(struct string from, struct string source, struct channel_info *channel, struct user_info *user, struct string reason);
 
 void services_pseudoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg);
-void services_pseudoclient_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp);
+void services_pseudoclient_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate);
 void services_pseudoclient_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source);
+
+void services_pseudoclient_handle_post_rename_user(struct string from, struct user_info *user, struct string nick, size_t old_timestamp, char forced, char immediate);

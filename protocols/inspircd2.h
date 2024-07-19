@@ -49,7 +49,7 @@ void inspircd2_protocol_propagate_new_server(struct string from, struct string a
 void inspircd2_protocol_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 void inspircd2_protocol_propagate_new_user(struct string from, struct user_info *info);
-void inspircd2_protocol_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void inspircd2_protocol_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void inspircd2_protocol_propagate_remove_user(struct string from, struct user_info *info, struct string reason);
 void inspircd2_protocol_propagate_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 void inspircd2_protocol_propagate_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
@@ -69,7 +69,7 @@ int inspircd2_protocol_handle_new_server(struct string from, struct string attac
 void inspircd2_protocol_handle_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 int inspircd2_protocol_handle_new_user(struct string from, struct user_info *info);
-int inspircd2_protocol_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+int inspircd2_protocol_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void inspircd2_protocol_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate);
 void inspircd2_protocol_handle_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 int inspircd2_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
@@ -85,7 +85,7 @@ void inspircd2_protocol_handle_kick_channel(struct string from, struct string so
 void inspircd2_protocol_fail_new_server(struct string from, struct string attached_to, struct server_info *info);
 
 void inspircd2_protocol_fail_new_user(struct string from, struct user_info *info);
-void inspircd2_protocol_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void inspircd2_protocol_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void inspircd2_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
 void inspircd2_protocol_fail_set_account(struct string from, struct user_info *info, struct string account, struct string source);

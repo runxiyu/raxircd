@@ -129,6 +129,7 @@ int haxserv_pseudoclient_post_reload(void) {
 	pseudoclients[HAXSERV_PSEUDOCLIENT].handle_privmsg = haxserv_pseudoclient_handle_privmsg;
 	pseudoclients[HAXSERV_PSEUDOCLIENT].handle_rename_user = haxserv_pseudoclient_handle_rename_user;
 	pseudoclients[HAXSERV_PSEUDOCLIENT].handle_set_cert = haxserv_pseudoclient_handle_set_cert;
+	pseudoclients[HAXSERV_PSEUDOCLIENT].handle_post_rename_user = haxserv_pseudoclient_handle_post_rename_user;
 
 	return 0;
 }
@@ -302,11 +303,15 @@ void haxserv_pseudoclient_handle_privmsg(struct string from, struct string sourc
 	}
 }
 
-void haxserv_pseudoclient_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp) {
+void haxserv_pseudoclient_handle_rename_user(struct string from, struct user_info *user, struct string nick, size_t timestamp, char forced, char immediate) {
 	return;
 }
 
 void haxserv_pseudoclient_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
+	return;
+}
+
+void haxserv_pseudoclient_handle_post_rename_user(struct string from, struct user_info *user, struct string nick, size_t old_timestamp, char forced, char immediate) {
 	return;
 }
 
