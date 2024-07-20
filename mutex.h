@@ -26,7 +26,7 @@
 
 #pragma once
 
-#ifdef USE_FUTEX
+#if defined(USE_FUTEX)
 
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -58,6 +58,26 @@ inline void mutex_unlock(uint32_t *futex) {
 }
 
 inline void mutex_destroy(uint32_t *futex) {
+	return;
+}
+
+#elif defined(USE_MISERABLE_SPINLOCKS)
+
+#define MUTEX_TYPE char
+
+inline void mutex_init(char *lock) {
+	*lock = 0;
+}
+
+inline void mutex_lock(char *lock) {
+	while (__sync_lock_test_and_set(lock, 0x1));
+}
+
+inline void mutex_unlock(char *lock) {
+	__sync_lock_release(lock);
+}
+
+inline void mutex_destroy(char *lock) {
 	return;
 }
 

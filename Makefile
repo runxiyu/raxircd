@@ -51,6 +51,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_SERVICES_PSEUDOCLIENT = $(SERVICES_PSEUDOCLIENT)' >> .makeopts
 	printf '%s\n' 'LAST_SAFE_STACK = $(SAFE_STACK)' >> .makeopts
 	printf '%s\n' 'LAST_FUTEX = $(FUTEX)' >> .makeopts
+	printf '%s\n' 'LAST_MISERABLE_SPINLOCKS = $(MISERABLE_SPINLOCKS)' >> .makeopts
 	printf '%s\n' 'LAST_ATOMICS = $(ATOMICS)' >> .makeopts
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
@@ -221,6 +222,14 @@ rebuild = 1
 endif
 else
 FUTEX := $(LAST_FUTEX)
+endif
+
+ifneq ($(MISERABLE_SPINLOCKS),)
+ifneq ($(MISERABLE_SPINLOCKS),$(LAST_MISERABLE_SPINLOCKS))
+rebuild = 1
+endif
+else
+MISERABLE_SPINLOCKS := $(LAST_MISERABLE_SPINLOCKS)
 endif
 
 ifneq ($(ATOMICS),)
@@ -413,6 +422,13 @@ endif
 
 ifeq ($(FUTEX),1)
 CFLAGS += -DUSE_FUTEX
+endif
+
+ifeq ($(MISERABLE_SPINLOCKS),1)
+ifeq ($(FUTEX),1)
+$(error Miserable spinlocks are only enabled when noy using futexes)
+endif
+CFLAGS += -DUSE_MISERABLE_SPINLOCKS
 endif
 
 ifeq ($(ATOMICS),1)
