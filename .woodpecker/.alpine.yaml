@@ -7,7 +7,7 @@ steps:
       event: [manual]
     image: alpine
     commands:
-      - apk add --no-cache build-base gcc curl openssl-dev gnutls-dev
+      - apk add --no-cache build-base gcc curl openssl-dev gnutls-dev lmdb-dev linux-headers
       - curl -o config.c 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/config.c'
       - curl -o .makeopts 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/.makeopts'
       - make
