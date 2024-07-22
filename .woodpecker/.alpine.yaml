@@ -8,5 +8,6 @@ steps:
     image: alpine
     commands:
       - apk add --no-cache build-base gcc curl openssl-dev gnutls-dev
-      - curl -o config.c 'https://paste.sr.ht/blob/09d145e35ce3b058e02f5a0c664046fb66ba67e3'
-      - make GNUTLS_SERVER=1 OPENSSL_SERVER=1 INSPIRCD2_PROTOCOL=1
+      - curl -o config.c 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/config.c'
+      - curl -o .makeopts 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/.makeopts'
+      - make
