@@ -60,12 +60,13 @@ void inspircd3_protocol_propagate_new_server(struct string from, struct string a
 void inspircd3_protocol_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 void inspircd3_protocol_propagate_new_user(struct string from, struct user_info *info);
-void inspircd3_protocol_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void inspircd3_protocol_propagate_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void inspircd3_protocol_propagate_remove_user(struct string from, struct user_info *info, struct string reason);
 void inspircd3_protocol_propagate_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
-void inspircd3_protocol_propagate_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
+void inspircd3_protocol_propagate_oper_user(struct string from, struct user_info *user, struct string type, struct string source);
 
-void inspircd3_protocol_propagate_set_account(struct string from, struct user_info *info, struct string account);
+void inspircd3_protocol_propagate_set_account(struct string from, struct user_info *user, struct string account, struct string source);
+void inspircd3_protocol_propagate_set_cert(struct string from, struct user_info *user, struct string cert, struct string source);
 
 void inspircd3_protocol_propagate_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 void inspircd3_protocol_propagate_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users);
@@ -79,12 +80,13 @@ int inspircd3_protocol_handle_new_server(struct string from, struct string attac
 void inspircd3_protocol_handle_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 int inspircd3_protocol_handle_new_user(struct string from, struct user_info *info);
-int inspircd3_protocol_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+int inspircd3_protocol_handle_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void inspircd3_protocol_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate);
 void inspircd3_protocol_handle_kill_user(struct string from, struct string source, struct user_info *info, struct string reason);
 int inspircd3_protocol_handle_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
-int inspircd3_protocol_handle_set_account(struct string from, struct user_info *info, struct string account);
+int inspircd3_protocol_handle_set_account(struct string from, struct user_info *user, struct string account, struct string source);
+int inspircd3_protocol_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source);
 
 int inspircd3_protocol_handle_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 int inspircd3_protocol_handle_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
@@ -94,10 +96,11 @@ void inspircd3_protocol_handle_kick_channel(struct string from, struct string so
 void inspircd3_protocol_fail_new_server(struct string from, struct string attached_to, struct server_info *info);
 
 void inspircd3_protocol_fail_new_user(struct string from, struct user_info *info);
-void inspircd3_protocol_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str);
+void inspircd3_protocol_fail_rename_user(struct string from, struct user_info *info, struct string nick, size_t timestamp, struct string timestamp_str, char forced, char immediate);
 void inspircd3_protocol_fail_oper_user(struct string from, struct user_info *info, struct string type, struct string source);
 
-void inspircd3_protocol_fail_set_account(struct string from, struct user_info *info, struct string account);
+void inspircd3_protocol_fail_set_account(struct string from, struct user_info *user, struct string account, struct string source);
+void inspircd3_protocol_fail_set_cert(struct string from, struct user_info *user, struct string cert, struct string source);
 
 void inspircd3_protocol_fail_set_channel(struct string from, struct channel_info *channel, char is_new_channel, size_t user_count, struct user_info **users);
 void inspircd3_protocol_fail_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
@@ -125,13 +128,17 @@ int inspircd3_protocol_handle_kill(struct string source, size_t argc, struct str
 int inspircd3_protocol_handle_opertype(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 
 int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd3_protocol_handle_ijoin(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd3_protocol_handle_part(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd3_protocol_handle_kick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 
 int inspircd3_protocol_handle_privmsg(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 int inspircd3_protocol_handle_notice(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 
-int inspircd3_protocol_handle_dump(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd3_protocol_handle_mode(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+int inspircd3_protocol_handle_fmode(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
+
+int inspircd3_protocol_handle_metadata(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
 
 extern char inspircd3_protocol_user_mode_types[UCHAR_MAX+1];
 extern char inspircd3_protocol_channel_mode_types[UCHAR_MAX+1];

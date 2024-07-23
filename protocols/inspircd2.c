@@ -1020,6 +1020,21 @@ void inspircd2_protocol_introduce_servers_to(size_t net, void *handle) {
 			inspircd2_protocol_introduce_servers_to_inner(net, handle, SID, info);
 		}
 	}
+
+	for (size_t i = 0; i < server_list.len; i++) {
+		struct server_info *target = server_list.array[i].ptr;
+		if (target != self && target->protocol != INSPIRCD2_PROTOCOL) {
+			networks[net].send(handle, STRING(":"));
+			networks[net].send(handle, SID);
+			networks[net].send(handle, STRING(" SERVER "));
+			networks[net].send(handle, target->name);
+			networks[net].send(handle, STRING(" * 0 "));
+			networks[net].send(handle, target->sid);
+			networks[net].send(handle, STRING(" :"));
+			networks[net].send(handle, target->fullname);
+			networks[net].send(handle, STRING("\n"));
+		}
+	}
 }
 
 void inspircd2_protocol_introduce_user_to(size_t net, void *handle, struct user_info *user, char join_channels) {

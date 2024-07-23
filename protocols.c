@@ -120,6 +120,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate_oper_user = inspircd3_protocol_propagate_oper_user,
 
 		.propagate_set_account = inspircd3_protocol_propagate_set_account,
+		.propagate_set_cert = inspircd3_protocol_propagate_set_cert,
 
 		.propagate_set_channel = inspircd3_protocol_propagate_set_channel,
 		.propagate_join_channel = inspircd3_protocol_propagate_join_channel,
@@ -139,6 +140,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.handle_oper_user = inspircd3_protocol_handle_oper_user,
 
 		.handle_set_account = inspircd3_protocol_handle_set_account,
+		.handle_set_cert = inspircd3_protocol_handle_set_cert,
 
 		.handle_set_channel = inspircd3_protocol_handle_set_channel,
 		.handle_join_channel = inspircd3_protocol_handle_join_channel,
@@ -152,6 +154,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.fail_oper_user = inspircd3_protocol_fail_oper_user,
 
 		.fail_set_account = inspircd3_protocol_fail_set_account,
+		.fail_set_cert = inspircd3_protocol_fail_set_cert,
 
 		.fail_set_channel = inspircd3_protocol_fail_set_channel,
 		.fail_join_channel = inspircd3_protocol_fail_join_channel,
