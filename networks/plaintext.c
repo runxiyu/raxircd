@@ -72,6 +72,8 @@ size_t plaintext_recv(void *fd, char *data, size_t len, char *err) {
 	if (res == -1) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
 			*err = 1;
+		} else if (errno == ESHUTDOWN || errno == ECONNRESET) {
+			*err = 2;
 		} else {
 			*err = 3;
 		}

@@ -148,6 +148,20 @@ size_t openssl_recv(void *handle, char *data, size_t len, char *err) {
 				case SSL_ERROR_WANT_WRITE:
 					pollfd.events = POLLOUT;
 					break;
+				case SSL_ERROR_ZERO_RETURN:
+					mutex_unlock(&(openssl_handle->mutex));
+					*err = 2;
+					return 0;
+				case SSL_ERROR_SYSCALL:
+					mutex_unlock(&(openssl_handle->mutex));
+
+					if (errno == ESHUTDOWN || errno == ECONNRESET) {
+						*err = 2;
+					} else {
+						*err = 3;
+					}
+
+					return 0;
 				default:
 					mutex_unlock(&(openssl_handle->mutex));
 					*err = 3;

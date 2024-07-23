@@ -98,7 +98,7 @@ inline void mutex_lock(sem_t *mutex) {
 }
 
 inline void mutex_unlock(sem_t *mutex) {
-	sem_trywait(mutex);
+	while (sem_trywait(mutex) == -1 && errno == EINTR);
 	sem_post(mutex);
 }
 
