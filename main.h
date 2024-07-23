@@ -1,3 +1,5 @@
+// Definitions for a few global things that don't fit anywhere more specific
+//
 // Written by: Test_User <hax@andrewyu.org>
 //
 // This is free and unencumbered software released into the public
@@ -32,4 +34,4 @@ extern pthread_attr_t pthread_attr;
 
 extern MUTEX_TYPE state_lock;
 
-int main(void);
+int real_main(void);

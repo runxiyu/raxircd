@@ -1,4 +1,4 @@
-// One of the code files for HaxServ
+// InspIRCd v3 / InspIRCd 1205 protocol support
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

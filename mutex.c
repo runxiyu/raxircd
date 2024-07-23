@@ -1,4 +1,4 @@
-// One of the code files for HaxServ
+// Just ensures the mutex functions get compiled in somewhere, and only once, for if it's not inlined somewhere
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

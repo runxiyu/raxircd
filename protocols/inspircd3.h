@@ -1,3 +1,5 @@
+// InspIRCd v3 / InspIRCd 1205 protocol support
+//
 // Written by: Test_User <hax@andrewyu.org>
 //
 // This is free and unencumbered software released into the public

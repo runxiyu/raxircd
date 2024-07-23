@@ -1,3 +1,5 @@
+// Protocol-related constants
+//
 // Written by: Test_User <hax@andrewyu.org>
 //
 // This is free and unencumbered software released into the public

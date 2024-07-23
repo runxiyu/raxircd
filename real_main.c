@@ -1,4 +1,4 @@
-// "Main" file for haxserv
+// Actual "Main" file for HaxIRCd, just does the required setup
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

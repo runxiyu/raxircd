@@ -1,4 +1,4 @@
-// One of the code files for HaxServ
+// Server networking setup and connection accepting
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

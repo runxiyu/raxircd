@@ -1,4 +1,4 @@
-// One of the code files for HaxServ
+// s2s protocol interface
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

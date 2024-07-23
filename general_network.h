@@ -1,4 +1,4 @@
-// One of the headers for HaxServ
+// Header for generic IRC behavior and general networking usage
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

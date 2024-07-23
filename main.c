@@ -1,4 +1,4 @@
-// One of the code files for HaxServ
+// This just loads the actual HaxIRCd, so its symbols and such are available to its modules
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

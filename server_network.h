@@ -1,3 +1,5 @@
+// Server networking setup and connection accepting
+//
 // Written by: Test_User <hax@andrewyu.org>
 //
 // This is free and unencumbered software released into the public

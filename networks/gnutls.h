@@ -1,4 +1,4 @@
-// One of the headers for HaxServ
+// Direct GnuTLS networking
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

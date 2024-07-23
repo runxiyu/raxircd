@@ -1,4 +1,4 @@
-// One of the code files for HaxServ
+// Direct OpenSSL networking
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

@@ -1,4 +1,4 @@
-// One of the headers for HaxServ
+// OpenSSL networking, with a buffer and a seperate sending thread
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

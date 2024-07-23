@@ -1,4 +1,4 @@
-// One of the code files for HaxServ
+// Raw socket networking
 //
 // Written by: Test_User <hax@andrewyu.org>
 //

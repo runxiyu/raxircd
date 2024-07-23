@@ -1,4 +1,4 @@
-// One of the code files for HaxServ
+// Functions for implementing generic IRC behavior, and some general networking stuff
 //
 // Written by: Test_User <hax@andrewyu.org>
 //
