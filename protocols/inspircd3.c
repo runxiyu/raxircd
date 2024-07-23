@@ -1261,7 +1261,7 @@ int inspircd3_protocol_handle_ping(struct string source, size_t argc, struct str
 		return -1;
 	}
 
-	if (STRING_EQ(config->sid, source) && STRING_EQ(SID, argv[1])) {
+	if (STRING_EQ(config->sid, source) && STRING_EQ(SID, argv[0])) {
 		struct server_info *server = get_table_index(server_list, config->sid);
 		if (!server->awaiting_pong) {
 			networks[net].send(handle, STRING(":"));
@@ -1274,10 +1274,6 @@ int inspircd3_protocol_handle_ping(struct string source, size_t argc, struct str
 			gettimeofday(&(server->last_ping), 0);
 		}
 	}
-
-	struct server_info *reply = get_table_index(server_list, argv[0]);
-	if (!reply || !STRING_EQ(reply->next, config->sid))
-		return 0;
 
 	networks[net].send(handle, STRING(":"));
 	networks[net].send(handle, argv[0]);
