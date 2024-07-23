@@ -62,6 +62,9 @@ extern struct command_def haxserv_pseudoclient_clear_command_def;
 #ifdef USE_INSPIRCD2_PROTOCOL
 extern struct command_def haxserv_pseudoclient_raw_inspircd2_command_def;
 #endif
+#ifdef USE_INSPIRCD3_PROTOCOL
+extern struct command_def haxserv_pseudoclient_raw_inspircd3_command_def;
+#endif
 extern struct command_def haxserv_pseudoclient_kill_command_def;
 extern struct command_def haxserv_pseudoclient_spam_command_def;
 extern struct command_def haxserv_pseudoclient_reload_command_def;

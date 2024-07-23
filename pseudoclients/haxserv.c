@@ -88,9 +88,14 @@ int haxserv_pseudoclient_post_reload(void) {
 		return 1;
 #ifdef USE_INSPIRCD2_PROTOCOL
 	haxserv_pseudoclient_raw_inspircd2_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING(":"), &haxserv_pseudoclient_raw_inspircd2_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("I2:"), &haxserv_pseudoclient_raw_inspircd2_command_def) != 0)
 		return 1;
-	if (set_table_index(&haxserv_pseudoclient_prefixes, STRING(":"), &haxserv_pseudoclient_raw_inspircd2_command_def) != 0)
+#endif
+#ifdef USE_INSPIRCD3_PROTOCOL
+	haxserv_pseudoclient_raw_inspircd3_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING(":"), &haxserv_pseudoclient_raw_inspircd3_command_def) != 0)
+		return 1;
+	if (set_table_index(&haxserv_pseudoclient_prefixes, STRING(":"), &haxserv_pseudoclient_raw_inspircd3_command_def) != 0)
 		return 1;
 #endif
 	haxserv_pseudoclient_kill_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
@@ -466,6 +471,20 @@ int haxserv_pseudoclient_raw_inspircd2_command(struct string from, struct string
 struct command_def haxserv_pseudoclient_raw_inspircd2_command_def = {
 	.func = haxserv_pseudoclient_raw_inspircd2_command,
 	.summary = STRING("Sends a raw message to all InspIRCd v2 links."),
+	.aligned_name = STRING("i2:         "),
+	.name = STRING("i2:"),
+};
+#endif
+#ifdef USE_INSPIRCD3_PROTOCOL
+int haxserv_pseudoclient_raw_inspircd3_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
+	protocols[INSPIRCD3_PROTOCOL].propagate(SID, original_message);
+	protocols[INSPIRCD3_PROTOCOL].propagate(SID, STRING("\n"));
+
+	return 0;
+}
+struct command_def haxserv_pseudoclient_raw_inspircd3_command_def = {
+	.func = haxserv_pseudoclient_raw_inspircd3_command,
+	.summary = STRING("Sends a raw message to all InspIRCd v3 links."),
 	.aligned_name = STRING(":           "),
 	.name = STRING(":"),
 };
