@@ -128,5 +128,6 @@ extern struct string NICKSERV_ADDRESS; // = STRING("/dev/null");
 
 extern struct string SERVICES_CHANNEL; // = STRING("#services");
 
+extern struct string SERVICES_DB_PATH; // = STRING("./pseudoclients/services.db");
 extern size_t SERVICES_DB_MAX_SIZE; // = 100 M;
 #endif

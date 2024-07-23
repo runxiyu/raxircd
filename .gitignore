@@ -6,5 +6,5 @@ HaxIRCd
 core
 .makeopts
 output
-pseudoclients/services.db
-pseudoclients/services.db-lock
+*.db
+*.db-lock

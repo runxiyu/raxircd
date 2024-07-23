@@ -72,7 +72,14 @@ int services_pseudoclient_post_reload(void) {
 		return 1;
 	if (mdb_env_set_maxdbs(services_db_env, 5) != 0) // nick->account + cert->account + account->nicks (also used for account list) + account->certs + account->name
 		return 1;
-	if (mdb_env_open(services_db_env, "./pseudoclients/services.db", MDB_NOSUBDIR | MDB_NOTLS | MDB_NORDAHEAD, 0600) != 0)
+	for (size_t i = 0; i < SERVICES_DB_PATH.len; i++) {
+		if (SERVICES_DB_PATH.data[i] == 0)
+			return 1; // LMDB does not support null in the filepath... nor do normal FSes really, but that can be changed
+	}
+	char path[SERVICES_DB_PATH.len + 1];
+	memcpy(path, SERVICES_DB_PATH.data, SERVICES_DB_PATH.len);
+	path[SERVICES_DB_PATH.len] = 0;
+	if (mdb_env_open(services_db_env, path, MDB_NOSUBDIR | MDB_NOTLS | MDB_NORDAHEAD, 0600) != 0)
 		return 1;
 	{
 		int discard;
