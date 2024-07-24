@@ -597,7 +597,7 @@ void inspircd4_protocol_propagate_unlink_server(struct string from, struct serve
 	inspircd4_protocol_propagate(from, STRING(" : \n"));
 }
 
-// [:source] UID <UID> <nick_ts> <nick> <host> <vhost> <ident> <address> <user_ts> <modes> [<mode args>] <fullname>
+// [:source] UID <UID> <nick_ts> <nick> <host> <vhost> <real_username> <ident> <address> <user_ts> <modes> [<mode args>] <fullname>
 void inspircd4_protocol_propagate_new_user(struct string from, struct user_info *info) {
 	inspircd4_protocol_propagate(from, STRING(":"));
 	inspircd4_protocol_propagate(from, info->server);
@@ -611,6 +611,8 @@ void inspircd4_protocol_propagate_new_user(struct string from, struct user_info 
 	inspircd4_protocol_propagate(from, info->host);
 	inspircd4_protocol_propagate(from, STRING(" "));
 	inspircd4_protocol_propagate(from, info->vhost);
+	inspircd4_protocol_propagate(from, STRING(" "));
+	inspircd4_protocol_propagate(from, info->ident); // XXX: this field is real_username, but we don't track real_username, so we'll just send the ident again
 	inspircd4_protocol_propagate(from, STRING(" "));
 	inspircd4_protocol_propagate(from, info->ident);
 	inspircd4_protocol_propagate(from, STRING(" "));
@@ -1105,6 +1107,8 @@ void inspircd4_protocol_introduce_user_to(size_t net, void *handle, struct user_
 	networks[net].send(handle, STRING(" "));
 	networks[net].send(handle, user->vhost);
 	networks[net].send(handle, STRING(" "));
+	networks[net].send(handle, user->ident);  // XXX: this field is real_username, but we don't track real_username, so we'll just send the ident again
+	networks[net].send(handle, STRING(" "));
 	networks[net].send(handle, user->ident);
 	networks[net].send(handle, STRING(" "));
 	networks[net].send(handle, user->address);
@@ -1392,9 +1396,11 @@ int inspircd4_protocol_handle_rsquit(struct string source, size_t argc, struct s
 	return 0;
 }
 
-// [:source] UID <UID> <nick_ts> <nick> <host> <vhost> <ident> <address> <user_ts> <modes> [<mode args>] <fullname>
+// [:source] UID <UID> <nick_ts> <nick> <host> <vhost> <real_username> <ident> <address> <user_ts> <modes> [<mode args>] <fullname>
 int inspircd4_protocol_handle_uid(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
-	if (argc < 10) {
+	// XXX: real_username is ignored.
+
+	if (argc < 11) {
 		WRITES(2, STRING("[InspIRCd v4] Invalid UID received! (Missing parameters)\r\n"));
 		return -1;
 	}
@@ -1405,16 +1411,16 @@ int inspircd4_protocol_handle_uid(struct string source, size_t argc, struct stri
 	}
 
 	char dir = '?';
-	size_t arg_i = 9;
+	size_t arg_i = 10;
 	size_t mode_i = 0;
 
 	while (1) {
-		if (argv[8].len <= mode_i)
+		if (argv[9].len <= mode_i)
 			break;
-		switch(argv[8].data[mode_i]) {
+		switch(argv[9].data[mode_i]) {
 			case '+':
 			case '-':
-				dir = argv[8].data[mode_i];
+				dir = argv[9].data[mode_i];
 				break;
 			default:
 				if (dir == '?') {
@@ -1422,7 +1428,7 @@ int inspircd4_protocol_handle_uid(struct string source, size_t argc, struct stri
 					return -1;
 				}
 
-				switch(inspircd4_protocol_user_mode_types[(unsigned char)argv[8].data[mode_i]]) {
+				switch(inspircd4_protocol_user_mode_types[(unsigned char)argv[9].data[mode_i]]) {
 					case MODE_TYPE_NOARGS:
 						break;
 					case MODE_TYPE_REPLACE:
@@ -1453,13 +1459,13 @@ int inspircd4_protocol_handle_uid(struct string source, size_t argc, struct stri
 		return -1;
 	}
 
-	size_t user_ts = str_to_unsigned(argv[7], &err);
+	size_t user_ts = str_to_unsigned(argv[8], &err);
 	if (err) {
 		WRITES(2, STRING("[InspIRCd v4] Invalid UID received! (Invalid user timestamp)\r\n"));
 		return -1;
 	}
 
-	if (add_user(config->sid, source, argv[0], argv[2], argv[arg_i], argv[5], argv[4], argv[3], argv[6], user_ts, nick_ts, 0, 0, 0, 0, 0) != 0) {
+	if (add_user(config->sid, source, argv[0], argv[2], argv[arg_i], argv[6], argv[4], argv[3], argv[7], user_ts, nick_ts, 0, 0, 0, 0, 0) != 0) {
 		WRITES(2, STRING("ERROR: Unable to add user!\r\n"));
 		return -1;
 	}
