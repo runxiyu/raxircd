@@ -47,6 +47,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_OPENSSL_BUFFERED_SERVER = $(OPENSSL_BUFFERED_SERVER)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD2_PROTOCOL = $(INSPIRCD2_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD3_PROTOCOL = $(INSPIRCD3_PROTOCOL)' >> .makeopts
+	printf '%s\n' 'LAST_INSPIRCD4_PROTOCOL = $(INSPIRCD4_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_HAXSERV_PSEUDOCLIENT = $(HAXSERV_PSEUDOCLIENT)' >> .makeopts
 	printf '%s\n' 'LAST_SERVICES_PSEUDOCLIENT = $(SERVICES_PSEUDOCLIENT)' >> .makeopts
 	printf '%s\n' 'LAST_SAFE_STACK = $(SAFE_STACK)' >> .makeopts
@@ -174,6 +175,14 @@ rebuild = 1
 endif
 else
 INSPIRCD3_PROTOCOL := $(LAST_INSPIRCD3_PROTOCOL)
+endif
+
+ifneq ($(INSPIRCD4_PROTOCOL),)
+ifneq ($(INSPIRCD4_PROTOCOL),$(LAST_INSPIRCD4_PROTOCOL))
+rebuild = 1
+endif
+else
+INSPIRCD4_PROTOCOL := $(LAST_INSPIRCD4_PROTOCOL)
 endif
 
 ifneq ($(HAXSERV_PSEUDOCLIENT),)
@@ -349,6 +358,11 @@ CFLAGS += -DUSE_INSPIRCD3_PROTOCOL
 USE_PROTOCOLS = 1
 endif
 
+ifeq ($(INSPIRCD4_PROTOCOL),1)
+OFILES += protocols/inspircd4.o
+CFLAGS += -DUSE_INSPIRCD4_PROTOCOL
+USE_PROTOCOLS = 1
+endif
 
 
 ifeq ($(HAXSERV_PSEUDOCLIENT),1)
@@ -534,6 +548,10 @@ endif
 
 ifeq ($(INSPIRCD3_PROTOCOL),1)
 $(call DEPS,protocols/inspircd3,o)
+endif
+
+ifeq ($(INSPIRCD4_PROTOCOL),1)
+$(call DEPS,protocols/inspircd4,o)
 endif
 
 ifeq ($(USE_PSEUDOCLIENTS),1)

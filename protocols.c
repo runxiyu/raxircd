@@ -34,6 +34,9 @@
 #ifdef USE_INSPIRCD3_PROTOCOL
 #include "protocols/inspircd3.h"
 #endif
+#ifdef USE_INSPIRCD4_PROTOCOL
+#include "protocols/inspircd4.h"
+#endif
 
 struct protocol protocols[NUM_PROTOCOLS] = {
 #ifdef USE_INSPIRCD2_PROTOCOL
@@ -162,6 +165,69 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.do_unlink = inspircd3_protocol_do_unlink,
 	},
 #endif
+#ifdef USE_INSPIRCD4_PROTOCOL
+	[INSPIRCD4_PROTOCOL] = {
+		.init = init_inspircd4_protocol,
+		.fail_init = init_inspircd4_protocol_fail,
+
+		.handle_connection = inspircd4_protocol_connection,
+		.autoconnect = inspircd4_protocol_autoconnect,
+		.update_propagations = inspircd4_protocol_update_propagations,
+
+		.propagate = inspircd4_protocol_propagate,
+
+		.propagate_new_server = inspircd4_protocol_propagate_new_server,
+		.propagate_unlink_server = inspircd4_protocol_propagate_unlink_server,
+
+		.propagate_new_user = inspircd4_protocol_propagate_new_user,
+		.propagate_rename_user = inspircd4_protocol_propagate_rename_user,
+		.propagate_remove_user = inspircd4_protocol_propagate_remove_user,
+		.propagate_kill_user = inspircd4_protocol_propagate_kill_user,
+		.propagate_oper_user = inspircd4_protocol_propagate_oper_user,
+
+		.propagate_set_account = inspircd4_protocol_propagate_set_account,
+		.propagate_set_cert = inspircd4_protocol_propagate_set_cert,
+
+		.propagate_set_channel = inspircd4_protocol_propagate_set_channel,
+		.propagate_join_channel = inspircd4_protocol_propagate_join_channel,
+		.propagate_part_channel = inspircd4_protocol_propagate_part_channel,
+		.propagate_kick_channel = inspircd4_protocol_propagate_kick_channel,
+
+		.propagate_privmsg = inspircd4_protocol_propagate_privmsg,
+		.propagate_notice = inspircd4_protocol_propagate_notice,
+
+		.handle_new_server = inspircd4_protocol_handle_new_server,
+		.handle_unlink_server = inspircd4_protocol_handle_unlink_server,
+
+		.handle_new_user = inspircd4_protocol_handle_new_user,
+		.handle_rename_user = inspircd4_protocol_handle_rename_user,
+		.handle_remove_user = inspircd4_protocol_handle_remove_user,
+		.handle_kill_user = inspircd4_protocol_handle_kill_user,
+		.handle_oper_user = inspircd4_protocol_handle_oper_user,
+
+		.handle_set_account = inspircd4_protocol_handle_set_account,
+		.handle_set_cert = inspircd4_protocol_handle_set_cert,
+
+		.handle_set_channel = inspircd4_protocol_handle_set_channel,
+		.handle_join_channel = inspircd4_protocol_handle_join_channel,
+		.handle_part_channel = inspircd4_protocol_handle_part_channel,
+		.handle_kick_channel = inspircd4_protocol_handle_kick_channel,
+
+		.fail_new_server = inspircd4_protocol_fail_new_server,
+
+		.fail_new_user = inspircd4_protocol_fail_new_user,
+		.fail_rename_user = inspircd4_protocol_fail_rename_user,
+		.fail_oper_user = inspircd4_protocol_fail_oper_user,
+
+		.fail_set_account = inspircd4_protocol_fail_set_account,
+		.fail_set_cert = inspircd4_protocol_fail_set_cert,
+
+		.fail_set_channel = inspircd4_protocol_fail_set_channel,
+		.fail_join_channel = inspircd4_protocol_fail_join_channel,
+
+		.do_unlink = inspircd4_protocol_do_unlink,
+	},
+#endif
 };
 
 char active_protocols[NUM_PROTOCOLS] = {
@@ -170,6 +236,9 @@ char active_protocols[NUM_PROTOCOLS] = {
 #endif
 #ifdef USE_INSPIRCD3_PROTOCOL
 	[INSPIRCD3_PROTOCOL] = 1,
+#endif
+#ifdef USE_INSPIRCD4_PROTOCOL
+	[INSPIRCD4_PROTOCOL] = 1,
 #endif
 };
 
