@@ -207,9 +207,7 @@ int gnutls_buffered_connect(void **handle, struct string address, struct string 
 
 	*handle = gnutls_handle;
 
-	int res = mutex_init(&(gnutls_handle->mutex));
-	if (res != 0)
-		goto gnutls_connect_free_gnutls_handle;
+	mutex_init(&(gnutls_handle->mutex));
 
 	struct sockaddr sockaddr;
 	if (resolve(address, port, &sockaddr) != 0)
@@ -222,6 +220,7 @@ int gnutls_buffered_connect(void **handle, struct string address, struct string 
 	gnutls_handle->fd = fd;
 	gnutls_handle->valid = 1;
 
+	int res;
 	do {
 		res = connect(fd, &sockaddr, sizeof(sockaddr));
 	} while (res < 0 && errno == EINTR);
@@ -303,7 +302,6 @@ int gnutls_buffered_connect(void **handle, struct string address, struct string 
 	close(fd);
 	gnutls_connect_destroy_mutex:
 	mutex_destroy(&(gnutls_handle->mutex));
-	gnutls_connect_free_gnutls_handle:
 	free(gnutls_handle);
 
 	return -1;
@@ -339,9 +337,7 @@ int gnutls_buffered_accept(int listen_fd, void **handle, struct string *addr) {
 	gnutls_handle->valid = 1;
 	gnutls_handle->fd = con_fd;
 
-	int res = mutex_init(&(gnutls_handle->mutex));
-	if (res != 0)
-		goto gnutls_accept_free_gnutls_handle;
+	mutex_init(&(gnutls_handle->mutex));
 
 	addr->data = malloc(address_len);
 	if (addr->data == 0 && address_len != 0)
@@ -372,7 +368,7 @@ int gnutls_buffered_accept(int listen_fd, void **handle, struct string *addr) {
 		int poll_res;
 		do {
 			gnutls_res = gnutls_handshake(gnutls_handle->session);
-		} while (res == GNUTLS_E_INTERRUPTED);
+		} while (gnutls_res == GNUTLS_E_INTERRUPTED);
 		if (gnutls_res < 0) {
 			if (gnutls_res == GNUTLS_E_AGAIN) {
 				pollfd.events = POLLIN | POLLOUT;
@@ -412,7 +408,6 @@ int gnutls_buffered_accept(int listen_fd, void **handle, struct string *addr) {
 	free(addr->data);
 	gnutls_accept_destroy_mutex:
 	mutex_destroy(&(gnutls_handle->mutex));
-	gnutls_accept_free_gnutls_handle:
 	free(gnutls_handle);
 	gnutls_accept_close:
 	close(con_fd);
