@@ -192,7 +192,7 @@ void * inspircd4_protocol_connection(void *type) {
 		networks[net].send(handle, SERVER_NAME);
 		networks[net].send(handle, STRING(" "));
 		networks[net].send(handle, config->out_pass);
-		networks[net].send(handle, STRING(" 0 "));
+		networks[net].send(handle, STRING(" "));
 		networks[net].send(handle, SID);
 		networks[net].send(handle, STRING(" :"));
 		networks[net].send(handle, SERVER_FULLNAME);
@@ -1174,9 +1174,9 @@ int inspircd4_protocol_init_handle_capab(struct string source, size_t argc, stru
 	return 0;
 }
 
-// SERVER <address> <password> <always 0> <SID> [key=value, ...] <name>
+// SERVER <address> <password> <SID> [key=value, ...] <name>
 int inspircd4_protocol_init_handle_server(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming) {
-	if (argc < 5) {
+	if (argc < 4) {
 		WRITES(2, STRING("[InspIRCd v4] Invalid SERVER received! (Missing parameters)\r\n"));
 		return -1;
 	}
@@ -1187,13 +1187,13 @@ int inspircd4_protocol_init_handle_server(struct string source, size_t argc, str
 	}
 
 	if (is_incoming) {
-		*config = get_table_index(server_config, argv[3]);
+		*config = get_table_index(server_config, argv[2]);
 		if (!(*config)) {
 			WRITES(2, STRING("[InspIRCd v4] Unknown SID attempted to connect.\r\n"));
 			return -1;
 		}
 	} else {
-		if (!STRING_EQ(argv[3], (*config)->sid)) {
+		if (!STRING_EQ(argv[2], (*config)->sid)) {
 			WRITES(2, STRING("[InspIRCd v4] Wrong SID given in SERVER!\r\n"));
 			return -1;
 		}
@@ -1209,7 +1209,7 @@ int inspircd4_protocol_init_handle_server(struct string source, size_t argc, str
 		networks[net].send(handle, SERVER_NAME);
 		networks[net].send(handle, STRING(" "));
 		networks[net].send(handle, (*config)->out_pass);
-		networks[net].send(handle, STRING(" 0 "));
+		networks[net].send(handle, STRING(" "));
 		networks[net].send(handle, SID);
 		networks[net].send(handle, STRING(" :"));
 		networks[net].send(handle, SERVER_FULLNAME);
@@ -1248,7 +1248,7 @@ int inspircd4_protocol_init_handle_server(struct string source, size_t argc, str
 
 	free(time.data);
 
-	if (add_server((*config)->sid, SID, argv[3], argv[0], argv[argc - 1], INSPIRCD4_PROTOCOL, net, handle) != 0) {
+	if (add_server((*config)->sid, SID, argv[2], argv[0], argv[argc - 1], INSPIRCD4_PROTOCOL, net, handle) != 0) {
 		WRITES(2, STRING("ERROR: Unable to add server!\r\n"));
 		return -1;
 	}
