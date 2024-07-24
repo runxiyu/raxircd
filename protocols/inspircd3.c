@@ -1052,7 +1052,7 @@ void inspircd3_protocol_introduce_servers_to_inner(size_t net, void *handle, str
 	networks[net].send(handle, source);
 	networks[net].send(handle, STRING(" SERVER "));
 	networks[net].send(handle, target->name);
-	networks[net].send(handle, STRING(" * 0 "));
+	networks[net].send(handle, STRING(" "));
 	networks[net].send(handle, target->sid);
 	networks[net].send(handle, STRING(" :"));
 	networks[net].send(handle, target->fullname);
@@ -1081,7 +1081,7 @@ void inspircd3_protocol_introduce_servers_to(size_t net, void *handle) {
 			networks[net].send(handle, SID);
 			networks[net].send(handle, STRING(" SERVER "));
 			networks[net].send(handle, target->name);
-			networks[net].send(handle, STRING(" * 0 "));
+			networks[net].send(handle, STRING(" "));
 			networks[net].send(handle, target->sid);
 			networks[net].send(handle, STRING(" :"));
 			networks[net].send(handle, target->fullname);
