@@ -3,7 +3,7 @@ skip_clone: false
 steps:
   build:
     when:
-      branch: [master, runxiyu]
+      branch: []
       event: [manual]
     image: archlinux
     commands:
