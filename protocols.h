@@ -157,3 +157,4 @@ void protocols_fail_set_channel(struct string from, struct channel_info *channel
 void protocols_fail_join_channel(struct string from, struct channel_info *channel, size_t user_count, struct user_info **users, char propagate);
 
 extern struct protocol protocols[NUM_PROTOCOLS];
+extern char active_protocols[NUM_PROTOCOLS];

@@ -37,6 +37,7 @@
 struct server_network_info {
 	size_t net_type;
 	size_t protocol;
+	int family;
 	char is_incoming;
 };
 

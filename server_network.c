@@ -118,47 +118,50 @@ int start_server_network(void) {
 int start_server_network_threads(size_t net) {
 	pthread_t trash; // Not actually used, so discard
 	struct server_network_info *type;
-#ifdef USE_INSPIRCD2_PROTOCOL
-	if (SERVER_INCOMING[net][INSPIRCD2_PROTOCOL]) {
-		type = malloc(sizeof(*type));
-		if (!type)
-			return 1;
-		type->net_type = net;
-		type->protocol = INSPIRCD2_PROTOCOL;
-		type->is_incoming = 1;
-		if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
-			free(type);
-			return 1;
+	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
+		if (active_protocols[i] && SERVER_INCOMING[net][i]) {
+			type = malloc(sizeof(*type));
+			if (!type)
+				return 1;
+			type->net_type = net;
+			type->protocol = INSPIRCD2_PROTOCOL;
+			type->family = AF_INET;
+			type->is_incoming = 1;
+			if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
+				free(type);
+				return 1;
+			}
+
+#ifdef USE_IPv6
+			type = malloc(sizeof(*type));
+			if (!type)
+				return 1;
+			type->net_type = net;
+			type->protocol = INSPIRCD2_PROTOCOL;
+			type->family = AF_INET6;
+			type->is_incoming = 1;
+			if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
+				free(type);
+				return 1;
+			}
+#endif
 		}
 	}
-#endif
-#ifdef USE_INSPIRCD3_PROTOCOL
-	if (SERVER_INCOMING[net][INSPIRCD3_PROTOCOL]) {
-		type = malloc(sizeof(*type));
-		if (!type)
-			return 1;
-		type->net_type = net;
-		type->protocol = INSPIRCD3_PROTOCOL;
-		type->is_incoming = 1;
-		if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
-			free(type);
-			return 1;
-		}
-	}
-#endif
 	return 0;
 }
 
 void * server_accept_thread(void *type) {
 	size_t net;
 	size_t protocol;
+	int family;
 	{
 		struct server_network_info *t = type;
 		net = t->net_type;
 		protocol = t->protocol;
+		family = t->family;
 	}
 
-	int listen_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	int listen_fd = socket(family, SOCK_STREAM, IPPROTO_TCP);
 	if (listen_fd < 0)
 		return 0;
 
@@ -168,11 +171,20 @@ void * server_accept_thread(void *type) {
 	}
 
 	{
-		struct sockaddr_in sockaddr = {
-			.sin_family = AF_INET,
+		struct sockaddr sockaddr = {
+			.sa_family = family,
 		};
 
-		sockaddr.sin_port = htons(SERVER_PORTS[net][protocol]);
+		if (family == AF_INET) {
+			((struct sockaddr_in *)&sockaddr)->sin_port = htons(SERVER_PORTS[net][protocol]);
+#ifdef IPv6
+		} else if (family == AF_INET6) {
+			((struct sockaddr_in6 *)&sockaddr)->sin_port = htons(SERVER_PORTS[net][protocol]);
+			int one = 1;
+			setsockopt(listen_fd, SOL_IPV6, IPV6_V6ONLY, &one, sizeof(one));
+#endif
+		}
+
 		size_t listen_number = SERVER_LISTEN[net][protocol];
 
 		if (bind(listen_fd, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) != 0)
