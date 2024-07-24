@@ -53,6 +53,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_FUTEX = $(FUTEX)' >> .makeopts
 	printf '%s\n' 'LAST_MISERABLE_SPINLOCKS = $(MISERABLE_SPINLOCKS)' >> .makeopts
 	printf '%s\n' 'LAST_ATOMICS = $(ATOMICS)' >> .makeopts
+	printf '%s\n' 'LAST_IPv6 = $(IPv6)' >> .makeopts
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
 
@@ -238,6 +239,14 @@ rebuild = 1
 endif
 else
 ATOMICS := $(LAST_ATOMICS)
+endif
+
+ifneq ($(IPv6),)
+ifneq ($(IPv6),$(LAST_IPv6))
+rebuild = 1
+endif
+else
+IPv6 := $(LAST_IPv6)
 endif
 
 ifeq ($(rebuild),1)
@@ -433,6 +442,12 @@ endif
 
 ifeq ($(ATOMICS),1)
 CFLAGS += -DUSE_ATOMICS
+endif
+
+
+
+ifeq ($(IPv6),1)
+CFLAGS += -DUSE_IPv6
 endif
 
 

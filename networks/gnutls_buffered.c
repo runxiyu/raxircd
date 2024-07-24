@@ -210,10 +210,12 @@ int gnutls_buffered_connect(void **handle, struct string address, struct string 
 	mutex_init(&(gnutls_handle->mutex));
 
 	struct sockaddr sockaddr;
-	if (resolve(address, port, &sockaddr) != 0)
+	socklen_t sockaddr_len;
+	int family;
+	if (resolve(address, port, &sockaddr, &sockaddr_len, &family) != 0)
 		goto gnutls_connect_destroy_mutex;
 
-	int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	int fd = socket(family, SOCK_STREAM, IPPROTO_TCP);
 	if (fd == -1)
 		goto gnutls_connect_destroy_mutex;
 
@@ -222,7 +224,7 @@ int gnutls_buffered_connect(void **handle, struct string address, struct string 
 
 	int res;
 	do {
-		res = connect(fd, &sockaddr, sizeof(sockaddr));
+		res = connect(fd, &sockaddr, sockaddr_len);
 	} while (res < 0 && errno == EINTR);
 	if (res < 0)
 		goto gnutls_connect_close;
@@ -287,12 +289,12 @@ int gnutls_buffered_connect(void **handle, struct string address, struct string 
 			goto gnutls_connect_deinit_session;
 	} while (1);
 
-	addr_out->data = malloc(sizeof(sockaddr));
+	addr_out->data = malloc(sockaddr_len);
 	if (!addr_out->data)
 		goto gnutls_connect_deinit_session;
 
-	memcpy(addr_out->data, &sockaddr, sizeof(sockaddr));
-	addr_out->len = sizeof(sockaddr);
+	memcpy(addr_out->data, &sockaddr, sockaddr_len);
+	addr_out->len = sockaddr_len;
 
 	return fd;
 

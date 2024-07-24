@@ -222,10 +222,12 @@ size_t plaintext_buffered_recv(void *handle, char *data, size_t len, char *err) 
 
 int plaintext_buffered_connect(void **handle, struct string address, struct string port, struct string *addr_out) {
 	struct sockaddr sockaddr;
-	if (resolve(address, port, &sockaddr) != 0)
+	socklen_t sockaddr_len;
+	int family;
+	if (resolve(address, port, &sockaddr, &sockaddr_len, &family) != 0)
 		return -1;
 
-	int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	int fd = socket(family, SOCK_STREAM, IPPROTO_TCP);
 	if (fd == -1)
 		return -1;
 
@@ -240,7 +242,7 @@ int plaintext_buffered_connect(void **handle, struct string address, struct stri
 
 	int res;
 	do {
-		res = connect(fd, &sockaddr, sizeof(sockaddr));
+		res = connect(fd, &sockaddr, sockaddr_len);
 	} while (res < 0 && errno == EINTR);
 	if (res < 0)
 		goto plaintext_buffered_connect_close;
@@ -254,11 +256,11 @@ int plaintext_buffered_connect(void **handle, struct string address, struct stri
 	plaintext_handle->close = 0;
 	plaintext_handle->fd = fd;
 
-	addr_out->data = malloc(sizeof(sockaddr));
+	addr_out->data = malloc(sockaddr_len);
 	if (!addr_out->data)
 		goto plaintext_buffered_connect_free_handle;
-	memcpy(addr_out->data, &sockaddr, sizeof(sockaddr));
-	addr_out->len = sizeof(sockaddr);
+	memcpy(addr_out->data, &sockaddr, sockaddr_len);
+	addr_out->len = sockaddr_len;
 
 	plaintext_handle->buffer = malloc(PLAINTEXT_BUFFERED_LEN);
 	if (!plaintext_handle->buffer)

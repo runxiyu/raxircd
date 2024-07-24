@@ -127,7 +127,7 @@ struct channel_info {
 	void *protocol_specific[NUM_PROTOCOLS];
 };
 
-int resolve(struct string address, struct string port, struct sockaddr *sockaddr);
+int resolve(struct string address, struct string port, struct sockaddr *sockaddr, socklen_t *len, int *family);
 
 int init_general_network(void);
 

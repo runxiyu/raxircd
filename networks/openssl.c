@@ -203,10 +203,12 @@ size_t openssl_recv(void *handle, char *data, size_t len, char *err) {
 
 int openssl_connect(void **handle, struct string address, struct string port, struct string *addr_out) {
 	struct sockaddr sockaddr;
-	if (resolve(address, port, &sockaddr) != 0)
+	socklen_t sockaddr_len;
+	int family;
+	if (resolve(address, port, &sockaddr, &sockaddr_len, &family) != 0)
 		return -1;
 
-	int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	int fd = socket(family, SOCK_STREAM, IPPROTO_TCP);
 	if (fd == -1)
 		return -1;
 
@@ -221,7 +223,7 @@ int openssl_connect(void **handle, struct string address, struct string port, st
 
 	int res;
 	do {
-		res = connect(fd, &sockaddr, sizeof(sockaddr));
+		res = connect(fd, &sockaddr, sockaddr_len);
 	} while (res < 0 && errno == EINTR);
 	if (res < 0)
 		goto openssl_connect_close;
@@ -232,11 +234,11 @@ int openssl_connect(void **handle, struct string address, struct string port, st
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
 		goto openssl_connect_close;
 
-	addr_out->data = malloc(sizeof(sockaddr));
+	addr_out->data = malloc(sockaddr_len);
 	if (!addr_out->data)
 		goto openssl_connect_close;
-	memcpy(addr_out->data, &sockaddr, sizeof(sockaddr));
-	addr_out->len = sizeof(sockaddr);
+	memcpy(addr_out->data, &sockaddr, sockaddr_len);
+	addr_out->len = sockaddr_len;
 
 	struct openssl_handle *openssl_handle;
 	openssl_handle = malloc(sizeof(*openssl_handle));

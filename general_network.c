@@ -169,7 +169,7 @@ struct table channel_list = {0};
 
 struct server_info *self;
 
-int resolve(struct string address, struct string port, struct sockaddr *sockaddr) {
+int resolve(struct string address, struct string port, struct sockaddr *sockaddr, socklen_t *len, int *family) {
 	// NULL isn't really valid in this anyways so... just checking it and replacing with null-terminated for now
 	for (size_t i = 0; i < address.len; i++)
 		if (address.data[i] == 0)
@@ -194,7 +194,7 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 
 	int success;
 	struct addrinfo hints = {
-		.ai_family = AF_INET,
+		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM,
 		.ai_protocol = IPPROTO_TCP,
 		.ai_flags = AI_NUMERICSERV | AI_ADDRCONFIG,
@@ -204,7 +204,24 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 	success = getaddrinfo(addr_null, port_null, &hints, &info);
 
 	if (success == 0) {
-		*sockaddr = *(info->ai_addr);
+		struct addrinfo *this = info;
+		while (1) {
+			if (this->ai_family == AF_INET
+#ifdef USE_IPv6
+					|| this->ai_family == AF_INET6
+#endif
+					) {
+				memcpy(sockaddr, this->ai_addr, this->ai_addrlen);
+				*len = this->ai_addrlen;
+				*family = this->ai_family;
+				break;
+			} else if (this->ai_next) {
+				this = this->ai_next;
+			} else {
+				success = 1;
+				break;
+			}
+		}
 		freeaddrinfo(info);
 	}
 
