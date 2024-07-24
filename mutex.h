@@ -86,6 +86,7 @@ inline void mutex_destroy(char *lock) {
 #else
 
 #include <semaphore.h>
+#include <errno.h>
 
 #define MUTEX_TYPE sem_t
 
