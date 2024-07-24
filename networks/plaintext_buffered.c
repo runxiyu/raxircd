@@ -221,10 +221,10 @@ size_t plaintext_buffered_recv(void *handle, char *data, size_t len, char *err) 
 }
 
 int plaintext_buffered_connect(void **handle, struct string address, struct string port, struct string *addr_out) {
-	struct sockaddr sockaddr;
+	struct sockaddr_storage sockaddr;
 	socklen_t sockaddr_len;
 	int family;
-	if (resolve(address, port, &sockaddr, &sockaddr_len, &family) != 0)
+	if (resolve(address, port, (struct sockaddr*)&sockaddr, &sockaddr_len, &family) != 0)
 		return -1;
 
 	int fd = socket(family, SOCK_STREAM, IPPROTO_TCP);
@@ -242,7 +242,7 @@ int plaintext_buffered_connect(void **handle, struct string address, struct stri
 
 	int res;
 	do {
-		res = connect(fd, &sockaddr, sockaddr_len);
+		res = connect(fd, (struct sockaddr*)&sockaddr, sockaddr_len);
 	} while (res < 0 && errno == EINTR);
 	if (res < 0)
 		goto plaintext_buffered_connect_close;
@@ -295,12 +295,12 @@ int plaintext_buffered_connect(void **handle, struct string address, struct stri
 }
 
 int plaintext_buffered_accept(int listen_fd, void **handle, struct string *addr) {
-	struct sockaddr address;
+	struct sockaddr_storage address;
 	socklen_t address_len = sizeof(address);
 
 	int con_fd;
 	do {
-		con_fd = accept(listen_fd, &address, &address_len);
+		con_fd = accept(listen_fd, (struct sockaddr*)&address, &address_len);
 	} while (con_fd == -1 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT || errno == EHOSTDOWN || errno == ENONET || errno == EHOSTUNREACH || errno == EOPNOTSUPP || errno == ENETUNREACH));
 
 	if (con_fd == -1)

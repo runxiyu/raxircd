@@ -27,6 +27,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -171,19 +172,29 @@ void * server_accept_thread(void *type) {
 	}
 
 	{
-		struct sockaddr sockaddr = {
-			.sa_family = family,
+		struct sockaddr_storage sockaddr = {
+			.ss_family = family,
 		};
 
 		if (family == AF_INET) {
 			((struct sockaddr_in *)&sockaddr)->sin_port = htons(SERVER_PORTS[net][protocol]);
-			inet_pton(AF_INET, "0.0.0.0", &(((struct sockaddr_in *)&sockaddr)->sin_addr));
 #ifdef USE_IPv6
 		} else if (family == AF_INET6) {
-			((struct sockaddr_in6 *)&sockaddr)->sin6_port = htons(SERVER_PORTS[net][protocol]);
-			inet_pton(AF_INET6, "::", &(((struct sockaddr_in6 *)&sockaddr)->sin6_addr));
 			int one = 1;
 			setsockopt(listen_fd, SOL_IPV6, IPV6_V6ONLY, &one, sizeof(one));
+			struct addrinfo hints = {
+				.ai_family = family,
+				.ai_socktype = SOCK_STREAM,
+				.ai_protocol = IPPROTO_TCP,
+				.ai_flags = AI_PASSIVE | AI_NUMERICSERV,
+			};
+			struct addrinfo *res;
+			int success = getaddrinfo(NULL, "0", &hints, &res);
+			if (success != 0)
+				return 0;
+			memcpy(&sockaddr, res->ai_addr, res->ai_addrlen);
+			freeaddrinfo(res);
+			((struct sockaddr_in6 *)&sockaddr)->sin6_port = htons(SERVER_PORTS[net][protocol]);
 #endif
 		}
 

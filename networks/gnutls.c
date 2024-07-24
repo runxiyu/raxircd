@@ -209,10 +209,10 @@ int gnutls_connect(void **handle, struct string address, struct string port, str
 
 	mutex_init(&(gnutls_handle->mutex));
 
-	struct sockaddr sockaddr;
+	struct sockaddr_storage sockaddr;
 	socklen_t sockaddr_len;
 	int family;
-	if (resolve(address, port, &sockaddr, &sockaddr_len, &family) != 0)
+	if (resolve(address, port, (struct sockaddr*)&sockaddr, &sockaddr_len, &family) != 0)
 		goto gnutls_connect_destroy_mutex;
 
 	int fd = socket(family, SOCK_STREAM, IPPROTO_TCP);
@@ -224,7 +224,7 @@ int gnutls_connect(void **handle, struct string address, struct string port, str
 
 	int res;
 	do {
-		res = connect(fd, &sockaddr, sockaddr_len);
+		res = connect(fd, (struct sockaddr*)&sockaddr, sockaddr_len);
 	} while (res < 0 && errno == EINTR);
 	if (res < 0)
 		goto gnutls_connect_close;
@@ -313,12 +313,12 @@ int gnutls_accept(int listen_fd, void **handle, struct string *addr) {
 	if (!GNUTLS_CERT_PATH || !GNUTLS_KEY_PATH)
 		return -1;
 
-	struct sockaddr address;
+	struct sockaddr_storage address;
 	socklen_t address_len = sizeof(address);
 
 	int con_fd;
 	do {
-		con_fd = accept(listen_fd, &address, &address_len);
+		con_fd = accept(listen_fd, (struct sockaddr*)&address, &address_len);
 	} while (con_fd == -1 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT || errno == EHOSTDOWN || errno == ENONET || errno == EHOSTUNREACH || errno == EOPNOTSUPP || errno == ENETUNREACH));
 
 	if (con_fd == -1)
