@@ -124,7 +124,7 @@ int start_server_network_threads(size_t net) {
 			if (!type)
 				return 1;
 			type->net_type = net;
-			type->protocol = INSPIRCD2_PROTOCOL;
+			type->protocol = i;
 			type->family = AF_INET;
 			type->is_incoming = 1;
 			if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {
@@ -137,7 +137,7 @@ int start_server_network_threads(size_t net) {
 			if (!type)
 				return 1;
 			type->net_type = net;
-			type->protocol = INSPIRCD2_PROTOCOL;
+			type->protocol = i;
 			type->family = AF_INET6;
 			type->is_incoming = 1;
 			if (pthread_create(&trash, &pthread_attr, server_accept_thread, type) != 0) {

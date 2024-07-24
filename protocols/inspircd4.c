@@ -574,14 +574,14 @@ void inspircd4_protocol_propagate_new_server(struct string from, struct string a
 }
 
 // [:source] SQUIT <sid> [<reason>?]
-void inspircd4_protocol_propagate_remove_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
+void inspircd4_protocol_propagate_remove_server(struct string from, struct server_info *server, struct string reason) {
 	if (server->protocol == INSPIRCD4_PROTOCOL)
 		return;
 
 	inspircd4_protocol_propagate(from, STRING(":"));
 	inspircd4_protocol_propagate(from, SID);
 	inspircd4_protocol_propagate(from, STRING(" SQUIT "));
-	inspircd4_protocol_propagate(from, target->sid);
+	inspircd4_protocol_propagate(from, server->sid);
 	inspircd4_protocol_propagate(from, STRING(" :"));
 	if (reason.len != 0)
 		inspircd4_protocol_propagate(from, reason);
