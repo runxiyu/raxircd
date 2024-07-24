@@ -177,9 +177,9 @@ void * server_accept_thread(void *type) {
 
 		if (family == AF_INET) {
 			((struct sockaddr_in *)&sockaddr)->sin_port = htons(SERVER_PORTS[net][protocol]);
-#ifdef IPv6
+#ifdef USE_IPv6
 		} else if (family == AF_INET6) {
-			((struct sockaddr_in6 *)&sockaddr)->sin_port = htons(SERVER_PORTS[net][protocol]);
+			((struct sockaddr_in6 *)&sockaddr)->sin6_port = htons(SERVER_PORTS[net][protocol]);
 			int one = 1;
 			setsockopt(listen_fd, SOL_IPV6, IPV6_V6ONLY, &one, sizeof(one));
 #endif
