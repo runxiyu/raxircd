@@ -1,4 +1,4 @@
-skip_clone: false
+skip_clone: true
 
 steps:
   build:
@@ -7,7 +7,8 @@ steps:
       event: [manual]
     image: fedora
     commands:
-      - dnf -y install make gcc openssl-devel gnutls-devel pkg-config curl lmdb-devel
-      - curl -o config.c 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/config.c'
-      - curl -o .makeopts 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/.makeopts'
-      - make GNUTLS_SERVER=1 OPENSSL_SERVER=1 INSPIRCD2_PROTOCOL=1
+      - echo not building on fedora
+# dnf -y install make gcc openssl-devel gnutls-devel pkg-config curl lmdb-devel
+# curl -o config.c 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/config.c'
+# curl -o .makeopts 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/.makeopts'
+# make GNUTLS_SERVER=1 OPENSSL_SERVER=1 INSPIRCD2_PROTOCOL=1
