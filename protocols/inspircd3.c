@@ -910,8 +910,10 @@ void inspircd3_protocol_handle_unlink_server(struct string from, struct server_i
 
 int inspircd3_protocol_handle_new_user(struct string from, struct user_info *info) {
 	struct server_info *server = get_table_index(server_list, info->server);
-	if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL)
+	if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL) {
+		info->protocol_specific[INSPIRCD3_PROTOCOL] = 0;
 		return 0;
+	}
 
 	struct inspircd3_protocol_specific_user *prot_info;
 	prot_info = malloc(sizeof(*prot_info));
@@ -936,6 +938,11 @@ void inspircd3_protocol_handle_remove_user(struct string from, struct user_info 
 		return;
 
 	struct inspircd3_protocol_specific_user *prot_info = info->protocol_specific[INSPIRCD3_PROTOCOL];
+	while (prot_info->memberships.len > 0) {
+		struct inspircd3_protocol_member_id *mid = remove_table_index(&(prot_info->memberships), prot_info->memberships.array[0].name);
+		free(mid->id_str.data);
+		free(mid);
+	}
 	free(prot_info->memberships.array);
 	free(prot_info);
 
@@ -1685,10 +1692,8 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 		uid.len = (size_t)(&(argv[arg_i].data[i]) - uid.data);
 
 		users[n] = get_table_index(user_list, uid);
-		if (!users[n]) { // Maybe KILLed or smth
-			n--;
+		if (!users[n] || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) // TODO: Check that it's coming the right way too
 			user_count--;
-		}
 
 		i++;
 
@@ -1697,6 +1702,11 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 
 		while (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
 			i++;
+
+		if (!users[n] || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) {
+			n--;
+			continue;
+		}
 
 		mid.len = (size_t)(&(argv[arg_i].data[i]) - mid.data);
 		if (mid.len == 0)
@@ -1728,8 +1738,10 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 	}
 
 	for (size_t i = 0; i < user_count; i++) {
-		if (members[user_count + i])
+		if (members[user_count + i]) {
 			free(members[user_count + i]->id_str.data);
+			free(members[user_count + i]);
+		}
 	}
 
 	struct channel_info *channel = get_table_index(channel_list, argv[0]);

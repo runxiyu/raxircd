@@ -3,7 +3,8 @@ config.c
 *.so
 .*.swp
 HaxIRCd
-core
+core*
+vgcore*
 .makeopts
 output
 *.db
