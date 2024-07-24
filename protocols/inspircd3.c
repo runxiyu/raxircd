@@ -593,7 +593,7 @@ void inspircd3_protocol_propagate_unlink_server(struct string from, struct serve
 		inspircd3_protocol_propagate(from, SID);
 	inspircd3_protocol_propagate(from, STRING(" SQUIT "));
 	inspircd3_protocol_propagate(from, target->sid);
-	inspircd3_protocol_propagate(from, STRING(" :\n"));
+	inspircd3_protocol_propagate(from, STRING(" : \n"));
 }
 
 // [:source] UID <UID> <nick_ts> <nick> <host> <vhost> <ident> <address> <user_ts> <modes> [<mode args>] <fullname>
