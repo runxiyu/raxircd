@@ -1730,7 +1730,7 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 	return 0;
 
 	inspircd3_protocol_handle_fjoin_reset_member_ids:
-	for (size_t x = n; n > 0;) {
+	for (size_t x = n; x > 0;) {
 		x--;
 		struct inspircd3_protocol_specific_user *this = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
 		if (members[user_count + x])
