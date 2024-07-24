@@ -285,6 +285,8 @@ void free_server(struct server_info *server) {
 }
 
 void remove_server(struct string from, struct server_info *server, struct string reason) {
+	protocols_propagate_remove_server(from, server, reason);
+
 	while (server->user_list.len != 0) {
 		remove_user(from, server->user_list.array[0].ptr, reason, 0);
 	}

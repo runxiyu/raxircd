@@ -46,6 +46,7 @@ struct protocol {
 	void (*propagate)(struct string from, struct string msg);
 
 	void (*propagate_new_server)(struct string from, struct string attached_to, struct server_info *info);
+	void (*propagate_remove_server)(struct string from, struct server_info *server, struct string reason);
 	void (*propagate_unlink_server)(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 	void (*propagate_new_user)(struct string from, struct user_info *info);
@@ -106,6 +107,7 @@ int protocols_init(void);
 void protocols_update_propagations(void);
 
 void protocols_propagate_new_server(struct string from, struct string attached_to, struct server_info *info);
+void protocols_propagate_remove_server(struct string from, struct server_info *server, struct string reason);
 void protocols_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 void protocols_propagate_new_user(struct string from, struct user_info *info);

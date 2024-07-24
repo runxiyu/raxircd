@@ -574,7 +574,27 @@ void inspircd4_protocol_propagate_new_server(struct string from, struct string a
 }
 
 // [:source] SQUIT <sid> [<reason>?]
+void inspircd4_protocol_propagate_remove_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
+	if (server->protocol == INSPIRCD4_PROTOCOL)
+		return;
+
+	inspircd4_protocol_propagate(from, STRING(":"));
+	inspircd4_protocol_propagate(from, SID);
+	inspircd4_protocol_propagate(from, STRING(" SQUIT "));
+	inspircd4_protocol_propagate(from, target->sid);
+	inspircd4_protocol_propagate(from, STRING(" :"));
+	if (reason.len != 0)
+		inspircd4_protocol_propagate(from, reason);
+	else
+		inspircd4_protocol_propagate(from, STRING(" "));
+	inspircd4_protocol_propagate(from, STRING("\n"));
+}
+
+// [:source] SQUIT <sid> [<reason>?]
 void inspircd4_protocol_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
+	if (protocol != INSPIRCD4_PROTOCOL)
+		return;
+
 	struct server_info *source;
 	struct server_info *target;
 	if (a->distance == 0 && !STRING_EQ(a->sid, SID)) {
@@ -588,10 +608,7 @@ void inspircd4_protocol_propagate_unlink_server(struct string from, struct serve
 	}
 
 	inspircd4_protocol_propagate(from, STRING(":"));
-	if (protocol == INSPIRCD4_PROTOCOL)
-		inspircd4_protocol_propagate(from, source->sid);
-	else
-		inspircd4_protocol_propagate(from, SID);
+	inspircd4_protocol_propagate(from, source->sid);
 	inspircd4_protocol_propagate(from, STRING(" SQUIT "));
 	inspircd4_protocol_propagate(from, target->sid);
 	inspircd4_protocol_propagate(from, STRING(" : \n"));

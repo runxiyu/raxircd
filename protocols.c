@@ -51,6 +51,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate = inspircd2_protocol_propagate,
 
 		.propagate_new_server = inspircd2_protocol_propagate_new_server,
+		.propagate_remove_server = inspircd2_protocol_propagate_remove_server,
 		.propagate_unlink_server = inspircd2_protocol_propagate_unlink_server,
 
 		.propagate_new_user = inspircd2_protocol_propagate_new_user,
@@ -114,6 +115,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate = inspircd3_protocol_propagate,
 
 		.propagate_new_server = inspircd3_protocol_propagate_new_server,
+		.propagate_remove_server = inspircd3_protocol_propagate_remove_server,
 		.propagate_unlink_server = inspircd3_protocol_propagate_unlink_server,
 
 		.propagate_new_user = inspircd3_protocol_propagate_new_user,
@@ -177,6 +179,7 @@ struct protocol protocols[NUM_PROTOCOLS] = {
 		.propagate = inspircd4_protocol_propagate,
 
 		.propagate_new_server = inspircd4_protocol_propagate_new_server,
+		.propagate_remove_server = inspircd4_protocol_propagate_remove_server,
 		.propagate_unlink_server = inspircd4_protocol_propagate_unlink_server,
 
 		.propagate_new_user = inspircd4_protocol_propagate_new_user,
@@ -279,6 +282,15 @@ void protocols_propagate_new_server(struct string from, struct string attached_t
 		protocols[i].propagate_new_server(from, attached_to, info);
 	}
 }
+
+void protocols_propagate_remove_server(struct string from, struct server_info *server, struct string reason) {
+	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
+		if (!active_protocols[i])
+			continue;
+		protocols[i].propagate_remove_server(from, server, reason);
+	}
+}
+
 void protocols_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol) {
 	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
 		if (!active_protocols[i])

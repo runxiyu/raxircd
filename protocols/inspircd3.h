@@ -57,6 +57,7 @@ void inspircd3_protocol_update_propagations(void);
 void inspircd3_protocol_propagate(struct string from, struct string msg);
 
 void inspircd3_protocol_propagate_new_server(struct string from, struct string attached_to, struct server_info *info);
+void inspircd3_protocol_propagate_remove_server(struct string from, struct server_info *server, struct string reason);
 void inspircd3_protocol_propagate_unlink_server(struct string from, struct server_info *a, struct server_info *b, size_t protocol);
 
 void inspircd3_protocol_propagate_new_user(struct string from, struct user_info *info);
