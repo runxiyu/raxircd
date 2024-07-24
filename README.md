@@ -16,7 +16,7 @@
 
 ## Some implementation details(-ish)
 
-* `dlopen(3)` is used to dynamically load `HaxIRCd.so`; this is for RTLD_GLOBAL,
+* `dlopen(3)` is used to dynamically load `HaxIRCd.so`; this is for `RTLD_GLOBAL`,
   so we can use the contained symbols for the actual loadable modules.
 * All strings that we handle (i.e. not required by external libraries) are
   length-specified, not null-terminated. Null bytes are treated as any other
