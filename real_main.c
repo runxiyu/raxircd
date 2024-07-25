@@ -34,22 +34,22 @@
 #include "main.h"
 #include "mutex.h"
 
-#ifdef USE_PLAINTEXT
+#ifdef USE_PLAINTEXT_NETWORK
 #include "networks/plaintext.h"
 #endif
-#ifdef USE_GNUTLS
+#ifdef USE_GNUTLS_NETWORK
 #include "networks/gnutls.h"
 #endif
-#ifdef USE_OPENSSL
+#ifdef USE_OPENSSL_NETWORK
 #include "networks/openssl.h"
 #endif
-#ifdef USE_PLAINTEXT_BUFFERED
+#ifdef USE_PLAINTEXT_BUFFERED_NETWORK
 #include "networks/plaintext_buffered.h"
 #endif
-#ifdef USE_GNUTLS_BUFFERED
+#ifdef USE_GNUTLS_BUFFERED_NETWORK
 #include "networks/gnutls_buffered.h"
 #endif
-#ifdef USE_OPENSSL_BUFFERED
+#ifdef USE_OPENSSL_BUFFERED_NETWORK
 #include "networks/openssl_buffered.h"
 #endif
 
@@ -78,32 +78,32 @@ int real_main(void) {
 	if (init_general_network() != 0)
 		return 1;
 
-#ifdef USE_PLAINTEXT
+#ifdef USE_PLAINTEXT_NETWORK
 	if (init_plaintext_network() != 0) // there's not really anything to do ahead of time with plain tcp networking, this is just here for consistency
 		return 1;
 #endif
 
-#ifdef USE_GNUTLS
+#ifdef USE_GNUTLS_NETWORK
 	if (init_gnutls_network() != 0)
 		return 1;
 #endif
 
-#ifdef USE_OPENSSL
+#ifdef USE_OPENSSL_NETWORK
 	if (init_openssl_network() != 0)
 		return 1;
 #endif
 
-#ifdef USE_PLAINTEXT_BUFFERED
+#ifdef USE_PLAINTEXT_BUFFERED_NETWORK
 	if (init_plaintext_buffered_network() != 0)
 		return 1;
 #endif
 
-#ifdef USE_GNUTLS_BUFFERED
+#ifdef USE_GNUTLS_BUFFERED_NETWORK
 	if (init_gnutls_buffered_network() != 0)
 		return 1;
 #endif
 
-#ifdef USE_OPENSSL_BUFFERED
+#ifdef USE_OPENSSL_BUFFERED_NETWORK
 	if (init_openssl_buffered_network() != 0)
 		return 1;
 #endif

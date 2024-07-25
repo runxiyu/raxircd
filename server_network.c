@@ -40,22 +40,22 @@
 #include "protocols.h"
 #include "server_network.h"
 
-#ifdef USE_PLAINTEXT_SERVER
+#ifdef USE_PLAINTEXT_NETWORK
 #include "networks/plaintext.h"
 #endif
-#ifdef USE_GNUTLS_SERVER
+#ifdef USE_GNUTLS_NETWORK
 #include "networks/gnutls.h"
 #endif
-#ifdef USE_OPENSSL_SERVER
+#ifdef USE_OPENSSL_NETWORK
 #include "networks/openssl.h"
 #endif
-#ifdef USE_PLAINTEXT_BUFFERED_SERVER
+#ifdef USE_PLAINTEXT_BUFFERED_NETWORK
 #include "networks/plaintext_buffered.h"
 #endif
-#ifdef USE_GNUTLS_BUFFERED_SERVER
+#ifdef USE_GNUTLS_BUFFERED_NETWORK
 #include "networks/gnutls_buffered.h"
 #endif
-#ifdef USE_OPENSSL_BUFFERED_SERVER
+#ifdef USE_OPENSSL_BUFFERED_NETWORK
 #include "networks/openssl_buffered.h"
 #endif
 
@@ -75,30 +75,30 @@ int init_server_network(void) {
 }
 
 int start_server_network(void) {
-#ifdef USE_PLAINTEXT_SERVER
+#ifdef USE_PLAINTEXT_NETWORK
 	if (start_server_network_threads(NET_TYPE_PLAINTEXT) != 0)
 		return 1;
 #endif
-#ifdef USE_GNUTLS_SERVER
+#ifdef USE_GNUTLS_NETWORK
 	if (GNUTLS_CERT_PATH && GNUTLS_KEY_PATH)
 		if (start_server_network_threads(NET_TYPE_GNUTLS) != 0)
 			return 1;
 #endif
-#ifdef USE_OPENSSL_SERVER
+#ifdef USE_OPENSSL_NETWORK
 	if (OPENSSL_CERT_PATH && OPENSSL_KEY_PATH)
 		if (start_server_network_threads(NET_TYPE_OPENSSL) != 0)
 			return 1;
 #endif
-#ifdef USE_PLAINTEXT_BUFFERED_SERVER
+#ifdef USE_PLAINTEXT_BUFFERED_NETWORK
 	if (start_server_network_threads(NET_TYPE_PLAINTEXT_BUFFERED) != 0)
 		return 1;
 #endif
-#ifdef USE_GNUTLS_BUFFERED_SERVER
+#ifdef USE_GNUTLS_BUFFERED_NETWORK
 	if (GNUTLS_CERT_PATH && GNUTLS_KEY_PATH)
 		if (start_server_network_threads(NET_TYPE_GNUTLS_BUFFERED) != 0)
 			return 1;
 #endif
-#ifdef USE_OPENSSL_BUFFERED_SERVER
+#ifdef USE_OPENSSL_BUFFERED_NETWORK
 	if (OPENSSL_CERT_PATH && OPENSSL_KEY_PATH)
 		if (start_server_network_threads(NET_TYPE_OPENSSL_BUFFERED) != 0)
 			return 1;

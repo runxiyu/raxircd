@@ -40,22 +40,22 @@
 #include "haxstring.h"
 #include "haxstring_utils.h"
 
-#ifdef USE_PLAINTEXT
+#ifdef USE_PLAINTEXT_NETWORK
 #include "networks/plaintext.h"
 #endif
-#ifdef USE_GNUTLS
+#ifdef USE_GNUTLS_NETWORK
 #include "networks/gnutls.h"
 #endif
-#ifdef USE_OPENSSL
+#ifdef USE_OPENSSL_NETWORK
 #include "networks/openssl.h"
 #endif
-#ifdef USE_PLAINTEXT_BUFFERED
+#ifdef USE_PLAINTEXT_BUFFERED_NETWORK
 #include "networks/plaintext_buffered.h"
 #endif
-#ifdef USE_GNUTLS_BUFFERED
+#ifdef USE_GNUTLS_BUFFERED_NETWORK
 #include "networks/gnutls_buffered.h"
 #endif
-#ifdef USE_OPENSSL_BUFFERED
+#ifdef USE_OPENSSL_BUFFERED_NETWORK
 #include "networks/openssl_buffered.h"
 #endif
 
@@ -101,7 +101,7 @@ char casemap[UCHAR_MAX+1] = {
 };
 
 struct network networks[NUM_NET_TYPES] = {
-#ifdef USE_PLAINTEXT
+#ifdef USE_PLAINTEXT_NETWORK
 	[NET_TYPE_PLAINTEXT] = {
 		.send = plaintext_send,
 		.recv = plaintext_recv,
@@ -111,7 +111,7 @@ struct network networks[NUM_NET_TYPES] = {
 		.close = plaintext_close,
 	},
 #endif
-#ifdef USE_GNUTLS
+#ifdef USE_GNUTLS_NETWORK
 	[NET_TYPE_GNUTLS] = {
 		.send = gnutls_send,
 		.recv = gnutls_recv,
@@ -121,7 +121,7 @@ struct network networks[NUM_NET_TYPES] = {
 		.close = gnutls_close,
 	},
 #endif
-#ifdef USE_OPENSSL
+#ifdef USE_OPENSSL_NETWORK
 	[NET_TYPE_OPENSSL] = {
 		.send = openssl_send,
 		.recv = openssl_recv,
@@ -131,7 +131,7 @@ struct network networks[NUM_NET_TYPES] = {
 		.close = openssl_close,
 	},
 #endif
-#ifdef USE_PLAINTEXT_BUFFERED
+#ifdef USE_PLAINTEXT_BUFFERED_NETWORK
 	[NET_TYPE_PLAINTEXT_BUFFERED] = {
 		.send = plaintext_buffered_send,
 		.recv = plaintext_buffered_recv,
@@ -141,7 +141,7 @@ struct network networks[NUM_NET_TYPES] = {
 		.close = plaintext_buffered_close,
 	},
 #endif
-#ifdef USE_GNUTLS_BUFFERED
+#ifdef USE_GNUTLS_BUFFERED_NETWORK
 	[NET_TYPE_GNUTLS_BUFFERED] = {
 		.send = gnutls_buffered_send,
 		.recv = gnutls_buffered_recv,
@@ -151,7 +151,7 @@ struct network networks[NUM_NET_TYPES] = {
 		.close = gnutls_buffered_close,
 	},
 #endif
-#ifdef USE_OPENSSL_BUFFERED
+#ifdef USE_OPENSSL_BUFFERED_NETWORK
 	[NET_TYPE_OPENSSL_BUFFERED] = {
 		.send = openssl_buffered_send,
 		.recv = openssl_buffered_recv,
@@ -436,6 +436,7 @@ int rename_user(struct string from, struct user_info *user, struct string nick, 
 		memcpy(user->nick.data, nick.data, nick.len);
 		user->nick.len = nick.len;
 
+		free(user->nick_ts_str.data);
 		user->nick_ts_str = timestamp_str;
 		user->nick_ts = timestamp;
 	}

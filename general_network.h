@@ -155,22 +155,22 @@ extern int case_string_eq(struct string x, struct string y);
 extern char casemap[UCHAR_MAX+1];
 #define CASEMAP(x) (casemap[(unsigned char)x])
 
-#ifdef USE_PLAINTEXT
+#ifdef USE_PLAINTEXT_NETWORK
 #define NET_TYPE_PLAINTEXT 0
 #endif
-#ifdef USE_GNUTLS
+#ifdef USE_GNUTLS_NETWORK
 #define NET_TYPE_GNUTLS 1
 #endif
-#ifdef USE_OPENSSL
+#ifdef USE_OPENSSL_NETWORK
 #define NET_TYPE_OPENSSL 2
 #endif
-#ifdef USE_PLAINTEXT_BUFFERED
+#ifdef USE_PLAINTEXT_BUFFERED_NETWORK
 #define NET_TYPE_PLAINTEXT_BUFFERED 3
 #endif
-#ifdef USE_GNUTLS_BUFFERED
+#ifdef USE_GNUTLS_BUFFERED_NETWORK
 #define NET_TYPE_GNUTLS_BUFFERED 4
 #endif
-#ifdef USE_OPENSSL_BUFFERED
+#ifdef USE_OPENSSL_BUFFERED_NETWORK
 #define NET_TYPE_OPENSSL_BUFFERED 5
 #endif
 

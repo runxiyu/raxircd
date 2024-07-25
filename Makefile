@@ -33,18 +33,15 @@ INCLUDEFLAGS =
 LDFLAGS = -lpthread
 
 .makeopts:
-	printf '%s\n' 'LAST_PLAINTEXT_CLIENT = $(PLAINTEXT_CLIENT)' > .makeopts
-	printf '%s\n' 'LAST_PLAINTEXT_SERVER = $(PLAINTEXT_SERVER)' >> .makeopts
-	printf '%s\n' 'LAST_GNUTLS_CLIENT = $(GNUTLS_CLIENT)' >> .makeopts
-	printf '%s\n' 'LAST_GNUTLS_SERVER = $(GNUTLS_SERVER)' >> .makeopts
-	printf '%s\n' 'LAST_OPENSSL_CLIENT = $(OPENSSL_CLIENT)' >> .makeopts
-	printf '%s\n' 'LAST_OPENSSL_SERVER = $(OPENSSL_SERVER)' >> .makeopts
-	printf '%s\n' 'LAST_PLAINTEXT_BUFFERED_CLIENT = $(PLAINTEXT_BUFFERED_CLIENT)' >> .makeopts
-	printf '%s\n' 'LAST_PLAINTEXT_BUFFERED_SERVER = $(PLAINTEXT_BUFFERED_SERVER)' >> .makeopts
-	printf '%s\n' 'LAST_GNUTLS_BUFFERED_CLIENT = $(GNUTLS_BUFFERED_CLIENT)' >> .makeopts
-	printf '%s\n' 'LAST_GNUTLS_BUFFERED_SERVER = $(GNUTLS_BUFFERED_SERVER)' >> .makeopts
-	printf '%s\n' 'LAST_OPENSSL_BUFFERED_CLIENT = $(OPENSSL_BUFFERED_CLIENT)' >> .makeopts
-	printf '%s\n' 'LAST_OPENSSL_BUFFERED_SERVER = $(OPENSSL_BUFFERED_SERVER)' >> .makeopts
+	> .makeopts
+	printf '%s\n' 'LAST_CLIENT = $(CLIENT)' >> .makeopts
+	printf '%s\n' 'LAST_SERVER = $(SERVER)' >> .makeopts
+	printf '%s\n' 'LAST_PLAINTEXT_NETWORK = $(PLAINTEXT_NETWORK)' >> .makeopts
+	printf '%s\n' 'LAST_GNUTLS_NETWORK = $(GNUTLS_NETWORK)' >> .makeopts
+	printf '%s\n' 'LAST_OPENSSL_NETWORK = $(OPENSSL_NETWORK)' >> .makeopts
+	printf '%s\n' 'LAST_PLAINTEXT_BUFFERED_NETWORK = $(PLAINTEXT_BUFFERED_NETWORK)' >> .makeopts
+	printf '%s\n' 'LAST_GNUTLS_BUFFERED_NETWORK = $(GNUTLS_BUFFERED_NETWORK)' >> .makeopts
+	printf '%s\n' 'LAST_OPENSSL_BUFFERED_NETWORK = $(OPENSSL_BUFFERED_NETWORK)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD2_PROTOCOL = $(INSPIRCD2_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD3_PROTOCOL = $(INSPIRCD3_PROTOCOL)' >> .makeopts
 	printf '%s\n' 'LAST_INSPIRCD4_PROTOCOL = $(INSPIRCD4_PROTOCOL)' >> .makeopts
@@ -66,100 +63,68 @@ include .makeopts
 rebuild = 0
 
 # tabs not allowed :(
-ifneq ($(PLAINTEXT_CLIENT),)
-ifneq ($(PLAINTEXT_CLIENT),$(LAST_PLAINTEXT_CLIENT))
+ifneq ($(CLIENT),)
+ifneq ($(CLIENT),$(LAST_CLIENT))
 rebuild = 1
 endif
 else
-PLAINTEXT_CLIENT := $(LAST_PLAINTEXT_CLIENT)
+CLIENT := $(LAST_CLIENT)
 endif
 
-ifneq ($(PLAINTEXT_SERVER),)
-ifneq ($(PLAINTEXT_SERVER),$(LAST_PLAINTEXT_SERVER))
+ifneq ($(SERVER),)
+ifneq ($(SERVER),$(LAST_SERVER))
 rebuild = 1
 endif
 else
-PLAINTEXT_SERVER := $(LAST_PLAINTEXT_SERVER)
+SERVER := $(LAST_SERVER)
 endif
 
-ifneq ($(GNUTLS_CLIENT),)
-ifneq ($(GNUTLS_CLIENT),$(LAST_GNUTLS_CLIENT))
+ifneq ($(PLAINTEXT_NETWORK),)
+ifneq ($(PLAINTEXT_NETWORK),$(LAST_PLAINTEXT_NETWORK))
 rebuild = 1
 endif
 else
-GNUTLS_CLIENT := $(LAST_GNUTLS_CLIENT)
+PLAINTEXT_NETWORK := $(LAST_PLAINTEXT_NETWORK)
 endif
 
-ifneq ($(GNUTLS_SERVER),)
-ifneq ($(GNUTLS_SERVER),$(LAST_GNUTLS_SERVER))
+ifneq ($(GNUTLS_NETWORK),)
+ifneq ($(GNUTLS_NETWORK),$(LAST_GNUTLS_NETWORK))
 rebuild = 1
 endif
 else
-GNUTLS_SERVER := $(LAST_GNUTLS_SERVER)
+GNUTLS_NETWORK := $(LAST_GNUTLS_NETWORK)
 endif
 
-ifneq ($(OPENSSL_CLIENT),)
-ifneq ($(OPENSSL_CLIENT),$(LAST_OPENSSL_CLIENT))
+ifneq ($(OPENSSL_NETWORK),)
+ifneq ($(OPENSSL_NETWORK),$(LAST_OPENSSL_NETWORK))
 rebuild = 1
 endif
 else
-OPENSSL_CLIENT := $(LAST_OPENSSL_CLIENT)
+OPENSSL_NETWORK := $(LAST_OPENSSL_NETWORK)
 endif
 
-ifneq ($(OPENSSL_SERVER),)
-ifneq ($(OPENSSL_SERVER),$(LAST_OPENSSL_SERVER))
+ifneq ($(PLAINTEXT_BUFFERED_NETWORK),)
+ifneq ($(PLAINTEXT_BUFFERED_NETWORK),$(LAST_PLAINTEXT_BUFFERED_NETWORK))
 rebuild = 1
 endif
 else
-OPENSSL_SERVER := $(LAST_OPENSSL_SERVER)
+PLAINTEXT_BUFFERED_NETWORK := $(LAST_PLAINTEXT_BUFFERED_NETWORK)
 endif
 
-ifneq ($(PLAINTEXT_BUFFERED_CLIENT),)
-ifneq ($(PLAINTEXT_BUFFERED_CLIENT),$(LAST_PLAINTEXT_BUFFERED_CLIENT))
+ifneq ($(GNUTLS_BUFFERED_NETWORK),)
+ifneq ($(GNUTLS_BUFFERED_NETWORK),$(LAST_GNUTLS_BUFFERED_NETWORK))
 rebuild = 1
 endif
 else
-PLAINTEXT_BUFFERED_CLIENT := $(LAST_PLAINTEXT_BUFFERED_CLIENT)
+GNUTLS_BUFFERED_NETWORK := $(LAST_GNUTLS_BUFFERED_NETWORK)
 endif
 
-ifneq ($(PLAINTEXT_BUFFERED_SERVER),)
-ifneq ($(PLAINTEXT_BUFFERED_SERVER),$(LAST_PLAINTEXT_BUFFERED_SERVER))
+ifneq ($(OPENSSL_BUFFERED_NETWORK),)
+ifneq ($(OPENSSL_BUFFERED_NETWORK),$(LAST_OPENSSL_BUFFERED_NETWORK))
 rebuild = 1
 endif
 else
-PLAINTEXT_BUFFERED_SERVER := $(LAST_PLAINTEXT_BUFFERED_SERVER)
-endif
-
-ifneq ($(GNUTLS_BUFFERED_CLIENT),)
-ifneq ($(GNUTLS_BUFFERED_CLIENT),$(LAST_GNUTLS_BUFFERED_CLIENT))
-rebuild = 1
-endif
-else
-GNUTLS_BUFFERED_CLIENT := $(LAST_GNUTLS_BUFFERED_CLIENT)
-endif
-
-ifneq ($(GNUTLS_BUFFERED_SERVER),)
-ifneq ($(GNUTLS_BUFFERED_SERVER),$(LAST_GNUTLS_BUFFERED_SERVER))
-rebuild = 1
-endif
-else
-GNUTLS_BUFFERED_SERVER := $(LAST_GNUTLS_BUFFERED_SERVER)
-endif
-
-ifneq ($(OPENSSL_BUFFERED_CLIENT),)
-ifneq ($(OPENSSL_BUFFERED_CLIENT),$(LAST_OPENSSL_BUFFERED_CLIENT))
-rebuild = 1
-endif
-else
-OPENSSL_BUFFERED_CLIENT := $(LAST_OPENSSL_BUFFERED_CLIENT)
-endif
-
-ifneq ($(OPENSSL_BUFFERED_SERVER),)
-ifneq ($(OPENSSL_BUFFERED_SERVER),$(LAST_OPENSSL_BUFFERED_SERVER))
-rebuild = 1
-endif
-else
-OPENSSL_BUFFERED_SERVER := $(LAST_OPENSSL_BUFFERED_SERVER)
+OPENSSL_BUFFERED_NETWORK := $(LAST_OPENSSL_BUFFERED_NETWORK)
 endif
 
 ifneq ($(INSPIRCD2_PROTOCOL),)
@@ -281,76 +246,75 @@ USE_SERVER = 0
 OFILES = config.o general_network.o haxstring_utils.o real_main.o table.o mutex.o
 SOFILES = HaxIRCd.so
 
-ifeq ($(PLAINTEXT_CLIENT),1)
-CFLAGS += -DUSE_PLAINTEXT_CLIENT
-USE_CLIENT = 1
-USE_PLAINTEXT = 1
+USE_IRCD := 0
+ifeq ($(CLIENT),1)
+OFILES += client_network.o
+CFLAGS += -DUSE_CLIENT
+USE_IRCD := 1
+USE_CLIENT := 1
 endif
 
-ifeq ($(PLAINTEXT_SERVER),1)
-CFLAGS += -DUSE_PLAINTEXT_SERVER
-USE_SERVER = 1
-USE_PLAINTEXT = 1
+ifeq ($(SERVER),1)
+OFILES += server_network.o
+CFLAGS += -DUSE_SERVER
+USE_IRCD := 1
+USE_SERVER := 1
 endif
 
-ifeq ($(GNUTLS_CLIENT),1)
-CFLAGS += -DUSE_GNUTLS_CLIENT
-USE_CLIENT = 1
-USE_GNUTLS = 1
+ifneq ($(USE_IRCD),1)
+$(error Well, you neither want clients nor servers, so... int main(void) {return 0;}, your IRCd is complete.)
 endif
 
-ifeq ($(GNUTLS_SERVER),1)
-CFLAGS += -DUSE_GNUTLS_SERVER
-USE_SERVER = 1
-USE_GNUTLS = 1
+
+USE_NETWORK := 0
+ifeq ($(PLAINTEXT_NETWORK),1)
+OFILES += networks/plaintext.o
+CFLAGS += -DUSE_PLAINTEXT_NETWORK
+USE_NETWORK := 1
+USE_PLAINTEXT_NETWORK := 1
 endif
 
-ifeq ($(OPENSSL_CLIENT),1)
-CFLAGS += -DUSE_OPENSSL_CLIENT
-USE_CLIENT = 1
-USE_OPENSSL = 1
+ifeq ($(GNUTLS_NETWORK),1)
+OFILES += networks/gnutls.o
+CFLAGS += -DUSE_GNUTLS_NETWORK $(shell pkg-config gnutls --cflags)
+LDFLAGS += $(shell pkg-config gnutls --libs)
+USE_NETWORK := 1
+USE_GNUTLS_NETWORK := 1
 endif
 
-ifeq ($(OPENSSL_SERVER),1)
-CFLAGS += -DUSE_OPENSSL_SERVER
-USE_SERVER = 1
-USE_OPENSSL = 1
+ifeq ($(OPENSSL_NETWORK),1)
+OFILES += networks/openssl.o
+CFLAGS += -DUSE_OPENSSL_NETWORK $(shell pkg-config openssl --cflags)
+LDFLAGS += $(shell pkg-config openssl --libs)
+USE_NETWORK := 1
+USE_OPENSSL_NETWORK := 1
 endif
 
-ifeq ($(PLAINTEXT_BUFFERED_CLIENT),1)
-CFLAGS += -DUSE_PLAINTEXT_BUFFERED_CLIENT
-USE_CLIENT = 1
-USE_PLAINTEXT_BUFFERED = 1
+ifeq ($(PLAINTEXT_BUFFERED_NETWORK),1)
+OFILES += networks/plaintext_buffered.o
+CFLAGS += -DUSE_PLAINTEXT_BUFFERED_NETWORK
+USE_NETWORK := 1
+USE_PLAINTEXT_BUFFERED_NETWORK := 1
 endif
 
-ifeq ($(PLAINTEXT_BUFFERED_SERVER),1)
-CFLAGS += -DUSE_PLAINTEXT_BUFFERED_SERVER
-USE_SERVER = 1
-USE_PLAINTEXT_BUFFERED = 1
+ifeq ($(GNUTLS_BUFFERED_NETWORK),1)
+OFILES += networks/gnutls_buffered.o
+CFLAGS += -DUSE_GNUTLS_BUFFERED_NETWORK $(shell pkg-config gnutls --cflags)
+LDFLAGS += $(shell pkg-config gnutls --libs)
+USE_NETWORK := 1
+USE_GNUTLS_BUFFERED_NETWORK := 1
 endif
 
-ifeq ($(GNUTLS_BUFFERED_CLIENT),1)
-CFLAGS += -DUSE_GNUTLS_BUFFERED_CLIENT
-USE_CLIENT = 1
-USE_GNUTLS_BUFFERED = 1
+ifeq ($(OPENSSL_BUFFERED_NETWORK),1)
+OFILES += networks/openssl_buffered.o
+CFLAGS += -DUSE_OPENSSL_BUFFERED_NETWORK $(shell pkg-config openssl --cflags)
+LDFLAGS += $(shell pkg-config openssl --libs)
+USE_NETWORK := 1
+USE_OPENSSL_BUFFERED_NETWORK := 1
 endif
 
-ifeq ($(GNUTLS_BUFFERED_SERVER),1)
-CFLAGS += -DUSE_GNUTLS_BUFFERED_SERVER
-USE_SERVER = 1
-USE_GNUTLS_BUFFERED = 1
-endif
-
-ifeq ($(OPENSSL_BUFFERED_CLIENT),1)
-CFLAGS += -DUSE_OPENSSL_BUFFERED_CLIENT
-USE_CLIENT = 1
-USE_OPENSSL_BUFFERED = 1
-endif
-
-ifeq ($(OPENSSL_BUFFERED_SERVER),1)
-CFLAGS += -DUSE_OPENSSL_BUFFERED_SERVER
-USE_SERVER = 1
-USE_OPENSSL_BUFFERED = 1
+ifneq ($(USE_NETWORK),1)
+$(error How would you like to communicate with these clients or servers?)
 endif
 
 
@@ -373,6 +337,13 @@ CFLAGS += -DUSE_INSPIRCD4_PROTOCOL
 USE_PROTOCOLS = 1
 endif
 
+ifeq ($(USE_SERVER),1)
+ifneq ($(USE_PROTOCOLS),1)
+$(error You must use some s2s protocol if you want to link servers)
+endif
+endif
+
+
 
 ifeq ($(HAXSERV_PSEUDOCLIENT),1)
 SOFILES += pseudoclients/haxserv.so
@@ -388,36 +359,6 @@ USE_PSEUDOCLIENTS = 1
 endif
 
 
-
-ifeq ($(USE_CLIENT),1)
-OFILES += client_network.o
-CFLAGS += -DUSE_CLIENT
-endif
-
-ifeq ($(USE_SERVER),1)
-ifneq ($(USE_PROTOCOLS),1)
-$(error You must use some s2s protocol if you want to use a server transport layer)
-endif
-OFILES += server_network.o
-CFLAGS += -DUSE_SERVER
-endif
-
-ifeq ($(USE_PLAINTEXT),1)
-OFILES += networks/plaintext.o
-CFLAGS += -DUSE_PLAINTEXT
-endif
-
-ifeq ($(USE_GNUTLS),1)
-OFILES += networks/gnutls.o
-CFLAGS += -DUSE_GNUTLS $(shell pkg-config gnutls --cflags)
-LDFLAGS += $(shell pkg-config gnutls --libs)
-endif
-
-ifeq ($(USE_OPENSSL),1)
-OFILES += networks/openssl.o
-CFLAGS += -DUSE_OPENSSL $(shell pkg-config openssl --cflags)
-LDFLAGS += $(shell pkg-config openssl --libs)
-endif
 
 ifeq ($(USE_PLAINTEXT_BUFFERED),1)
 OFILES += networks/plaintext_buffered.o

@@ -69,27 +69,27 @@ extern struct string SERVER_FULLNAME; // = STRING("My random server");
 
 extern time_t PING_INTERVAL; // = 60;
 
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS_NETWORK) || defined(USE_GNUTLS_BUFFERED_NETWORK)
 extern char GNUTLS_USE_SYSTEM_TRUST; // = 1;
 extern char *GNUTLS_CERT_PATH; // = "/etc/keys/crt.pem", or 0
 extern char *GNUTLS_KEY_PATH; // = "/etc/keys/key.pem", or 0
 #endif
 
-#ifdef USE_OPENSSL
+#if defined(USE_OPENSSL_NETWORK) || defined(USE_OPENSSL_BUFFERED_NETWORK)
 extern char OPENSSL_USE_SYSTEM_TRUST; // = 1;
 extern char *OPENSSL_CERT_PATH; // = "/etc/keys/crt.pem", or 0
 extern char *OPENSSL_KEY_PATH; // = "/etc/keys/key.pem", or 0
 #endif
 
-#ifdef USE_PLAINTEXT_BUFFERED
+#ifdef USE_PLAINTEXT_BUFFERED_NETWORK
 extern size_t PLAINTEXT_BUFFERED_LEN; // = 1 M
 #endif
 
-#ifdef USE_GNUTLS_BUFFERED
+#ifdef USE_GNUTLS_BUFFERED_NETWORK
 extern size_t GNUTLS_BUFFERED_LEN; // = 1 M
 #endif
 
-#ifdef USE_OPENSSL_BUFFERED
+#ifdef USE_OPENSSL_BUFFERED_NETWORK
 extern size_t OPENSSL_BUFFERED_LEN; // = 1 M
 #endif
 
