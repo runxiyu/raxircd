@@ -2,6 +2,12 @@
 
 **This is a work in progress.**
 
+* Git repo: <https://git.andrewyu.org/hax/haxircd.git>
+* IRC channel: [#chat](ircs://irc.runxiyu.org/#chat) on [rx](https://irc.runxiyu.org)
+* Documentation: <https://man.sr.ht/~runxiyu/haxircd>
+* Task tracker: <https://todo.sr.ht/~runxiyu/haxircd>
+* Mailing list: <https://lists.sr.ht/~runxiyu/haxircd>
+
 ## Goals
 
 * Could link in a network among multiple traditional protocols from different
@@ -39,9 +45,3 @@
   (InspIRCd v2) protocol, which is not supported by InspIRCd v4; more generally,
   we want to make protocols pluggable modules.
 
-## Project links
-
-* Git repo: <https://git.andrewyu.org/hax/haxircd.git>
-* IRC channel: [#chat](ircs://irc.runxiyu.org/#chat) on [rx](https://irc.runxiyu.org)
-* Task tracker: <https://todo.sr.ht/~runxiyu/haxircd>
-* Mailing list: <https://lists.sr.ht/~runxiyu/haxircd>
