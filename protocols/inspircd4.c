@@ -1699,7 +1699,7 @@ int inspircd4_protocol_handle_fjoin(struct string source, size_t argc, struct st
 		uid.len = (size_t)(&(argv[arg_i].data[i]) - uid.data);
 
 		users[n] = get_table_index(user_list, uid);
-		if (!users[n] || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) // TODO: Check that it's coming the right way too
+		if (!users[n] || !users[n]->protocol_specific[INSPIRCD4_PROTOCOL]) // TODO: Check that it's coming the right way too
 			user_count--;
 
 		i++;
@@ -1710,7 +1710,7 @@ int inspircd4_protocol_handle_fjoin(struct string source, size_t argc, struct st
 		while (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
 			i++;
 
-		if (!users[n] || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) {
+		if (!users[n] || !users[n]->protocol_specific[INSPIRCD4_PROTOCOL]) {
 			n--;
 			continue;
 		}
