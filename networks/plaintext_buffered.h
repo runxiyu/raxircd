@@ -1,4 +1,4 @@
-// Plaintext TCP networking, with a buffer and a seperate sending thread
+// Plaintext TCP networking, with a buffer and a separate sending thread
 //
 // Written by: Test_User <hax@andrewyu.org>
 //
