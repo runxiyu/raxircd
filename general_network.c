@@ -206,7 +206,11 @@ int resolve(struct string address, struct string port, struct sockaddr *sockaddr
 	if (success == 0) {
 		struct addrinfo *this = info;
 		while (1) {
-			if (this->ai_family == AF_INET
+			if (0
+#ifdef USE_IPv4
+					|| this->ai_family == AF_INET
+#endif
+
 #ifdef USE_IPv6
 					|| this->ai_family == AF_INET6
 #endif

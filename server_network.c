@@ -121,6 +121,7 @@ int start_server_network_threads(size_t net) {
 	struct server_network_info *type;
 	for (size_t i = 0; i < NUM_PROTOCOLS; i++) {
 		if (active_protocols[i] && SERVER_INCOMING[net][i]) {
+#ifdef USE_IPv4
 			type = malloc(sizeof(*type));
 			if (!type)
 				return 1;
@@ -132,6 +133,7 @@ int start_server_network_threads(size_t net) {
 				free(type);
 				return 1;
 			}
+#endif
 
 #ifdef USE_IPv6
 			type = malloc(sizeof(*type));
@@ -176,8 +178,12 @@ void * server_accept_thread(void *type) {
 			.ss_family = family,
 		};
 
-		if (family == AF_INET) {
+		if (0) {
+#ifdef USE_IPv4
+		} else if (family == AF_INET) {
 			((struct sockaddr_in *)&sockaddr)->sin_port = htons(SERVER_PORTS[net][protocol]);
+#endif
+
 #ifdef USE_IPv6
 		} else if (family == AF_INET6) {
 			int one = 1;

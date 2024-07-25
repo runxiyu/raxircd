@@ -910,7 +910,7 @@ void inspircd3_protocol_handle_unlink_server(struct string from, struct server_i
 
 int inspircd3_protocol_handle_new_user(struct string from, struct user_info *info) {
 	struct server_info *server = get_table_index(server_list, info->server);
-	if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL) {
+	if (STRING_EQ(info->server, SID) || server->protocol != INSPIRCD3_PROTOCOL) {
 		info->protocol_specific[INSPIRCD3_PROTOCOL] = 0;
 		return 0;
 	}
@@ -934,7 +934,7 @@ int inspircd3_protocol_handle_rename_user(struct string from, struct user_info *
 
 void inspircd3_protocol_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate) {
 	struct server_info *server = get_table_index(server_list, info->server);
-	if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL)
+	if (STRING_EQ(info->server, SID) || server->protocol != INSPIRCD3_PROTOCOL)
 		return;
 
 	struct inspircd3_protocol_specific_user *prot_info = info->protocol_specific[INSPIRCD3_PROTOCOL];

@@ -54,6 +54,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_FUTEX = $(FUTEX)' >> .makeopts
 	printf '%s\n' 'LAST_MISERABLE_SPINLOCKS = $(MISERABLE_SPINLOCKS)' >> .makeopts
 	printf '%s\n' 'LAST_ATOMICS = $(ATOMICS)' >> .makeopts
+	printf '%s\n' 'LAST_IPv4 = $(IPv4)' >> .makeopts
 	printf '%s\n' 'LAST_IPv6 = $(IPv6)' >> .makeopts
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
@@ -248,6 +249,14 @@ rebuild = 1
 endif
 else
 ATOMICS := $(LAST_ATOMICS)
+endif
+
+ifneq ($(IPv4),)
+ifneq ($(IPv4),$(LAST_IPv4))
+rebuild = 1
+endif
+else
+IPv4 := $(LAST_IPv4)
 endif
 
 ifneq ($(IPv6),)
@@ -460,8 +469,20 @@ endif
 
 
 
+IP_ENABLED := 0
+
+ifeq ($(IPv4),1)
+CFLAGS += -DUSE_IPv4
+IP_ENABLED := 1
+endif
+
 ifeq ($(IPv6),1)
 CFLAGS += -DUSE_IPv6
+IP_ENABLED := 1
+endif
+
+ifneq ($(IP_ENABLED),1)
+$(error I don't know how you intend to use TCP/IP without IP)
 endif
 
 
