@@ -748,12 +748,13 @@ void inspircd3_protocol_propagate_set_channel(struct string from, struct channel
 		struct server_info *server = get_table_index(server_list, users[x]->server);
 
 		inspircd3_protocol_propagate(from, STRING(":"));
-		struct inspircd3_protocol_specific_user *prot_specific = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
 		struct inspircd3_protocol_member_id *member;
-		if (!STRING_EQ(server->sid, SID) && server->protocol == INSPIRCD3_PROTOCOL)
+		if (!STRING_EQ(server->sid, SID) && server->protocol == INSPIRCD3_PROTOCOL) {
+			struct inspircd3_protocol_specific_user *prot_specific = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
 			member = get_table_index(prot_specific->memberships, channel->name);
-		else
+		} else {
 			member = 0;
+		}
 
 		if (member)
 			inspircd3_protocol_propagate(from, member->id_str);
@@ -782,12 +783,13 @@ void inspircd3_protocol_propagate_join_channel(struct string from, struct channe
 		struct server_info *server = get_table_index(server_list, users[x]->server);
 
 		inspircd3_protocol_propagate(from, STRING(":"));
-		struct inspircd3_protocol_specific_user *prot_specific = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
 		struct inspircd3_protocol_member_id *member;
-		if (!STRING_EQ(server->sid, SID) && server->protocol == INSPIRCD3_PROTOCOL)
+		if (!STRING_EQ(server->sid, SID) && server->protocol == INSPIRCD3_PROTOCOL) {
+			struct inspircd3_protocol_specific_user *prot_specific = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
 			member = get_table_index(prot_specific->memberships, channel->name);
-		else
+		} else {
 			member = 0;
+		}
 
 		if (member)
 			inspircd3_protocol_propagate(from, member->id_str);
@@ -1157,6 +1159,22 @@ void inspircd3_protocol_introduce_user_to(size_t net, void *handle, struct user_
 			networks[net].send(handle, channel->channel_ts_str);
 			networks[net].send(handle, STRING(" + :,"));
 			networks[net].send(handle, user->uid);
+
+			struct server_info *server = get_table_index(server_list, user->server);
+
+			networks[net].send(handle, STRING(":"));
+			struct inspircd3_protocol_specific_user *prot_specific = user->protocol_specific[INSPIRCD3_PROTOCOL];
+			struct inspircd3_protocol_member_id *member;
+			if (!STRING_EQ(user->server, SID) && server->protocol == INSPIRCD3_PROTOCOL)
+				member = get_table_index(prot_specific->memberships, channel->name);
+			else
+				member = 0;
+
+			if (member)
+				networks[net].send(handle, member->id_str);
+			else
+				networks[net].send(handle, STRING("0"));
+
 			networks[net].send(handle, STRING("\n"));
 		}
 	}
@@ -1173,6 +1191,23 @@ void inspircd3_protocol_introduce_channel_to(size_t net, void *handle, struct ch
 	for (size_t i = 0; i < channel->user_list.len; i++) {
 		networks[net].send(handle, STRING(","));
 		networks[net].send(handle, channel->user_list.array[i].name);
+
+		struct user_info *user = channel->user_list.array[i].ptr;
+		struct server_info *server = get_table_index(server_list, user->server);
+
+		networks[net].send(handle, STRING(":"));
+		struct inspircd3_protocol_specific_user *prot_specific = user->protocol_specific[INSPIRCD3_PROTOCOL];
+		struct inspircd3_protocol_member_id *member;
+		if (!STRING_EQ(user->server, SID) && server->protocol == INSPIRCD3_PROTOCOL)
+			member = get_table_index(prot_specific->memberships, channel->name);
+		else
+			member = 0;
+
+		if (member)
+			networks[net].send(handle, member->id_str);
+		else
+			networks[net].send(handle, STRING("0"));
+
 		if (i != channel->user_list.len - 1)
 			networks[net].send(handle, STRING(" "));
 	}
@@ -1695,7 +1730,8 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 		if (!users[n] || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) // TODO: Check that it's coming the right way too
 			user_count--;
 
-		i++;
+		if (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
+			i++;
 
 		struct string mid;
 		mid.data = &(argv[arg_i].data[i]);
@@ -1714,8 +1750,10 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 
 		char err;
 		size_t mid_number = str_to_unsigned(mid, &err);
-		if (err)
+		if (err) {
+			WRITES(2, STRING("[InspIRCd v3] [FJOIN] Invalid member ID given!\r\n"));
 			goto inspircd3_protocol_handle_fjoin_free_member_ids;
+		}
 
 		members[n] = malloc(sizeof(**members));
 		if (!members[n])
