@@ -10,6 +10,6 @@ steps:
       - echo not building on debian for now
 # apt update -y
 # apt install --no-install-recommends -y binutils make gcc libssl-dev pkg-config curl libgnutls*-dev ca-certificates liblmdb-dev
-# curl -o config.c 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/config.c'
-# curl -o .makeopts 'https://git.runxiyu.org/runxiyu/misc.git/plain/haxircd-config-example/.makeopts'
+# curl -o config.c 'https://git.andrewyu.org/hax/haxircd-docs.git/plain/ci/config.c'
+# curl -o .makeopts 'https://git.andrewyu.org/hax/haxircd-docs.git/plain/ci/.makeopts'
 # make GNUTLS_SERVER=1 OPENSSL_SERVER=1 INSPIRCD2_PROTOCOL=1
