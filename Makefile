@@ -314,9 +314,8 @@ USE_OPENSSL_BUFFERED_NETWORK := 1
 endif
 
 ifneq ($(USE_NETWORK),1)
-$(error How would you like to communicate with these clients or servers?)
+$(error How would you like to communicate with these clients or servers? You need to enable at least one network transport)
 endif
-
 
 
 ifeq ($(INSPIRCD2_PROTOCOL),1)
@@ -339,7 +338,7 @@ endif
 
 ifeq ($(USE_SERVER),1)
 ifneq ($(USE_PROTOCOLS),1)
-$(error You must use some s2s protocol if you want to link servers)
+$(error You must enable at least one s2s protocol if you want to link servers)
 endif
 endif
 
@@ -379,7 +378,7 @@ endif
 
 ifeq ($(USE_PROTOCOLS),1)
 ifneq ($(USE_SERVER),1)
-$(error You must have some form of server transport layer enabled if you hope to use an s2s protocol)
+$(error You must have some form of server network transport enabled if you hope to use an s2s protocol)
 endif
 OFILES += protocols.o
 endif
@@ -399,7 +398,7 @@ endif
 
 ifeq ($(MISERABLE_SPINLOCKS),1)
 ifeq ($(FUTEX),1)
-$(error Miserable spinlocks are only enabled when noy using futexes)
+$(error Why are you trying to use miserable spinlocks when using futexes? Choose one)
 endif
 CFLAGS += -DUSE_MISERABLE_SPINLOCKS
 endif
@@ -423,7 +422,7 @@ IP_ENABLED := 1
 endif
 
 ifneq ($(IP_ENABLED),1)
-$(error I don't know how you intend to use TCP/IP without IP)
+$(error I don't know how you intend to use TCP/IP without IP. Enable at least one of IPv4 and IPv6)
 endif
 
 
