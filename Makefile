@@ -262,7 +262,7 @@ USE_SERVER := 1
 endif
 
 ifneq ($(USE_IRCD),1)
-$(error Well, you neither want clients nor servers, so... int main(void) {return 0;}, your IRCd is complete.)
+$(error Well, you neither want clients nor servers, so... int main(void) {return 0;}, your IRCd is complete)
 endif
 
 
