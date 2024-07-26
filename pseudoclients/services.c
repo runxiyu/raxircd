@@ -459,18 +459,25 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			notice(SID, NICKSERV_UID, user->uid, STRING("Unable to add cert."));
 			return;
 		} else if (msg.len >= 8 && case_string_eq((struct string){.data = msg.data, .len = 8}, STRING("DELCERT "))) {
-			if (user->account_name.len == 0)
+			if (user->account_name.len == 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("You're not logged in."));
 				goto delcert_fail;
+			}
 
 			struct string account_upper;
-			if (str_clone(&account_upper, user->account_name) != 0)
+			if (str_clone(&account_upper, user->account_name) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Unable to remove cert."));
 				goto delcert_fail;
+			}
+
 			for (size_t i = 0; i < account_upper.len; i++)
 				account_upper.data[i] = CASEMAP(account_upper.data[i]);
 
 			MDB_txn *txn;
-			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0)
+			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Unable to remove cert."));
 				goto delcert_fail_free_account;
+			}
 
 			MDB_val key = {
 				.mv_data = msg.data + 8,
@@ -478,23 +485,29 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			};
 
 
-			if (mdb_del(txn, services_cert_to_account, &key, 0) != 0)
+			if (mdb_del(txn, services_cert_to_account, &key, 0) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Cert removed. (You don't have this cert)"));
 				goto delcert_fail_abort;
+			}
 
 			MDB_val data = key;
 			key.mv_data = account_upper.data;
 			key.mv_size = account_upper.len;
 
-			if (mdb_del(txn, services_account_to_certs, &key, &data) != 0)
+			if (mdb_del(txn, services_account_to_certs, &key, &data) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Cert removed. (You don't have this cert)"));
 				goto delcert_fail_abort;
+			}
 
 			if (mdb_get(txn, services_account_to_certs, &key, &data) != 0) {
 				notice(SID, NICKSERV_UID, user->uid, STRING("This is your last cert, you would not be able to log in if this was removed."));
 				goto delcert_fail_abort;
 			}
 
-			if (mdb_txn_commit(txn) != 0)
+			if (mdb_txn_commit(txn) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Unable to remove cert."));
 				goto delcert_fail_abort;
+			}
 
 			notice(SID, NICKSERV_UID, user->uid, STRING("Cert removed."));
 
@@ -506,7 +519,90 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			delcert_fail_free_account:
 			free(account_upper.data);
 			delcert_fail:
-			notice(SID, NICKSERV_UID, user->uid, STRING("Unable to remove cert."));
+			return;
+		} else if (case_string_eq(msg, STRING("FIX"))) {
+			if (user->account_name.len == 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("You're not logged in, so there's no account to fix."));
+				goto fix_fail;
+			}
+
+			struct string account_upper;
+			if (str_clone(&account_upper, user->account_name) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto fix_fail;
+			}
+
+			for (size_t i = 0; i < account_upper.len; i++)
+				account_upper.data[i] = CASEMAP(account_upper.data[i]);
+
+			MDB_txn *txn;
+			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto fix_fail_free_account;
+			}
+
+			MDB_val key = {
+				.mv_data = account_upper.data,
+				.mv_size = account_upper.len,
+			};
+
+			MDB_val data = {
+				.mv_data = user->account_name.data,
+				.mv_size = user->account_name.len,
+			};
+
+			mdb_put(txn, services_account_to_name, &key, &data, MDB_NOOVERWRITE);
+
+			if (mdb_get(txn, services_nick_to_account, &key, &data) == 0) {
+				struct string other_name = {.data = data.mv_data, .len = data.mv_size};
+				if (!STRING_EQ(other_name, account_upper)) {
+					notice(SID, NICKSERV_UID, user->uid, STRING("This name belongs to another account."));
+					goto fix_fail_abort;
+				}
+			}
+
+			data = key;
+			mdb_put(txn, services_account_to_nicks, &key, &data, 0);
+			mdb_put(txn, services_nick_to_account, &key, &data, MDB_NOOVERWRITE);
+
+			MDB_cursor *cursor;
+			if (mdb_cursor_open(txn, services_account_to_nicks, &cursor) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto fix_fail_abort;
+			}
+
+			if (mdb_cursor_get(cursor, &key, &data, MDB_SET) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto fix_fail_close_cursor;
+			}
+
+			do {
+				struct string name = {.data = data.mv_data, .len = data.mv_size};
+				for (size_t i = 0; i < name.len; i++) {
+					if (CASEMAP(name.data[i]) != name.data[i]) {
+						mdb_cursor_del(cursor, 0);
+						mdb_del(txn, services_nick_to_account, &data, &key);
+						break;
+					}
+				}
+			} while (mdb_cursor_get(cursor, &key, &data, MDB_NEXT_DUP) == 0);
+
+			if (mdb_txn_commit(txn) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto fix_fail_free_account;
+			}
+			free(account_upper.data);
+
+			notice(SID, NICKSERV_UID, user->uid, STRING("Account fixed."));
+			return;
+
+			fix_fail_close_cursor:
+			mdb_cursor_close(cursor);
+			fix_fail_abort:
+			mdb_txn_abort(txn);
+			fix_fail_free_account:
+			free(account_upper.data);
+			fix_fail:
 			return;
 		} else {
 			notice(SID, NICKSERV_UID, user->uid, STRING("Supported commands:"));
@@ -517,6 +613,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			notice(SID, NICKSERV_UID, user->uid, STRING("        ADDCERT  adds a specified cert to your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        DELCERT  removes a specified cert from your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        LIST     lists nicks and certs associated with your account."));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        FIX      fixes your account (temporary measure)."));
 		}
 	}
 
