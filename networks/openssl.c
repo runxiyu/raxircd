@@ -34,6 +34,7 @@
 #include <poll.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <netinet/in.h>
 
 #include "../config.h"
 #include "../main.h"

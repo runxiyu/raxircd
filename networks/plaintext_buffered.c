@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <netinet/in.h>
 
 #include "../config.h"
 #include "../general_network.h"
