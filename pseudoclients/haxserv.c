@@ -761,7 +761,7 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 	}
 
 	if (STRING_EQ(argv[0], STRING("help"))) {
-		notice(SID, HAXSERV_UID, respond_to, STRING("Valid parameters: [uid | nick | info]"));
+		notice(SID, HAXSERV_UID, respond_to, STRING("Valid parameters: [uid | nick | info | l_info]"));
 	} else if (STRING_EQ(argv[0], STRING("uid"))) {
 		if (argc < 2) {
 			notice(SID, HAXSERV_UID, respond_to, STRING("Missing arguments."));
@@ -1011,7 +1011,7 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 }
 struct command_def haxserv_pseudoclient_get_command_def = {
 	.func = haxserv_pseudoclient_get_command,
-	.summary = STRING("[uid | name | info | l_info] <target>"),
+	.summary = STRING("[uid | nick | info | l_info] <target>"),
 	.aligned_name = STRING("get         "),
 	.name = STRING("get"),
 };
