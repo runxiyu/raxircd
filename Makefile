@@ -27,6 +27,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 
 ORIGINAL_CFLAGS := $(CFLAGS)
+ORIGINAL_LDFLAGS := $(LDFLAGS)
 
 INCLUDEFLAGS =
 
@@ -54,6 +55,7 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_IPv4 = $(IPv4)' >> .makeopts
 	printf '%s\n' 'LAST_IPv6 = $(IPv6)' >> .makeopts
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
+	printf '%s\n' 'LAST_LDFLAGS = $(ORIGINAL_LDFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
 
 $(shell [ -e .makeopts ] || > .makeopts)
@@ -182,6 +184,15 @@ endif
 else
 ORIGINAL_CFLAGS := $(LAST_CFLAGS)
 CFLAGS := $(LAST_CFLAGS)
+endif
+
+ifneq ($(ORIGINAL_LDFLAGS),)
+ifneq ($(ORIGINAL_LDFLAGS),$(LAST_LDFLAGS))
+rebuild = 1
+endif
+else
+ORIGINAL_LDFLAGS := $(LAST_LDFLAGS)
+LDFLAGS := $(LAST_LDFLAGS)
 endif
 
 ifneq ($(CC),)
