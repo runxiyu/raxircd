@@ -1920,7 +1920,7 @@ int inspircd3_protocol_handle_part(struct string source, size_t argc, struct str
 	return 0;
 }
 
-// [:source] KICK <channel> <user> [<reason>]
+// [:source] KICK <channel> <user> [<member id>] [<reason>]
 int inspircd3_protocol_handle_kick(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	if (argc < 2) {
 		WRITES(2, STRING("[InspIRCd v3] Invalid KICK received! (Missing parameters)\r\n"));
@@ -1945,11 +1945,38 @@ int inspircd3_protocol_handle_kick(struct string source, size_t argc, struct str
 			return 0;
 	}
 
-	int rejoin;
-	if (argc > 2)
-		rejoin = kick_channel(config->sid, source, channel, user, argv[2]);
-	else
-		rejoin = kick_channel(config->sid, source, channel, user, STRING(""));
+	char uses_inspircd3;
+	if (!STRING_EQ(user->server, SID)) {
+		struct server_info *server = get_table_index(server_list, user->server);
+		uses_inspircd3 = (server->protocol == INSPIRCD3_PROTOCOL);
+	} else {
+		uses_inspircd3 = 0;
+	}
+
+	struct string reason;
+	if (argc >= 4) {
+		if (uses_inspircd3) {
+			char err;
+			size_t member_id = str_to_unsigned(argv[2], &err);
+			if (err) {
+				kill_user(SID, SID, user, STRING("Member ID limit exceeded. Please reconnect to reset it."));
+				return 0;
+			}
+
+			struct inspircd3_protocol_specific_user *prot_specific = user->protocol_specific[INSPIRCD3_PROTOCOL];
+			struct inspircd3_protocol_member_id *current_member_id = get_table_index(prot_specific->memberships, channel->name);
+			if (member_id < current_member_id->id)
+				return 0; // Kick was for an old membership, ignore it
+		}
+
+		reason = argv[3];
+	} else if (argc >= 3) {
+		reason = argv[2];
+	} else {
+		reason = STRING("");
+	}
+
+	int rejoin = kick_channel(config->sid, source, channel, user, reason);
 
 	if (rejoin) {
 		struct server_info *server = get_table_index(server_list, user->server);
