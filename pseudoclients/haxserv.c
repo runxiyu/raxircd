@@ -709,13 +709,13 @@ int haxserv_pseudoclient_deny_command(struct string from, struct string sender, 
 	struct string msg_parts[] = {
 		STRING("User `"),
 		user->nick,
-		STRING("' is no longer an oper."),
+		STRING("' is now not an oper."),
 	};
 	struct string msg;
 	if (str_combine(&msg, sizeof(msg_parts)/sizeof(*msg_parts), msg_parts) == 0) {
 		notice(SID, HAXSERV_UID, respond_to, msg);
 	} else {
-		notice(SID, HAXSERV_UID, respond_to, STRING("User is no longer an oper."));
+		notice(SID, HAXSERV_UID, respond_to, STRING("User is now not an oper."));
 	}
 
 	return 0;
