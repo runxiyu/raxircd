@@ -247,7 +247,7 @@ ifeq ($(rebuild),1)
 .PHONY: .makeopts
 endif
 
-CFLAGS += $(INCLUDEFLAGS) -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -Wno-unused-parameter -Wno-implicit-fallthrough -std=gnu99
+CFLAGS += $(INCLUDEFLAGS) -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -Wno-unused-parameter -Wno-implicit-fallthrough -Wno-alloc-size -std=gnu99
 
 USE_PLAINTEXT = 0
 USE_CLIENT = 0
