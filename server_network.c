@@ -188,7 +188,7 @@ void * server_accept_thread(void *type) {
 #ifdef USE_IPv6
 		} else if (family == AF_INET6) {
 			int one = 1;
-			setsockopt(listen_fd, SOL_IPV6, IPV6_V6ONLY, &one, sizeof(one));
+			setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, &one, sizeof(one));
 			struct addrinfo hints = {
 				.ai_family = family,
 				.ai_socktype = SOCK_STREAM,
