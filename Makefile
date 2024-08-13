@@ -183,7 +183,7 @@ rebuild = 1
 endif
 else
 ORIGINAL_CFLAGS := $(LAST_CFLAGS)
-CFLAGS := $(LAST_CFLAGS)
+CFLAGS += $(LAST_CFLAGS)
 endif
 
 ifneq ($(ORIGINAL_LDFLAGS),)
@@ -192,7 +192,7 @@ rebuild = 1
 endif
 else
 ORIGINAL_LDFLAGS := $(LAST_LDFLAGS)
-LDFLAGS := $(LAST_LDFLAGS)
+LDFLAGS += $(LAST_LDFLAGS)
 endif
 
 ifneq ($(CC),)
