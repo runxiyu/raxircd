@@ -320,7 +320,7 @@ int gnutls_accept(int listen_fd, void **handle, struct string *addr) {
 	int con_fd;
 	do {
 		con_fd = accept(listen_fd, (struct sockaddr*)&address, &address_len);
-	} while (con_fd == -1 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT || errno == EHOSTDOWN || errno == ENONET || errno == EHOSTUNREACH || errno == EOPNOTSUPP || errno == ENETUNREACH));
+	} while (con_fd == -1 && RETRY_ACCEPT);
 
 	if (con_fd == -1)
 		return -1;

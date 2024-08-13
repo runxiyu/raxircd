@@ -37,6 +37,12 @@
 #include "protocol_numbers.h"
 #include "table.h"
 
+#ifdef ENONET
+#define RETRY_ACCEPT (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT || errno == EHOSTDOWN || errno == ENONET || errno == EHOSTUNREACH || errno == EOPNOTSUPP || errno == ENETUNREACH)
+#else
+#define RETRY_ACCEPT (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT || errno == EHOSTDOWN || errno == EHOSTUNREACH || errno == EOPNOTSUPP || errno == ENETUNREACH)
+#endif
+
 struct network {
 	int (*send)(void *handle, struct string msg);
 	size_t (*recv)(void *handle, char *data, size_t len, char *err);
