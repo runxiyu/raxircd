@@ -152,7 +152,12 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 		return;
 
 	if (STRING_EQ(target, NICKSERV_UID)) {
-		if (case_string_eq(msg, STRING("REGISTER")) && user->cert.len != 0) {
+		if (case_string_eq(msg, STRING("REGISTER"))) {
+			if (user->cert.len == 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("You must be using a TLS client cert to use this command."));
+				return;
+			}
+
 			if (user->account_name.len != 0) {
 				notice(SID, NICKSERV_UID, user->uid, STRING("You are already registered."));
 				return;
