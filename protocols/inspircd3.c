@@ -643,7 +643,7 @@ void inspircd3_protocol_propagate_rename_user(struct string from, struct user_in
 	if (forced) {
 		if (STRING_EQ(user->uid, nick)) {
 			inspircd3_protocol_propagate(from, STRING(":"));
-			inspircd3_protocol_propagate(from, user->uid);
+			inspircd3_protocol_propagate(from, from);
 			inspircd3_protocol_propagate(from, STRING(" SAVE "));
 			inspircd3_protocol_propagate(from, user->uid);
 			inspircd3_protocol_propagate(from, STRING(" :"));
