@@ -84,7 +84,7 @@ void pseudoclients_handle_privmsg(struct string from, struct string sender, stru
 		} else {
 			return;
 		}
-	} else if (!user && !has_table_index(server_list, sender)) {
+	} else if (!user && !has_table_index(server_list, target)) {
 		struct channel_info *channel = get_table_index(channel_list, target);
 		if (channel) {
 			char send_to[NUM_PSEUDOCLIENTS] = {0};
