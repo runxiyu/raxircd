@@ -1429,12 +1429,14 @@ int inspircd4_protocol_handle_rsquit(struct string source, size_t argc, struct s
 
 	for (size_t i = 0; i < server_list.len; i++) {
 		struct server_info *target = server_list.array[i].ptr;
-		if (target->protocol != INSPIRCD4_PROTOCOL)
+		if (target != self && target->protocol != INSPIRCD4_PROTOCOL)
 			continue; // TODO: Maybe actually unlink this somehow
 		if (!STRING_EQ(target->name, argv[0]))
 			continue;
 
-		if (has_table_index(target->connected_to, SID)) {
+		if (target == self) {
+			networks[net].shutdown(handle);
+		} else if (has_table_index(target->connected_to, SID)) {
 			networks[target->net].shutdown(target->handle);
 		} else {
 			struct server_info *next = get_table_index(server_list, target->next);
