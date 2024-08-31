@@ -402,7 +402,7 @@ void * inspircd3_protocol_connection(void *type) {
 					goto inspircd3_protocol_handle_connection_unlock_next;
 
 				if (!STRING_EQ(server->next, config->sid)) {
-					WRITES(2, STRING("[InspIRCd v3] Protocol violation: sourge isn't on this link.\r\n\n"));
+					WRITES(2, STRING("[InspIRCd v3] Protocol violation: source isn't on this link.\r\n\n"));
 					goto inspircd3_protocol_handle_connection_unlock_close;
 				}
 			}
