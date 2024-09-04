@@ -506,8 +506,6 @@ $(call DEPS,main,o)
 
 $(call DEPS,mutex,o)
 
-$(call DEPS,protocols,o)
-
 ifeq ($(USE_PLAINTEXT),1)
 $(call DEPS,networks/plaintext,o)
 endif
