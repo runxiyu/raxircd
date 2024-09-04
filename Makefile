@@ -247,7 +247,7 @@ ifeq ($(rebuild),1)
 .PHONY: .makeopts
 endif
 
-CFLAGS += $(INCLUDEFLAGS) -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -Wno-unknown-warning-option -Wno-unused-parameter -Wno-implicit-fallthrough -Wno-alloc-size -std=gnu99
+CFLAGS += $(INCLUDEFLAGS) -fPIC -fno-plt -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -Wno-unknown-warning-option -Wno-unused-parameter -Wno-implicit-fallthrough -Wno-alloc-size -std=gnu99
 
 USE_PLAINTEXT = 0
 USE_CLIENT = 0
@@ -454,13 +454,13 @@ HaxIRCd: main.c .makeopts Makefile
 	$(CC) main.c -o HaxIRCd
 
 HaxIRCd.so: $(OFILES) .makeopts Makefile
-	$(CC) $(OFILES) -shared -o $@ $(LDFLAGS)
+	$(LD) $(OFILES) -shared -o $@ $(LDFLAGS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -fPIC -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
-%.so: %.c
-	$(CC) $(CFLAGS) -shared -fPIC $< -o $@ $(LDFLAGS)
+%.so: %.o
+	$(LD) $(LDFLAGS) -shared $< -o $@
 
 $(call DEPS,config,o)
 
@@ -531,11 +531,11 @@ $(call DEPS,pseudoclients,o)
 endif
 
 ifeq ($(HAXSERV_PSEUDOCLIENT),1)
-$(call DEPS,pseudoclients/haxserv,so)
+$(call DEPS,pseudoclients/haxserv,o)
 endif
 
 ifeq ($(SERVICES_PSEUDOCLIENT),1)
-$(call DEPS,pseudoclients/services,so)
+$(call DEPS,pseudoclients/services,o)
 endif
 
 clean:
