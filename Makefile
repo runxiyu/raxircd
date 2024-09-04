@@ -54,6 +54,8 @@ LDFLAGS = -lpthread
 	printf '%s\n' 'LAST_ATOMICS = $(ATOMICS)' >> .makeopts
 	printf '%s\n' 'LAST_IPv4 = $(IPv4)' >> .makeopts
 	printf '%s\n' 'LAST_IPv6 = $(IPv6)' >> .makeopts
+	printf '%s\n' 'LAST_HAX_STRING_PATH = $(HAX_STRING_PATH)' >> .makeopts
+	printf '%s\n' 'LAST_HAX_TABLE_PATH = $(HAX_TABLE_PATH)' >> .makeopts
 	printf '%s\n' 'LAST_CFLAGS = $(ORIGINAL_CFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_LDFLAGS = $(ORIGINAL_LDFLAGS)' >> .makeopts
 	printf '%s\n' 'LAST_CC = $(CC)' >> .makeopts
@@ -186,6 +188,22 @@ ORIGINAL_CFLAGS := $(LAST_CFLAGS)
 CFLAGS += $(LAST_CFLAGS)
 endif
 
+ifneq ($(HAX_STRING_PATH),)
+ifneq ($(HAX_STRING_PATH),$(LAST_HAX_STRING_PATH))
+rebuild = 1
+endif
+else
+HAX_STRING_PATH += $(LAST_HAX_STRING_PATH)
+endif
+
+ifneq ($(HAX_TABLE_PATH),)
+ifneq ($(HAX_TABLE_PATH),$(LAST_HAX_TABLE_PATH))
+rebuild = 1
+endif
+else
+HAX_TABLE_PATH += $(LAST_HAX_TABLE_PATH)
+endif
+
 ifneq ($(ORIGINAL_LDFLAGS),)
 ifneq ($(ORIGINAL_LDFLAGS),$(LAST_LDFLAGS))
 rebuild = 1
@@ -249,12 +267,28 @@ endif
 
 CFLAGS += $(INCLUDEFLAGS) -fPIC -fno-plt -D_REENTRANT -ggdb3 -Wall -Wextra -Wsign-conversion -Wno-unknown-warning-option -Wno-unused-parameter -Wno-implicit-fallthrough -Wno-alloc-size -std=gnu99
 
+ifneq ($(HAX_STRING_PATH),)
+CFLAGS += -I$(HAX_STRING_PATH)
+endif
+ifneq ($(HAX_TABLE_PATH),)
+CFLAGS += -I$(HAX_TABLE_PATH)
+endif
+
+LDFLAGS += -lhax_string_utils -lhax_table
+
+ifneq ($(HAX_STRING_PATH),)
+LDFLAGS += -L$(HAX_STRING_PATH)
+endif
+ifneq ($(HAX_TABLE_PATH),)
+LDFLAGS += -L$(HAX_TABLE_PATH)
+endif
+
 USE_PLAINTEXT = 0
 USE_CLIENT = 0
 USE_GNUTLS = 0
 USE_SERVER = 0
 
-OFILES = config.o general_network.o haxstring_utils.o real_main.o table.o mutex.o
+OFILES = config.o general_network.o real_main.o mutex.o
 SOFILES = HaxIRCd.so
 
 USE_IRCD := 0
@@ -466,8 +500,6 @@ $(call DEPS,config,o)
 
 $(call DEPS,general_network,o)
 
-$(call DEPS,haxstring_utils,o)
-
 $(call DEPS,real_main,o)
 
 $(call DEPS,main,o)
@@ -475,8 +507,6 @@ $(call DEPS,main,o)
 $(call DEPS,mutex,o)
 
 $(call DEPS,protocols,o)
-
-$(call DEPS,table,o)
 
 ifeq ($(USE_PLAINTEXT),1)
 $(call DEPS,networks/plaintext,o)

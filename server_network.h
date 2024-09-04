@@ -31,8 +31,8 @@
 #include <stddef.h>
 
 #include "general_network.h"
-#include "haxstring.h"
-#include "table.h"
+#include "hax_string.h"
+#include "hax_table.h"
 
 struct server_network_info {
 	size_t net_type;

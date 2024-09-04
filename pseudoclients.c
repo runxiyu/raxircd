@@ -29,7 +29,7 @@
 #include <dlfcn.h>
 #include <stdio.h>
 
-#include "haxstring.h"
+#include "hax_string.h"
 #include "pseudoclients.h"
 
 struct pseudoclient pseudoclients[NUM_PSEUDOCLIENTS] = {0};

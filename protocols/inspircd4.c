@@ -35,8 +35,9 @@
 
 #include "../config.h"
 #include "../general_network.h"
-#include "../haxstring.h"
-#include "../haxstring_utils.h"
+#include "hax_string.h"
+#include "hax_string_utils.h"
+#include "hax_table.h"
 #include "../main.h"
 #include "../mutex.h"
 #include "../server_network.h"

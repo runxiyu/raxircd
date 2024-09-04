@@ -33,9 +33,9 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 
-#include "haxstring.h"
+#include "hax_string.h"
 #include "protocol_numbers.h"
-#include "table.h"
+#include "hax_table.h"
 
 #ifdef ENONET
 #define RETRY_ACCEPT (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT || errno == EHOSTDOWN || errno == ENONET || errno == EHOSTUNREACH || errno == EOPNOTSUPP || errno == ENETUNREACH)

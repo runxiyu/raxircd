@@ -31,9 +31,9 @@
 #include <stddef.h>
 
 #include "../config.h"
-#include "../haxstring.h"
+#include "hax_string.h"
 #include "../general_network.h"
-#include "../table.h"
+#include "hax_table.h"
 
 extern struct table inspircd2_protocol_init_commands;
 extern struct table inspircd2_protocol_commands;

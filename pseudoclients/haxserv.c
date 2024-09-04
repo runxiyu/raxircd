@@ -32,8 +32,9 @@
 #include <time.h>
 
 #include "../config.h"
-#include "../haxstring.h"
-#include "../haxstring_utils.h"
+#include "hax_string.h"
+#include "hax_string_utils.h"
+#include "hax_table.h"
 #include "../general_network.h"
 #include "../pseudoclients.h"
 

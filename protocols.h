@@ -30,7 +30,7 @@
 
 #include <stddef.h>
 
-#include "haxstring.h"
+#include "hax_string.h"
 #include "general_network.h"
 #include "protocol_numbers.h"
 #include "server_network.h"

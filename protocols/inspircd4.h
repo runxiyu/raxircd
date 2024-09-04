@@ -31,9 +31,9 @@
 #include <stddef.h>
 
 #include "../config.h"
-#include "../haxstring.h"
+#include "hax_string.h"
 #include "../general_network.h"
-#include "../table.h"
+#include "hax_table.h"
 
 struct inspircd4_protocol_specific_user {
 	struct table memberships;

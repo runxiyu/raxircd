@@ -39,7 +39,7 @@
 
 #include "../config.h"
 #include "../general_network.h"
-#include "../haxstring.h"
+#include "hax_string.h"
 #include "../main.h"
 #include "../mutex.h"
 #include "plaintext_buffered.h"

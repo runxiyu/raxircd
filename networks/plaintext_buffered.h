@@ -30,7 +30,7 @@
 
 #include <stddef.h>
 
-#include "../haxstring.h"
+#include "hax_string.h"
 #include "../general_network.h"
 
 int init_plaintext_buffered_network(void);

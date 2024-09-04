@@ -35,8 +35,8 @@
 #include <netinet/in.h>
 
 #include "config.h"
-#include "haxstring.h"
-#include "haxstring_utils.h"
+#include "hax_string.h"
+#include "hax_string_utils.h"
 #include "main.h"
 #include "protocols.h"
 #include "server_network.h"
