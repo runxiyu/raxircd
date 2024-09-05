@@ -76,20 +76,21 @@ int init_pseudoclients(void) {
 }
 
 void pseudoclients_handle_privmsg(struct string from, struct string sender, struct string target, struct string msg) {
-	struct user_info *user = get_table_index(user_list, target);
+	char exists;
+	struct user_info *user = get_table_index(user_list, target, &exists).data;
 
-	if (user) {
+	if (exists) {
 		if (user->is_pseudoclient) {
 			pseudoclients[user->pseudoclient].handle_privmsg(from, sender, target, msg);
 		} else {
 			return;
 		}
-	} else if (!user && !has_table_index(server_list, target)) {
-		struct channel_info *channel = get_table_index(channel_list, target);
-		if (channel) {
+	} else if (!exists && !has_table_index(server_list, target)) {
+		struct channel_info *channel = get_table_index(channel_list, target, &exists).data;
+		if (exists) {
 			char send_to[NUM_PSEUDOCLIENTS] = {0};
 			for (size_t i = 0; i < channel->user_list.len; i++) {
-				struct user_info *user = channel->user_list.array[i].ptr;
+				struct user_info *user = channel->user_list.array[i].ptr.data;
 				if (user->is_pseudoclient && !STRING_EQ(user->uid, sender))
 					send_to[user->pseudoclient] = 1;
 			}

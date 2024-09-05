@@ -258,7 +258,7 @@ int init_general_network(void) {
 	if (str_clone(&(own_info->fullname), SERVER_FULLNAME) != 0)
 		goto init_general_network_free_name;
 
-	if (set_table_index(&server_list, SID, own_info) != 0)
+	if (set_table_index(&server_list, SID, (union table_ptr){.data = own_info}) != 0)
 		goto init_general_network_free_fullname;
 
 	own_info->next = SID;
@@ -293,8 +293,9 @@ int init_general_network(void) {
 }
 
 int add_user(struct string from, struct string attached_to, struct string uid, struct string nick, struct string fullname, struct string ident, struct string vhost, struct string host, struct string address, size_t user_ts, size_t nick_ts, void *handle, size_t protocol, size_t net, char is_pseudoclient, size_t pseudoclient) {
-	struct server_info *attached = get_table_index(server_list, attached_to);
-	if (!attached)
+	char exists;
+	struct server_info *attached = get_table_index(server_list, attached_to, &exists).data;
+	if (!exists)
 		return 1;
 
 	if (has_table_index(user_list, uid))
@@ -344,10 +345,10 @@ int add_user(struct string from, struct string attached_to, struct string uid, s
 	if (str_clone(&(new_info->address), address) != 0)
 		goto add_user_free_host;
 
-	if (set_table_index(&user_list, uid, new_info) != 0)
+	if (set_table_index(&user_list, uid, (union table_ptr){.data = new_info}) != 0)
 		goto add_user_free_address;
 
-	if (set_table_index(&(attached->user_list), uid, new_info) != 0)
+	if (set_table_index(&(attached->user_list), uid, (union table_ptr){.data = new_info}) != 0)
 		goto add_user_remove_user_list;
 
 	new_info->channel_list.array = malloc(0);
@@ -460,13 +461,16 @@ void remove_user(struct string from, struct user_info *user, struct string reaso
 
 	remove_table_index(&user_list, user->uid);
 
-	struct server_info *server = get_table_index(server_list, user->server);
-	if (server) {
-		remove_table_index(&(server->user_list), user->uid);
+	{
+		char exists;
+		struct server_info *server = get_table_index(server_list, user->server, &exists).data;
+		if (exists) {
+			remove_table_index(&(server->user_list), user->uid);
+		}
 	}
 
 	while (user->channel_list.len != 0)
-		part_channel(from, user->channel_list.array[0].ptr, user, STRING(""), 0);
+		part_channel(from, user->channel_list.array[0].ptr.data, user, STRING(""), 0);
 	free(user->channel_list.array);
 
 	free(user->user_ts_str.data);
@@ -580,8 +584,9 @@ int set_cert(struct string from, struct user_info *user, struct string cert, str
 
 int set_channel(struct string from, struct string name, size_t timestamp, size_t user_count, struct user_info **users) {
 	char is_new_channel;
-	struct channel_info *channel = get_table_index(channel_list, name);
-	if (!channel) {
+	char exists;
+	struct channel_info *channel = get_table_index(channel_list, name, &exists).data;
+	if (!exists) {
 		is_new_channel = 1;
 		channel = malloc(sizeof(*channel));
 		if (!channel)
@@ -590,7 +595,7 @@ int set_channel(struct string from, struct string name, size_t timestamp, size_t
 		channel->channel_ts = timestamp;
 		channel->channel_ts_str = (struct string){.data = malloc(0), .len = 0};
 
-		if (set_table_index(&channel_list, name, channel) != 0)
+		if (set_table_index(&channel_list, name, (union table_ptr){.data = channel}) != 0)
 			goto set_channel_free_channel;
 
 		if (str_clone(&(channel->name), name) != 0)
@@ -667,14 +672,14 @@ int join_channel(struct string from, struct channel_info *channel, size_t user_c
 
 	i = 0;
 	while (i < user_count) {
-		if (set_table_index(&(channel->user_list), users[i]->uid, users[i]) != 0)
+		if (set_table_index(&(channel->user_list), users[i]->uid, (union table_ptr){.data = users[i]}) != 0)
 			goto join_channel_remove_users;
 		i++;
 	}
 
 	i = 0;
 	while (i < user_count) {
-		if (set_table_index(&(users[i]->channel_list), channel->name, channel) != 0)
+		if (set_table_index(&(users[i]->channel_list), channel->name, (union table_ptr){.data = channel}) != 0)
 			goto join_channel_remove_channels;
 		i++;
 	}
@@ -749,24 +754,17 @@ int kick_channel(struct string from, struct string source, struct channel_info *
 }
 
 int privmsg(struct string from, struct string sender, struct string target, struct string msg) {
-	struct user_info *user;
-	struct server_info *server;
-	struct channel_info *channel;
 	do {
-		user = get_table_index(user_list, target);
-		if (user)
+		if (has_table_index(user_list, target))
 			break;
-		server = get_table_index(server_list, target);
-		if (server)
+		if (has_table_index(server_list, target))
 			break;
-
-		channel = get_table_index(channel_list, target);
-		if (channel)
+		if (has_table_index(channel_list, target))
 			break;
 
 		char found = 0;
 		for (size_t i = 0; i < user_list.len; i++) {
-			user = user_list.array[i].ptr;
+			struct user_info *user = user_list.array[i].ptr.data;
 			if (STRING_EQ(user->nick, target)) {
 				target = user->uid;
 				found = 1;
@@ -792,16 +790,14 @@ int privmsg(struct string from, struct string sender, struct string target, stru
 
 int notice(struct string from, struct string sender, struct string target, struct string msg) {
 	do {
-		struct user_info *user = get_table_index(user_list, target);
-		if (user)
+		if (has_table_index(user_list, target))
 			break;
-		struct server_info *server = get_table_index(server_list, target);
-		if (server)
+		if (has_table_index(server_list, target))
 			break;
 
 		char found = 0;
 		for (size_t i = 0; i < user_list.len; i++) {
-			user = user_list.array[i].ptr;
+			struct user_info *user = user_list.array[i].ptr.data;
 			if (STRING_EQ(user->nick, target)) {
 				target = user->uid;
 				found = 1;
@@ -811,8 +807,7 @@ int notice(struct string from, struct string sender, struct string target, struc
 		if (found)
 			break;
 
-		struct channel_info *channel = get_table_index(channel_list, target);
-		if (channel)
+		if (has_table_index(channel_list, target))
 			break;
 
 		return 1; // Target not valid

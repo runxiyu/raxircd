@@ -64,7 +64,7 @@ struct table server_config = {0};
 
 int init_server_network(void) {
 	for (size_t i = 0; i < SERVER_CONFIG_LEN; i++) {
-		if (set_table_index(&server_config, SERVER_CONFIG[i].sid, &(SERVER_CONFIG[i])) != 0) {
+		if (set_table_index(&server_config, SERVER_CONFIG[i].sid, (union table_ptr){.data = &(SERVER_CONFIG[i])}) != 0) {
 			return 1;
 		}
 	}
@@ -241,8 +241,9 @@ void * server_accept_thread(void *type) {
 }
 
 int add_server(struct string from, struct string attached_to, struct string sid, struct string name, struct string fullname, size_t protocol, size_t net, void *handle) {
-	struct server_info *attached = get_table_index(server_list, attached_to);
-	if (!attached)
+	char exists;
+	struct server_info *attached = get_table_index(server_list, attached_to, &exists).data;
+	if (!exists)
 		return 1;
 
 	if (has_table_index(server_list, sid))
@@ -271,15 +272,15 @@ int add_server(struct string from, struct string attached_to, struct string sid,
 	// new_info->next shares string with sid of the server it points to
 
 	new_info->connected_to = (struct table){.array = malloc(0), .len = 0};
-	if (set_table_index(&(new_info->connected_to), attached_to, attached) != 0)
+	if (set_table_index(&(new_info->connected_to), attached_to, (union table_ptr){.data = attached}) != 0)
 		goto add_server_free_connected_to;
 
-	if (set_table_index(&(attached->connected_to), sid, new_info) != 0)
+	if (set_table_index(&(attached->connected_to), sid, (union table_ptr){.data = new_info}) != 0)
 		goto add_server_clear_connected_to;
 
 	new_info->user_list = (struct table){.array = malloc(0), .len = 0};
 
-	if (set_table_index(&(server_list), sid, new_info) != 0)
+	if (set_table_index(&(server_list), sid, (union table_ptr){.data = new_info}) != 0)
 		goto add_server_remove_attached_connected_to;
 
 	protocols[protocol].update_propagations();
@@ -320,11 +321,11 @@ void remove_server(struct string from, struct server_info *server, struct string
 	protocols_propagate_remove_server(from, server, reason);
 
 	while (server->user_list.len != 0) {
-		remove_user(from, server->user_list.array[0].ptr, reason, 0);
+		remove_user(from, server->user_list.array[0].ptr.data, reason, 0);
 	}
 
 	for (size_t i = 0; i < server->connected_to.len; i++) {
-		struct server_info *adjacent = server->connected_to.array[i].ptr;
+		struct server_info *adjacent = server->connected_to.array[i].ptr.data;
 		remove_table_index(&(adjacent->connected_to), server->sid);
 	}
 

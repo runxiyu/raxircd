@@ -62,10 +62,12 @@ int haxserv_pseudoclient_init(void) {
 
 	if (add_user(SID, SID, HAXSERV_UID, HAXSERV_NICK, HAXSERV_FULLNAME, HAXSERV_IDENT, HAXSERV_VHOST, HAXSERV_HOST, HAXSERV_ADDRESS, now, now, 0, 0, 0, 1, HAXSERV_PSEUDOCLIENT) != 0)
 		return 1;
-	if (oper_user(SID, get_table_index(user_list, HAXSERV_UID), HAXSERV_REQUIRED_OPER_TYPE, HAXSERV_UID) != 0)
+
+	char exists;
+	struct user_info *user = get_table_index(user_list, HAXSERV_UID, &exists).data;
+	if (oper_user(SID, user, HAXSERV_REQUIRED_OPER_TYPE, HAXSERV_UID) != 0)
 		return 1;
 
-	struct user_info *user = get_table_index(user_list, HAXSERV_UID);
 	for (size_t i = 0; i < HAXSERV_NUM_PREJOIN_CHANNELS; i++) {
 		if (set_channel(SID, HAXSERV_PREJOIN_CHANNELS[i], now, 1, &user) != 0)
 			return 1;
@@ -78,50 +80,50 @@ int haxserv_pseudoclient_post_reload(void) {
 	haxserv_pseudoclient_commands.array = malloc(0);
 	haxserv_pseudoclient_prefixes.array = malloc(0);
 
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("HELP"), &haxserv_pseudoclient_help_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("HELP"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_help_command_def}) != 0)
 		return 1;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("SUS"), &haxserv_pseudoclient_sus_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("SUS"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_sus_command_def}) != 0)
 		return 1;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("CR"), &haxserv_pseudoclient_cr_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("CR"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_cr_command_def}) != 0)
 		return 1;
 	haxserv_pseudoclient_clear_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("CLEAR"), &haxserv_pseudoclient_clear_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("CLEAR"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_clear_command_def}) != 0)
 		return 1;
 #ifdef USE_INSPIRCD2_PROTOCOL
 	haxserv_pseudoclient_raw_inspircd2_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("I2:"), &haxserv_pseudoclient_raw_inspircd2_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("I2:"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_raw_inspircd2_command_def}) != 0)
 		return 1;
 #endif
 #ifdef USE_INSPIRCD3_PROTOCOL
 	haxserv_pseudoclient_raw_inspircd3_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING(":"), &haxserv_pseudoclient_raw_inspircd3_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING(":"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_raw_inspircd3_command_def}) != 0)
 		return 1;
-	if (set_table_index(&haxserv_pseudoclient_prefixes, STRING(":"), &haxserv_pseudoclient_raw_inspircd3_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_prefixes, STRING(":"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_raw_inspircd3_command_def}) != 0)
 		return 1;
 #endif
 	haxserv_pseudoclient_kill_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("KILL"), &haxserv_pseudoclient_kill_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("KILL"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_kill_command_def}) != 0)
 		return 1;
 	haxserv_pseudoclient_spam_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("SPAM"), &haxserv_pseudoclient_spam_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("SPAM"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_spam_command_def}) != 0)
 		return 1;
 	haxserv_pseudoclient_reload_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("RELOAD"), &haxserv_pseudoclient_reload_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("RELOAD"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_reload_command_def}) != 0)
 		return 1;
 	haxserv_pseudoclient_allow_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("ALLOW"), &haxserv_pseudoclient_allow_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("ALLOW"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_allow_command_def}) != 0)
 		return 1;
 	haxserv_pseudoclient_deny_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("DENY"), &haxserv_pseudoclient_deny_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("DENY"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_deny_command_def}) != 0)
 		return 1;
 	haxserv_pseudoclient_reconnect_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("RECONNECT"), &haxserv_pseudoclient_reconnect_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("RECONNECT"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_reconnect_command_def}) != 0)
 		return 1;
 //	haxserv_pseudoclient_sanick_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-//	if (set_table_index(&haxserv_pseudoclient_commands, STRING("SANICK"), &haxserv_pseudoclient_sanick_command_def) != 0)
+//	if (set_table_index(&haxserv_pseudoclient_commands, STRING("SANICK"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_sanick_command_def}) != 0)
 //		return 1;
 	haxserv_pseudoclient_get_command_def.privs = HAXSERV_REQUIRED_OPER_TYPE;
-	if (set_table_index(&haxserv_pseudoclient_commands, STRING("GET"), &haxserv_pseudoclient_get_command_def) != 0)
+	if (set_table_index(&haxserv_pseudoclient_commands, STRING("GET"), (union table_ptr){.function = (void (*)(void))&haxserv_pseudoclient_get_command_def}) != 0)
 		return 1;
 
 	pseudoclients[HAXSERV_PSEUDOCLIENT].init = haxserv_pseudoclient_init;
@@ -222,11 +224,17 @@ void haxserv_pseudoclient_handle_privmsg(struct string from, struct string sourc
 		for (size_t i = 0; i < case_str.len; i++)
 			case_str.data[i] = CASEMAP(argv[0].data[i]);
 
-		cmd = get_table_index(haxserv_pseudoclient_commands, case_str);
+		char exists;
+		cmd = get_table_index(haxserv_pseudoclient_commands, case_str, &exists).data;
+		if (!exists)
+			cmd = 0;
 
 		free(case_str.data);
 	} else {
-		cmd = get_table_index(haxserv_pseudoclient_commands, argv[0]);
+		char exists;
+		cmd = get_table_index(haxserv_pseudoclient_commands, argv[0], &exists).data;
+		if (!exists)
+			cmd = 0;
 	}
 
 	char trim;
@@ -240,17 +248,24 @@ void haxserv_pseudoclient_handle_privmsg(struct string from, struct string sourc
 			for (size_t i = 0; i < case_str.len; i++)
 				case_str.data[i] = CASEMAP(msg.data[i]);
 
-			cmd = get_table_prefix(haxserv_pseudoclient_prefixes, case_str);
+			char exists;
+			cmd = get_table_prefix(haxserv_pseudoclient_prefixes, case_str, &exists).data;
+			if (!exists)
+				cmd = 0;
 
 			free(case_str.data);
 		} else {
-			cmd = get_table_prefix(haxserv_pseudoclient_prefixes, msg);
+			char exists;
+			cmd = get_table_prefix(haxserv_pseudoclient_prefixes, msg, &exists).data;
+			if (!exists)
+				cmd = 0;
 		}
 	}
 
 	if (cmd) {
 		if (cmd->privs.len != 0 && !(!has_table_index(user_list, source) && has_table_index(server_list, source))) {
-			struct user_info *user = get_table_index(user_list, source);
+			char exists;
+			struct user_info *user = get_table_index(user_list, source, &exists).data;
 			// TODO: Multiple privilege levels
 			if (!STRING_EQ(user->oper_type, cmd->privs)) {
 				notice(SID, HAXSERV_UID, respond_to, STRING("You are not authorized to execute this command."));
@@ -276,8 +291,9 @@ void haxserv_pseudoclient_handle_privmsg(struct string from, struct string sourc
 				}
 			}
 
-			struct user_info *user = get_table_index(user_list, source);
-			if (user) {
+			char exists;
+			struct user_info *user = get_table_index(user_list, source, &exists).data;
+			if (exists) {
 				log_msg_parts[1] = user->nick;
 			} else {
 				log_msg_parts[0] = STRING("Unknown user executes `");
@@ -324,7 +340,7 @@ void haxserv_pseudoclient_handle_post_rename_user(struct string from, struct use
 int haxserv_pseudoclient_help_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
 	notice(SID, HAXSERV_UID, respond_to, STRING("Command list:"));
 	for (size_t i = 0; i < haxserv_pseudoclient_commands.len; i++) {
-		struct command_def *cmd = haxserv_pseudoclient_commands.array[i].ptr;
+		struct command_def *cmd = haxserv_pseudoclient_commands.array[i].ptr.data;
 
 		struct string msg_parts[] = {
 			STRING("        "),
@@ -345,7 +361,7 @@ int haxserv_pseudoclient_help_command(struct string from, struct string sender, 
 
 	notice(SID, HAXSERV_UID, respond_to, STRING("Prefix list:"));
 	for (size_t i = 0; i < haxserv_pseudoclient_prefixes.len; i++) {
-		struct command_def *cmd = haxserv_pseudoclient_prefixes.array[i].ptr;
+		struct command_def *cmd = haxserv_pseudoclient_prefixes.array[i].ptr.data;
 
 		struct string msg_parts[] = {
 			STRING("        "),
@@ -394,8 +410,9 @@ int haxserv_pseudoclient_sus_command(struct string from, struct string sender, s
 	size_t index = (size_t)random() % (sizeof(haxserv_pseudoclient_sus_actions) / sizeof(*haxserv_pseudoclient_sus_actions));
 
 	if (haxserv_pseudoclient_sus_actions[index].type) {
-		struct user_info *user = get_table_index(user_list, sender);
-		if (!user)
+		char exists;
+		struct user_info *user = get_table_index(user_list, sender, &exists).data;
+		if (!exists)
 			return 0;
 
 		kill_user(SID, HAXSERV_UID, user, haxserv_pseudoclient_sus_actions[index].msg);
@@ -416,8 +433,9 @@ int haxserv_pseudoclient_cr_command(struct string from, struct string sender, st
 	size_t index = (size_t)random() % (sizeof(haxserv_pseudoclient_cr_actions) / sizeof(*haxserv_pseudoclient_cr_actions));
 
 	if (haxserv_pseudoclient_cr_actions[index].type) {
-		struct user_info *user = get_table_index(user_list, sender);
-		if (!user)
+		char exists;
+		struct user_info *user = get_table_index(user_list, sender, &exists).data;
+		if (!exists)
 			return 0;
 
 		kill_user(SID, HAXSERV_UID, user, haxserv_pseudoclient_cr_actions[index].msg);
@@ -440,15 +458,16 @@ int haxserv_pseudoclient_clear_command(struct string from, struct string sender,
 		return 0;
 	}
 
-	struct channel_info *channel = get_table_index(channel_list, argv[0]);
-	if (!channel) {
+	char exists;
+	struct channel_info *channel = get_table_index(channel_list, argv[0], &exists).data;
+	if (!exists) {
 		notice(SID, HAXSERV_UID, respond_to, STRING("That channel doesn't seem to exist, so is thereby already cleared."));
 		return 0;
 	}
 
 	size_t i = 0;
 	while (channel->user_list.len > i) {
-		if (kick_channel(SID, HAXSERV_UID, channel, channel->user_list.array[i].ptr, STRING("(B")) != 0) {
+		if (kick_channel(SID, HAXSERV_UID, channel, channel->user_list.array[i].ptr.data, STRING("(B")) != 0) {
 			i++;
 		}
 	}
@@ -498,16 +517,17 @@ int haxserv_pseudoclient_kill_command(struct string from, struct string sender, 
 		return 0;
 	}
 
-	struct user_info *user = get_table_index(user_list, argv[0]);
-	if (user) {
+	char exists;
+	struct user_info *user = get_table_index(user_list, argv[0], &exists).data;
+	if (exists) {
 		kill_user(SID, HAXSERV_UID, user, STRING("Impostor removed."));
 		return 0;
 	}
 
 	for (size_t i = 0; i < user_list.len; i++) {
-		struct user_info *user = user_list.array[i].ptr;
+		struct user_info *user = user_list.array[i].ptr.data;
 		if (STRING_EQ(user->nick, argv[0])) {
-			kill_user(SID, HAXSERV_UID, user_list.array[i].ptr, STRING("Impostor removed."));
+			kill_user(SID, HAXSERV_UID, user_list.array[i].ptr.data, STRING("Impostor removed."));
 			return 0;
 		}
 	}
@@ -549,11 +569,17 @@ int haxserv_pseudoclient_spam_command(struct string from, struct string sender, 
 		for (size_t i = 0; i < case_str.len; i++)
 			case_str.data[i] = CASEMAP(argv[1].data[i]);
 
-		cmd = get_table_index(haxserv_pseudoclient_commands, case_str);
+		char exists;
+		cmd = get_table_index(haxserv_pseudoclient_commands, case_str, &exists).data;
+		if (!exists)
+			cmd = 0;
 
 		free(case_str.data);
 	} else {
-		cmd = get_table_index(haxserv_pseudoclient_commands, argv[1]);
+		char exists;
+		cmd = get_table_index(haxserv_pseudoclient_commands, argv[1], &exists).data;
+		if (!exists)
+			cmd = 0;
 	}
 
 	if (cmd) {
@@ -570,17 +596,24 @@ int haxserv_pseudoclient_spam_command(struct string from, struct string sender, 
 			for (size_t i = 0; i < case_str.len; i++)
 				case_str.data[i] = CASEMAP(original_message.data[i]);
 
-			cmd = get_table_prefix(haxserv_pseudoclient_prefixes, case_str);
+			char exists;
+			cmd = get_table_prefix(haxserv_pseudoclient_prefixes, case_str, &exists).data;
+			if (!exists)
+				cmd = 0;
 
 			free(case_str.data);
 		} else {
-			cmd = get_table_prefix(haxserv_pseudoclient_prefixes, original_message);
+			char exists;
+			cmd = get_table_prefix(haxserv_pseudoclient_prefixes, original_message, &exists).data;
+			if (!exists)
+				cmd = 0;
 		}
 	}
 
 	if (cmd) {
 		if (cmd->privs.len != 0 && !(!has_table_index(user_list, sender) && has_table_index(server_list, sender))) {
-			struct user_info *user = get_table_index(user_list, sender);
+			char exists;
+			struct user_info *user = get_table_index(user_list, sender, &exists).data;
 			// TODO: Multiple privilege levels
 			if (!STRING_EQ(user->oper_type, cmd->privs)) {
 				notice(SID, HAXSERV_UID, respond_to, STRING("You are not authorized to execute this command."));
@@ -640,11 +673,12 @@ int haxserv_pseudoclient_allow_command(struct string from, struct string sender,
 		return 0;
 	}
 
-	struct user_info *user = get_table_index(user_list, argv[0]);
-	if (!user) {
+	char exists;
+	struct user_info *user = get_table_index(user_list, argv[0], &exists).data;
+	if (!exists) {
 		char found = 0;
 		for (size_t i = 0; i < user_list.len; i++) {
-			user = user_list.array[i].ptr;
+			user = user_list.array[i].ptr.data;
 			if (STRING_EQ(user->nick, argv[0])) {
 				found = 1;
 				break;
@@ -688,11 +722,12 @@ int haxserv_pseudoclient_deny_command(struct string from, struct string sender, 
 		return 0;
 	}
 
-	struct user_info *user = get_table_index(user_list, argv[0]);
-	if (!user) {
+	char exists;
+	struct user_info *user = get_table_index(user_list, argv[0], &exists).data;
+	if (!exists) {
 		char found = 0;
 		for (size_t i = 0; i < user_list.len; i++) {
-			user = user_list.array[i].ptr;
+			user = user_list.array[i].ptr.data;
 			if (STRING_EQ(user->nick, argv[0])) {
 				found = 1;
 				break;
@@ -730,7 +765,7 @@ struct command_def haxserv_pseudoclient_deny_command_def = {
 
 int haxserv_pseudoclient_reconnect_command(struct string from, struct string sender, struct string original_message, struct string respond_to, size_t argc, struct string *argv) {
 	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
+		struct server_info *adjacent = self->connected_to.array[i].ptr.data;
 		networks[adjacent->net].shutdown(adjacent->handle);
 	}
 
@@ -770,7 +805,7 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 		}
 
 		for (size_t i = 0; i < user_list.len; i++) {
-			struct user_info *user = user_list.array[i].ptr;
+			struct user_info *user = user_list.array[i].ptr.data;
 			if (STRING_EQ(argv[1], user->nick)) {
 				notice(SID, HAXSERV_UID, respond_to, user->uid);
 				return 0;
@@ -784,8 +819,9 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 			return 0;
 		}
 
-		struct user_info *user = get_table_index(user_list, argv[1]);
-		if (user) {
+		char exists;
+		struct user_info *user = get_table_index(user_list, argv[1], &exists).data;
+		if (exists) {
 			notice(SID, HAXSERV_UID, respond_to, user->nick);
 		} else {
 			notice(SID, HAXSERV_UID, respond_to, STRING("User is unknown."));
@@ -796,11 +832,12 @@ int haxserv_pseudoclient_get_command(struct string from, struct string sender, s
 			return 0;
 		}
 
-		struct user_info *user = get_table_index(user_list, argv[1]);
-		if (!user) {
+		char exists;
+		struct user_info *user = get_table_index(user_list, argv[1], &exists).data;
+		if (!exists) {
 			char found = 0;
 			for (size_t i = 0; i < user_list.len; i++) {
-				user = user_list.array[i].ptr;
+				user = user_list.array[i].ptr.data;
 				if (STRING_EQ(argv[1], user->nick)) {
 					found = 1;
 					break;

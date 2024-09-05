@@ -124,36 +124,36 @@ char inspircd3_protocol_channel_mode_types[UCHAR_MAX+1] = {
 int init_inspircd3_protocol(void) {
 	inspircd3_protocol_commands.array = malloc(0);
 
-	set_table_index(&inspircd3_protocol_init_commands, STRING("CAPAB"), &inspircd3_protocol_init_handle_capab);
-	set_table_index(&inspircd3_protocol_init_commands, STRING("SERVER"), &inspircd3_protocol_init_handle_server);
+	set_table_index(&inspircd3_protocol_init_commands, STRING("CAPAB"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_init_handle_capab});
+	set_table_index(&inspircd3_protocol_init_commands, STRING("SERVER"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_init_handle_server});
 
 
 
-	set_table_index(&inspircd3_protocol_commands, STRING("PING"), &inspircd3_protocol_handle_ping);
-	set_table_index(&inspircd3_protocol_commands, STRING("PONG"), &inspircd3_protocol_handle_pong);
+	set_table_index(&inspircd3_protocol_commands, STRING("PING"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_ping});
+	set_table_index(&inspircd3_protocol_commands, STRING("PONG"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_pong});
 
-	set_table_index(&inspircd3_protocol_commands, STRING("SERVER"), &inspircd3_protocol_handle_server);
-	set_table_index(&inspircd3_protocol_commands, STRING("SQUIT"), &inspircd3_protocol_handle_squit);
-	set_table_index(&inspircd3_protocol_commands, STRING("RSQUIT"), &inspircd3_protocol_handle_rsquit);
+	set_table_index(&inspircd3_protocol_commands, STRING("SERVER"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_server});
+	set_table_index(&inspircd3_protocol_commands, STRING("SQUIT"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_squit});
+	set_table_index(&inspircd3_protocol_commands, STRING("RSQUIT"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_rsquit});
 
-	set_table_index(&inspircd3_protocol_commands, STRING("UID"), &inspircd3_protocol_handle_uid);
-	set_table_index(&inspircd3_protocol_commands, STRING("NICK"), &inspircd3_protocol_handle_nick);
-	set_table_index(&inspircd3_protocol_commands, STRING("QUIT"), &inspircd3_protocol_handle_quit);
-	set_table_index(&inspircd3_protocol_commands, STRING("KILL"), &inspircd3_protocol_handle_kill);
-	set_table_index(&inspircd3_protocol_commands, STRING("OPERTYPE"), &inspircd3_protocol_handle_opertype);
+	set_table_index(&inspircd3_protocol_commands, STRING("UID"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_uid});
+	set_table_index(&inspircd3_protocol_commands, STRING("NICK"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_nick});
+	set_table_index(&inspircd3_protocol_commands, STRING("QUIT"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_quit});
+	set_table_index(&inspircd3_protocol_commands, STRING("KILL"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_kill});
+	set_table_index(&inspircd3_protocol_commands, STRING("OPERTYPE"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_opertype});
 
-	set_table_index(&inspircd3_protocol_commands, STRING("FJOIN"), &inspircd3_protocol_handle_fjoin);
-	set_table_index(&inspircd3_protocol_commands, STRING("IJOIN"), &inspircd3_protocol_handle_ijoin);
-	set_table_index(&inspircd3_protocol_commands, STRING("PART"), &inspircd3_protocol_handle_part);
-	set_table_index(&inspircd3_protocol_commands, STRING("KICK"), &inspircd3_protocol_handle_kick);
+	set_table_index(&inspircd3_protocol_commands, STRING("FJOIN"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_fjoin});
+	set_table_index(&inspircd3_protocol_commands, STRING("IJOIN"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_ijoin});
+	set_table_index(&inspircd3_protocol_commands, STRING("PART"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_part});
+	set_table_index(&inspircd3_protocol_commands, STRING("KICK"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_kick});
 
-	set_table_index(&inspircd3_protocol_commands, STRING("PRIVMSG"), &inspircd3_protocol_handle_privmsg);
-	set_table_index(&inspircd3_protocol_commands, STRING("NOTICE"), &inspircd3_protocol_handle_notice);
+	set_table_index(&inspircd3_protocol_commands, STRING("PRIVMSG"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_privmsg});
+	set_table_index(&inspircd3_protocol_commands, STRING("NOTICE"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_notice});
 
-	set_table_index(&inspircd3_protocol_commands, STRING("MODE"), &inspircd3_protocol_handle_mode);
-	set_table_index(&inspircd3_protocol_commands, STRING("FMODE"), &inspircd3_protocol_handle_fmode);
+	set_table_index(&inspircd3_protocol_commands, STRING("MODE"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_mode});
+	set_table_index(&inspircd3_protocol_commands, STRING("FMODE"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_fmode});
 
-	set_table_index(&inspircd3_protocol_commands, STRING("METADATA"), &inspircd3_protocol_handle_metadata);
+	set_table_index(&inspircd3_protocol_commands, STRING("METADATA"), (union table_ptr){.function = (void (*)(void))&inspircd3_protocol_handle_metadata});
 
 	return 0;
 }
@@ -226,7 +226,8 @@ void * inspircd3_protocol_connection(void *type) {
 						networks[net].send(handle, config->sid);
 						networks[net].send(handle, STRING("\n"));
 
-						struct server_info *server = get_table_index(server_list, config->sid);
+						char exists;
+						struct server_info *server = get_table_index(server_list, config->sid, &exists).data;
 						server->awaiting_pong = 1;
 						gettimeofday(&(server->last_ping), 0);
 
@@ -393,13 +394,14 @@ void * inspircd3_protocol_connection(void *type) {
 
 			if (source.len != 0) {
 				struct server_info *server;
-				struct user_info *user = get_table_index(user_list, source);
-				if (user)
-					server = get_table_index(server_list, user->server);
+				char exists;
+				struct user_info *user = get_table_index(user_list, source, &exists).data;
+				if (exists)
+					server = get_table_index(server_list, user->server, &exists).data;
 				else
-					server = get_table_index(server_list, source);
+					server = get_table_index(server_list, source, &exists).data;
 
-				if (!server)
+				if (!exists)
 					goto inspircd3_protocol_handle_connection_unlock_next;
 
 				if (!STRING_EQ(server->next, config->sid)) {
@@ -410,8 +412,9 @@ void * inspircd3_protocol_connection(void *type) {
 
 			if (!ready) {
 				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config **config, char is_incoming);
-				func = get_table_index(inspircd3_protocol_init_commands, command);
-				if (!func) {
+				char exists;
+				func = (int (*)(struct string, size_t, struct string *, size_t, void *, struct server_config **, char))get_table_index(inspircd3_protocol_init_commands, command, &exists).function;
+				if (!exists) {
 					WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n"));
 					goto inspircd3_protocol_handle_connection_unlock_next;
 				}
@@ -423,8 +426,9 @@ void * inspircd3_protocol_connection(void *type) {
 					ready = 1;
 			} else {
 				int (*func)(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming);
-				func = get_table_index(inspircd3_protocol_commands, command);
-				if (!func) {
+				char exists;
+				func = (int (*)(struct string, size_t, struct string *, size_t, void *, struct server_config *, char))get_table_index(inspircd3_protocol_commands, command, &exists).function;
+				if (!exists) {
 					WRITES(2, STRING("WARNING: Command is unknown, ignoring.\r\n"));
 					goto inspircd3_protocol_handle_connection_unlock_next;
 				}
@@ -454,7 +458,8 @@ void * inspircd3_protocol_connection(void *type) {
 
 	if (ready) {
 		mutex_lock(&(state_lock));
-		unlink_server(config->sid, get_table_index(server_list, config->sid), self, INSPIRCD3_PROTOCOL);
+		char exists;
+		unlink_server(config->sid, get_table_index(server_list, config->sid, &exists).data, self, INSPIRCD3_PROTOCOL);
 		mutex_unlock(&(state_lock));
 	}
 
@@ -501,7 +506,7 @@ void * inspircd3_protocol_autoconnect(void *tmp) {
 
 void inspircd3_protocol_update_propagations_inner(struct server_info *source) {
 	for (size_t i = 0; i < source->connected_to.len; i++) {
-		struct server_info *adjacent = source->connected_to.array[i].ptr;
+		struct server_info *adjacent = source->connected_to.array[i].ptr.data;
 		if (adjacent->distance == 0 && !STRING_EQ(adjacent->sid, SID)) {
 			adjacent->distance = source->distance + 1;
 			if (adjacent->distance == 1) {
@@ -517,7 +522,7 @@ void inspircd3_protocol_update_propagations_inner(struct server_info *source) {
 
 void inspircd3_protocol_update_propagations(void) {
 	for (size_t i = 0; i < server_list.len; i++) {
-		struct server_info *other = server_list.array[i].ptr;
+		struct server_info *other = server_list.array[i].ptr.data;
 		if (other->protocol == INSPIRCD3_PROTOCOL) {
 			other->distance = 0;
 		}
@@ -528,7 +533,7 @@ void inspircd3_protocol_update_propagations(void) {
 
 void inspircd3_protocol_propagate(struct string from, struct string msg) {
 	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *adjacent = self->connected_to.array[i].ptr;
+		struct server_info *adjacent = self->connected_to.array[i].ptr.data;
 		if (adjacent->protocol != INSPIRCD3_PROTOCOL || STRING_EQ(from, adjacent->sid))
 			continue; // Not ours or it's the source of this message
 
@@ -746,13 +751,16 @@ void inspircd3_protocol_propagate_set_channel(struct string from, struct channel
 		inspircd3_protocol_propagate(from, STRING(","));
 		inspircd3_protocol_propagate(from, users[x]->uid);
 
-		struct server_info *server = get_table_index(server_list, users[x]->server);
+		char exists;
+		struct server_info *server = get_table_index(server_list, users[x]->server, &exists).data;
 
 		inspircd3_protocol_propagate(from, STRING(":"));
 		struct inspircd3_protocol_member_id *member;
 		if (!STRING_EQ(server->sid, SID) && server->protocol == INSPIRCD3_PROTOCOL) {
 			struct inspircd3_protocol_specific_user *prot_specific = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
-			member = get_table_index(prot_specific->memberships, channel->name);
+			member = get_table_index(prot_specific->memberships, channel->name, &exists).data;
+			if (!exists)
+				member = 0;
 		} else {
 			member = 0;
 		}
@@ -781,13 +789,17 @@ void inspircd3_protocol_propagate_join_channel(struct string from, struct channe
 		inspircd3_protocol_propagate(from, STRING(","));
 		inspircd3_protocol_propagate(from, users[x]->uid);
 
-		struct server_info *server = get_table_index(server_list, users[x]->server);
+		char exists;
+		struct server_info *server = get_table_index(server_list, users[x]->server, &exists).data;
 
 		inspircd3_protocol_propagate(from, STRING(":"));
 		struct inspircd3_protocol_member_id *member;
 		if (!STRING_EQ(server->sid, SID) && server->protocol == INSPIRCD3_PROTOCOL) {
 			struct inspircd3_protocol_specific_user *prot_specific = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
-			member = get_table_index(prot_specific->memberships, channel->name);
+			char exists;
+			member = get_table_index(prot_specific->memberships, channel->name, &exists).data;
+			if (!exists)
+				member = 0;
 		} else {
 			member = 0;
 		}
@@ -829,15 +841,20 @@ void inspircd3_protocol_propagate_kick_channel(struct string from, struct string
 
 // [:source] PRIVMSG <target> <message>
 void inspircd3_protocol_propagate_privmsg(struct string from, struct string source, struct string target, struct string msg) {
-	struct user_info *user = get_table_index(user_list, target);
+	char exists;
+	struct user_info *user = get_table_index(user_list, target, &exists).data;
 	struct server_info *server;
-	if (!user)
-		server = get_table_index(server_list, target);
+	if (!exists) {
+		user = 0;
+		server = get_table_index(server_list, target, &exists).data;
+		if (!exists)
+			server = 0;
+	}
 
 	if (user || server) {
 		struct server_info *target_server;
 		if (user) {
-			target_server = get_table_index(server_list, user->server);
+			target_server = get_table_index(server_list, user->server, &exists).data;
 		} else {
 			target_server = server;
 		}
@@ -845,7 +862,7 @@ void inspircd3_protocol_propagate_privmsg(struct string from, struct string sour
 		if (target_server->protocol != INSPIRCD3_PROTOCOL || STRING_EQ(target_server->sid, SID))
 			return;
 
-		struct server_info *adjacent = get_table_index(server_list, target_server->next);
+		struct server_info *adjacent = get_table_index(server_list, target_server->next, &exists).data;
 		networks[adjacent->net].send(adjacent->handle, STRING(":"));
 		networks[adjacent->net].send(adjacent->handle, source);
 		networks[adjacent->net].send(adjacent->handle, STRING(" PRIVMSG "));
@@ -867,15 +884,21 @@ void inspircd3_protocol_propagate_privmsg(struct string from, struct string sour
 
 // [:source] NOTICE <target> <message>
 void inspircd3_protocol_propagate_notice(struct string from, struct string source, struct string target, struct string msg) {
-	struct user_info *user = get_table_index(user_list, target);
+	char exists;
+	struct user_info *user = get_table_index(user_list, target, &exists).data;
 	struct server_info *server;
-	if (!user)
-		server = get_table_index(server_list, target);
+	if (!exists) {
+		user = 0;
+		server = get_table_index(server_list, target, &exists).data;
+		if (!exists)
+			server = 0;
+	}
 
 	if (user || server) {
 		struct server_info *target_server;
 		if (user) {
-			target_server = get_table_index(server_list, user->server);
+			char exists;
+			target_server = get_table_index(server_list, user->server, &exists).data;
 		} else {
 			target_server = server;
 		}
@@ -883,7 +906,8 @@ void inspircd3_protocol_propagate_notice(struct string from, struct string sourc
 		if (target_server->protocol != INSPIRCD3_PROTOCOL || STRING_EQ(target_server->sid, SID))
 			return;
 
-		struct server_info *adjacent = get_table_index(server_list, target_server->next);
+		char exists;
+		struct server_info *adjacent = get_table_index(server_list, target_server->next, &exists).data;
 		networks[adjacent->net].send(adjacent->handle, STRING(":"));
 		networks[adjacent->net].send(adjacent->handle, source);
 		networks[adjacent->net].send(adjacent->handle, STRING(" NOTICE "));
@@ -912,7 +936,8 @@ void inspircd3_protocol_handle_unlink_server(struct string from, struct server_i
 }
 
 int inspircd3_protocol_handle_new_user(struct string from, struct user_info *info) {
-	struct server_info *server = get_table_index(server_list, info->server);
+	char exists;
+	struct server_info *server = get_table_index(server_list, info->server, &exists).data;
 	if (STRING_EQ(info->server, SID) || server->protocol != INSPIRCD3_PROTOCOL) {
 		info->protocol_specific[INSPIRCD3_PROTOCOL] = 0;
 		return 0;
@@ -936,13 +961,15 @@ int inspircd3_protocol_handle_rename_user(struct string from, struct user_info *
 }
 
 void inspircd3_protocol_handle_remove_user(struct string from, struct user_info *info, struct string reason, char propagate) {
-	struct server_info *server = get_table_index(server_list, info->server);
+	char exists;
+	struct server_info *server = get_table_index(server_list, info->server, &exists).data;
 	if (STRING_EQ(info->server, SID) || server->protocol != INSPIRCD3_PROTOCOL)
 		return;
 
 	struct inspircd3_protocol_specific_user *prot_info = info->protocol_specific[INSPIRCD3_PROTOCOL];
 	while (prot_info->memberships.len > 0) {
-		struct inspircd3_protocol_member_id *mid = remove_table_index(&(prot_info->memberships), prot_info->memberships.array[0].name);
+		char exists;
+		struct inspircd3_protocol_member_id *mid = get_and_remove_table_index(&(prot_info->memberships), prot_info->memberships.array[0].name, &exists).data;
 		free(mid->id_str.data);
 		free(mid);
 	}
@@ -989,14 +1016,15 @@ void inspircd3_protocol_fail_new_server(struct string from, struct string attach
 }
 
 void inspircd3_protocol_fail_new_user(struct string from, struct user_info *info) {
-	struct server_info *server = get_table_index(server_list, info->server);
+	char exists;
+	struct server_info *server = get_table_index(server_list, info->server, &exists).data;
 	if (STRING_EQ(server->sid, SID) || server->protocol != INSPIRCD3_PROTOCOL)
 		return;
 
 	struct inspircd3_protocol_specific_user *prot_info = info->protocol_specific[INSPIRCD3_PROTOCOL];
 
 	for (size_t i = 0; i < prot_info->memberships.len; i++) {
-		struct inspircd3_protocol_member_id *member = prot_info->memberships.array[i].ptr;
+		struct inspircd3_protocol_member_id *member = prot_info->memberships.array[i].ptr.data;
 		free(member->id_str.data);
 		free(member);
 	}
@@ -1037,7 +1065,7 @@ void inspircd3_protocol_do_unlink_inner(struct string from, struct server_info *
 
 	unsigned char i = 0;
 	while (target->connected_to.len > i) {
-		struct server_info *adjacent = target->connected_to.array[i].ptr;
+		struct server_info *adjacent = target->connected_to.array[i].ptr.data;
 		if (adjacent->distance != 0) {
 			i = 1;
 			continue;
@@ -1086,7 +1114,7 @@ void inspircd3_protocol_introduce_servers_to_inner(size_t net, void *handle, str
 	networks[net].send(handle, STRING("\n"));
 
 	for (size_t i = 0; i < target->connected_to.len; i++) {
-		struct server_info *adjacent = target->connected_to.array[i].ptr;
+		struct server_info *adjacent = target->connected_to.array[i].ptr.data;
 		if (adjacent->distance > target->distance) {
 			inspircd3_protocol_introduce_servers_to_inner(net, handle, target->sid, adjacent);
 		}
@@ -1095,14 +1123,14 @@ void inspircd3_protocol_introduce_servers_to_inner(size_t net, void *handle, str
 
 void inspircd3_protocol_introduce_servers_to(size_t net, void *handle) {
 	for (size_t i = 0; i < self->connected_to.len; i++) {
-		struct server_info *info = self->connected_to.array[i].ptr;
+		struct server_info *info = self->connected_to.array[i].ptr.data;
 		if (info->protocol == INSPIRCD3_PROTOCOL) { // This server hasn't been added to the list yet, so no need to check for that
 			inspircd3_protocol_introduce_servers_to_inner(net, handle, SID, info);
 		}
 	}
 
 	for (size_t i = 0; i < server_list.len; i++) {
-		struct server_info *target = server_list.array[i].ptr;
+		struct server_info *target = server_list.array[i].ptr.data;
 		if (target != self && target->protocol != INSPIRCD3_PROTOCOL) {
 			networks[net].send(handle, STRING(":"));
 			networks[net].send(handle, SID);
@@ -1150,7 +1178,7 @@ void inspircd3_protocol_introduce_user_to(size_t net, void *handle, struct user_
 
 	if (join_channels) {
 		for (size_t i = 0; i < user->channel_list.len; i++) {
-			struct channel_info *channel = user->channel_list.array[i].ptr;
+			struct channel_info *channel = user->channel_list.array[i].ptr.data;
 
 			networks[net].send(handle, STRING(":"));
 			networks[net].send(handle, SID);
@@ -1161,15 +1189,20 @@ void inspircd3_protocol_introduce_user_to(size_t net, void *handle, struct user_
 			networks[net].send(handle, STRING(" + :,"));
 			networks[net].send(handle, user->uid);
 
-			struct server_info *server = get_table_index(server_list, user->server);
+			char exists;
+			struct server_info *server = get_table_index(server_list, user->server, &exists).data;
 
 			networks[net].send(handle, STRING(":"));
 			struct inspircd3_protocol_specific_user *prot_specific = user->protocol_specific[INSPIRCD3_PROTOCOL];
 			struct inspircd3_protocol_member_id *member;
-			if (!STRING_EQ(user->server, SID) && server->protocol == INSPIRCD3_PROTOCOL)
-				member = get_table_index(prot_specific->memberships, channel->name);
-			else
+			if (!STRING_EQ(user->server, SID) && server->protocol == INSPIRCD3_PROTOCOL) {
+				char exists;
+				member = get_table_index(prot_specific->memberships, channel->name, &exists).data;
+				if (!exists)
+					member = 0;
+			} else {
 				member = 0;
+			}
 
 			if (member)
 				networks[net].send(handle, member->id_str);
@@ -1193,16 +1226,21 @@ void inspircd3_protocol_introduce_channel_to(size_t net, void *handle, struct ch
 		networks[net].send(handle, STRING(","));
 		networks[net].send(handle, channel->user_list.array[i].name);
 
-		struct user_info *user = channel->user_list.array[i].ptr;
-		struct server_info *server = get_table_index(server_list, user->server);
+		struct user_info *user = channel->user_list.array[i].ptr.data;
+		char exists;
+		struct server_info *server = get_table_index(server_list, user->server, &exists).data;
 
 		networks[net].send(handle, STRING(":"));
 		struct inspircd3_protocol_specific_user *prot_specific = user->protocol_specific[INSPIRCD3_PROTOCOL];
 		struct inspircd3_protocol_member_id *member;
-		if (!STRING_EQ(user->server, SID) && server->protocol == INSPIRCD3_PROTOCOL)
-			member = get_table_index(prot_specific->memberships, channel->name);
-		else
+		if (!STRING_EQ(user->server, SID) && server->protocol == INSPIRCD3_PROTOCOL) {
+			char exists;
+			member = get_table_index(prot_specific->memberships, channel->name, &exists).data;
+			if (!exists)
+				member = 0;
+		} else {
 			member = 0;
+		}
 
 		if (member)
 			networks[net].send(handle, member->id_str);
@@ -1242,8 +1280,9 @@ int inspircd3_protocol_init_handle_server(struct string source, size_t argc, str
 	}
 
 	if (is_incoming) {
-		*config = get_table_index(server_config, argv[3]);
-		if (!(*config)) {
+		char exists;
+		*config = get_table_index(server_config, argv[3], &exists).data;
+		if (!exists) {
 			WRITES(2, STRING("[InspIRCd v3] Unknown SID attempted to connect.\r\n"));
 			return -1;
 		}
@@ -1292,10 +1331,10 @@ int inspircd3_protocol_init_handle_server(struct string source, size_t argc, str
 	inspircd3_protocol_introduce_servers_to(net, handle);
 
 	for (size_t i = 0; i < user_list.len; i++)
-		inspircd3_protocol_introduce_user_to(net, handle, user_list.array[i].ptr, 0);
+		inspircd3_protocol_introduce_user_to(net, handle, user_list.array[i].ptr.data, 0);
 
 	for (size_t i = 0; i < channel_list.len; i++)
-		inspircd3_protocol_introduce_channel_to(net, handle, channel_list.array[i].ptr);
+		inspircd3_protocol_introduce_channel_to(net, handle, channel_list.array[i].ptr.data);
 
 	networks[net].send(handle, STRING(":"));
 	networks[net].send(handle, SID);
@@ -1308,7 +1347,8 @@ int inspircd3_protocol_init_handle_server(struct string source, size_t argc, str
 		return -1;
 	}
 
-	struct server_info *server = get_table_index(server_list, (*config)->sid);
+	char exists;
+	struct server_info *server = get_table_index(server_list, (*config)->sid, &exists).data;
 	server->awaiting_pong = 0;
 
 	return 1;
@@ -1322,7 +1362,8 @@ int inspircd3_protocol_handle_ping(struct string source, size_t argc, struct str
 	}
 
 	if (STRING_EQ(config->sid, source) && STRING_EQ(SID, argv[0])) {
-		struct server_info *server = get_table_index(server_list, config->sid);
+		char exists;
+		struct server_info *server = get_table_index(server_list, config->sid, &exists).data;
 		if (!server->awaiting_pong) {
 			networks[net].send(handle, STRING(":"));
 			networks[net].send(handle, SID);
@@ -1348,7 +1389,8 @@ int inspircd3_protocol_handle_ping(struct string source, size_t argc, struct str
 int inspircd3_protocol_handle_pong(struct string source, size_t argc, struct string *argv, size_t net, void *handle, struct server_config *config, char is_incoming) {
 	struct timeval now;
 	gettimeofday(&now, 0);
-	struct server_info *server = get_table_index(server_list, config->sid);
+	char exists;
+	struct server_info *server = get_table_index(server_list, config->sid, &exists).data;
 
 	if (!server->awaiting_pong) // We don't relay PINGs, so PONGs also shouldn't need relayed
 		return 1;
@@ -1397,8 +1439,13 @@ int inspircd3_protocol_handle_squit(struct string source, size_t argc, struct st
 		return -1;
 	}
 
-	struct server_info *a = get_table_index(server_list, source);
-	struct server_info *b = get_table_index(server_list, argv[0]);
+	char exists;
+	struct server_info *a = get_table_index(server_list, source, &exists).data;
+	if (!exists)
+		a = 0;
+	struct server_info *b = get_table_index(server_list, argv[0], &exists).data;
+	if (!exists)
+		b = 0;
 	if (!a || !b) { // Maybe we already RSQUIT it or smth
 		WRITES(2, STRING("[InspIRCd v3] Invalid SQUIT received! (Unknown source or target)\r\n"));
 		return -1;
@@ -1424,7 +1471,7 @@ int inspircd3_protocol_handle_rsquit(struct string source, size_t argc, struct s
 		return 0;
 
 	for (size_t i = 0; i < server_list.len; i++) {
-		struct server_info *target = server_list.array[i].ptr;
+		struct server_info *target = server_list.array[i].ptr.data;
 		if (target != self && target->protocol != INSPIRCD3_PROTOCOL)
 			continue; // TODO: Maybe actually unlink this somehow
 		if (!STRING_EQ(target->name, argv[0]))
@@ -1435,7 +1482,8 @@ int inspircd3_protocol_handle_rsquit(struct string source, size_t argc, struct s
 		} else if (has_table_index(target->connected_to, SID)) {
 			networks[target->net].shutdown(target->handle);
 		} else {
-			struct server_info *next = get_table_index(server_list, target->next);
+			char exists;
+			struct server_info *next = get_table_index(server_list, target->next, &exists).data;
 			networks[next->net].send(next->handle, STRING(":"));
 			networks[next->net].send(next->handle, source);
 			networks[next->net].send(next->handle, STRING(" RSQUIT "));
@@ -1544,8 +1592,9 @@ int inspircd3_protocol_handle_nick(struct string source, size_t argc, struct str
 		return -1;
 	}
 
-	struct user_info *user = get_table_index(user_list, source);
-	if (!user)
+	char exists;
+	struct user_info *user = get_table_index(user_list, source, &exists).data;
+	if (!exists)
 		return 0; // KILL timings, etc
 
 	if (rename_user(config->sid, user, argv[0], nick_ts, 0, 1) != 0)
@@ -1562,8 +1611,9 @@ int inspircd3_protocol_handle_quit(struct string source, size_t argc, struct str
 	else
 		reason = argv[0];
 
-	struct user_info *user = get_table_index(user_list, source);
-	if (!user)
+	char exists;
+	struct user_info *user = get_table_index(user_list, source, &exists).data;
+	if (!exists)
 		return 0; // Maybe KILLed or something
 
 	if (STRING_EQ(user->server, SID)) {
@@ -1583,10 +1633,11 @@ int inspircd3_protocol_handle_kill(struct string source, size_t argc, struct str
 		return -1;
 	}
 
-	struct user_info *user = get_table_index(user_list, argv[0]);
-	if (!user) {
+	char exists;
+	struct user_info *user = get_table_index(user_list, argv[0], &exists).data;
+	if (!exists) {
 		for (size_t i = 0; i < user_list.len; i++) {
-			struct user_info *tmp = user_list.array[i].ptr;
+			struct user_info *tmp = user_list.array[i].ptr.data;
 			if (STRING_EQ(tmp->nick, argv[0])) {
 				user = tmp;
 				break;
@@ -1629,8 +1680,9 @@ int inspircd3_protocol_handle_opertype(struct string source, size_t argc, struct
 		return -1;
 	}
 
-	struct user_info *user = get_table_index(user_list, source);
-	if (!user)
+	char exists;
+	struct user_info *user = get_table_index(user_list, source, &exists).data;
+	if (!exists)
 		return 0;
 
 	if (oper_user(config->sid, user, argv[0], config->sid) != 0) {
@@ -1731,8 +1783,9 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 
 		uid.len = (size_t)(&(argv[arg_i].data[i]) - uid.data);
 
-		users[n] = get_table_index(user_list, uid);
-		if (!users[n] || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) // TODO: Check that it's coming the right way too
+		char exists;
+		users[n] = get_table_index(user_list, uid, &exists).data;
+		if (!exists || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) // TODO: Check that it's coming the right way too
 			user_count--;
 
 		if (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
@@ -1744,7 +1797,7 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 		while (i < argv[arg_i].len && argv[arg_i].data[i] != ' ')
 			i++;
 
-		if (!users[n] || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) {
+		if (!exists || !users[n]->protocol_specific[INSPIRCD3_PROTOCOL]) {
 			n--;
 			continue;
 		}
@@ -1775,8 +1828,11 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 
 	for (n = 0; n < user_count; n++) {
 		struct inspircd3_protocol_specific_user *this = users[n]->protocol_specific[INSPIRCD3_PROTOCOL];
-		members[user_count + n] = get_table_index(this->memberships, argv[0]);
-		if (set_table_index(&(this->memberships), argv[0], members[n]) != 0)
+		char exists;
+		members[user_count + n] = get_table_index(this->memberships, argv[0], &exists).data;
+		if (!exists)
+			members[user_count + n] = 0;
+		if (set_table_index(&(this->memberships), argv[0], (union table_ptr){.data = members[n]}) != 0)
 			goto inspircd3_protocol_handle_fjoin_reset_member_ids;
 	}
 
@@ -1787,8 +1843,9 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 		}
 	}
 
-	struct channel_info *channel = get_table_index(channel_list, argv[0]);
-	if (!channel || timestamp < channel->channel_ts) {
+	char exists;
+	struct channel_info *channel = get_table_index(channel_list, argv[0], &exists).data;
+	if (!exists || timestamp < channel->channel_ts) {
 		if (set_channel(config->sid, argv[0], timestamp, user_count, users) != 0)
 			goto inspircd3_protocol_handle_fjoin_free_member_ids;
 	} else {
@@ -1806,7 +1863,7 @@ int inspircd3_protocol_handle_fjoin(struct string source, size_t argc, struct st
 		x--;
 		struct inspircd3_protocol_specific_user *this = users[x]->protocol_specific[INSPIRCD3_PROTOCOL];
 		if (members[user_count + x])
-			set_table_index(&(this->memberships), argv[0], members[user_count + x]); // Cannot fail
+			set_table_index(&(this->memberships), argv[0], (union table_ptr){.data = members[user_count + x]}); // Cannot fail
 		else
 			remove_table_index(&(this->memberships), argv[0]);
 	}
@@ -1831,8 +1888,9 @@ int inspircd3_protocol_handle_ijoin(struct string source, size_t argc, struct st
 		return -1;
 	}
 
-	struct user_info *user = get_table_index(user_list, source);
-	if (!user)
+	char exists;
+	struct user_info *user = get_table_index(user_list, source, &exists).data;
+	if (!exists)
 		return 0;
 
 	struct string *mid;
@@ -1847,22 +1905,24 @@ int inspircd3_protocol_handle_ijoin(struct string source, size_t argc, struct st
 
 	struct inspircd3_protocol_specific_user *this = user->protocol_specific[INSPIRCD3_PROTOCOL];
 
-	struct string *old_mid = get_table_index(this->memberships, argv[0]);
-	if (set_table_index(&(this->memberships), argv[0], mid) != 0) {
+	struct string *old_mid = get_table_index(this->memberships, argv[0], &exists).data;
+	if (!exists)
+		old_mid = 0;
+	if (set_table_index(&(this->memberships), argv[0], (union table_ptr){.data = mid}) != 0) {
 		free(mid->data);
 		free(mid);
 		return -1;
 	}
 
-	struct channel_info *channel = get_table_index(channel_list, argv[0]);
-	if (!channel) {
+	struct channel_info *channel = get_table_index(channel_list, argv[0], &exists).data;
+	if (!exists) {
 		size_t timestamp;
 		{
 			ssize_t t = time(0);
 			if (t < 0) {
 				WRITES(2, STRING("Please check your clock.\r\n"));
 				if (old_mid)
-					set_table_index(&(this->memberships), argv[0], old_mid);
+					set_table_index(&(this->memberships), argv[0], (union table_ptr){.data = old_mid});
 				else
 					remove_table_index(&(this->memberships), argv[0]);
 				free(mid->data);
@@ -1873,7 +1933,7 @@ int inspircd3_protocol_handle_ijoin(struct string source, size_t argc, struct st
 		}
 		if (set_channel(config->sid, argv[0], timestamp, 1, &user) != 0) {
 			if (old_mid)
-				set_table_index(&(this->memberships), argv[0], old_mid);
+				set_table_index(&(this->memberships), argv[0], (union table_ptr){.data = old_mid});
 			else
 				remove_table_index(&(this->memberships), argv[0]);
 			free(mid->data);
@@ -1883,7 +1943,7 @@ int inspircd3_protocol_handle_ijoin(struct string source, size_t argc, struct st
 	} else {
 		if (join_channel(config->sid, channel, 1, &user, 1) != 0) {
 			if (old_mid)
-				set_table_index(&(this->memberships), argv[0], old_mid);
+				set_table_index(&(this->memberships), argv[0], (union table_ptr){.data = old_mid});
 			else
 				remove_table_index(&(this->memberships), argv[0]);
 			free(mid->data);
@@ -1912,11 +1972,12 @@ int inspircd3_protocol_handle_part(struct string source, size_t argc, struct str
 	else
 		reason = argv[1];
 
-	struct user_info *user = get_table_index(user_list, source);
+	char exists;
+	struct user_info *user = get_table_index(user_list, source, &exists).data;
 	if (!user)
 		return 0;
 
-	struct channel_info *channel = get_table_index(channel_list, argv[0]);
+	struct channel_info *channel = get_table_index(channel_list, argv[0], &exists).data;
 	if (!channel)
 		return 0;
 
@@ -1932,15 +1993,16 @@ int inspircd3_protocol_handle_kick(struct string source, size_t argc, struct str
 		return -1;
 	}
 
-	struct channel_info *channel = get_table_index(channel_list, argv[0]);
-	if (!channel)
+	char exists;
+	struct channel_info *channel = get_table_index(channel_list, argv[0], &exists).data;
+	if (!exists)
 		return 0;
 
-	struct user_info *user = get_table_index(user_list, argv[1]);
-	if (!user) {
+	struct user_info *user = get_table_index(user_list, argv[1], &exists).data;
+	if (!exists) {
 		char found = 0;
 		for (size_t i = 0; i < user_list.len; i++) {
-			user = user_list.array[i].ptr;
+			user = user_list.array[i].ptr.data;
 			if (STRING_EQ(user->nick, argv[1])) {
 				found = 1;
 				break;
@@ -1952,7 +2014,8 @@ int inspircd3_protocol_handle_kick(struct string source, size_t argc, struct str
 
 	char uses_inspircd3;
 	if (!STRING_EQ(user->server, SID)) {
-		struct server_info *server = get_table_index(server_list, user->server);
+		char exists;
+		struct server_info *server = get_table_index(server_list, user->server, &exists).data;
 		uses_inspircd3 = (server->protocol == INSPIRCD3_PROTOCOL);
 	} else {
 		uses_inspircd3 = 0;
@@ -1969,7 +2032,8 @@ int inspircd3_protocol_handle_kick(struct string source, size_t argc, struct str
 			}
 
 			struct inspircd3_protocol_specific_user *prot_specific = user->protocol_specific[INSPIRCD3_PROTOCOL];
-			struct inspircd3_protocol_member_id *current_member_id = get_table_index(prot_specific->memberships, channel->name);
+			char exists;
+			struct inspircd3_protocol_member_id *current_member_id = get_table_index(prot_specific->memberships, channel->name, &exists).data;
 			if (member_id < current_member_id->id)
 				return 0; // Kick was for an old membership, ignore it
 		}
@@ -1984,7 +2048,8 @@ int inspircd3_protocol_handle_kick(struct string source, size_t argc, struct str
 	int rejoin = kick_channel(config->sid, source, channel, user, reason);
 
 	if (rejoin) {
-		struct server_info *server = get_table_index(server_list, user->server);
+		char exists;
+		struct server_info *server = get_table_index(server_list, user->server, &exists).data;
 		networks[net].send(handle, STRING(":"));
 		networks[net].send(handle, SID);
 		networks[net].send(handle, STRING(" FJOIN "));
@@ -1996,8 +2061,8 @@ int inspircd3_protocol_handle_kick(struct string source, size_t argc, struct str
 		if (!STRING_EQ(server->sid, SID) && server->protocol == INSPIRCD3_PROTOCOL) {
 			networks[net].send(handle, STRING(":"));
 			struct inspircd3_protocol_specific_user *prot_specific = user->protocol_specific[INSPIRCD3_PROTOCOL];
-			struct string *mid = get_table_index(prot_specific->memberships, channel->name);
-			if (mid)
+			struct string *mid = get_table_index(prot_specific->memberships, channel->name, &exists).data;
+			if (exists)
 				networks[net].send(handle, *mid);
 			else
 				networks[net].send(handle, STRING("0"));
@@ -2041,14 +2106,15 @@ int inspircd3_protocol_handle_mode(struct string source, size_t argc, struct str
 		return -1;
 	}
 
-	struct user_info *user = get_table_index(user_list, argv[0]);
-	if (!user) {
+	char exists;
+	struct user_info *user = get_table_index(user_list, argv[0], &exists).data;
+	if (!exists) {
 		if (has_table_index(server_list, argv[0]))
 			return 0; // TODO: Probably not actually valid
 
 		char found = 0;
 		for (size_t i = 0; i < user_list.len; i++) {
-			user = user_list.array[i].ptr;
+			user = user_list.array[i].ptr.data;
 			if (case_string_eq(user->nick, argv[0])) {
 				found = 1;
 				break;
@@ -2059,42 +2125,40 @@ int inspircd3_protocol_handle_mode(struct string source, size_t argc, struct str
 			return 0;
 	}
 
-	if (user) {
-		size_t arg_i = 2;
-		char dir = '?';
-		for (size_t i = 0; i < argv[1].len; i++) {
-			switch(argv[1].data[i]) {
-				case '+':
-				case '-':
-					dir = argv[1].data[i];
-					break;
-				default:
-					if (dir == '?') {
-						WRITES(2, STRING("[InspIRCd v3] Invalid MODE received (Mode direction not set)\r\n"));
+	size_t arg_i = 2;
+	char dir = '?';
+	for (size_t i = 0; i < argv[1].len; i++) {
+		switch(argv[1].data[i]) {
+			case '+':
+			case '-':
+				dir = argv[1].data[i];
+				break;
+			default:
+				if (dir == '?') {
+					WRITES(2, STRING("[InspIRCd v3] Invalid MODE received (Mode direction not set)\r\n"));
+					return -1;
+				}
+				switch(inspircd3_protocol_user_mode_types[(unsigned char)argv[1].data[i]]) {
+					case MODE_TYPE_NOARGS:
+						if (dir == '-' && argv[1].data[i] == 'o') {
+							if (oper_user(config->sid, user, STRING(""), source) != 0)
+								return -1;
+						}
+						break;
+					case MODE_TYPE_REPLACE:
+					case MODE_TYPE_MODE:
+						if (dir == '-')
+							break;
+					case MODE_TYPE_MULTIPLE:
+						arg_i++;
+						break;
+					case MODE_TYPE_USERS:
+						arg_i++;
+						break;
+					default:
+						WRITES(2, STRING("[InspIRCd v3] Invalid MODE received! (Unknown mode given)\r\n"));
 						return -1;
-					}
-					switch(inspircd3_protocol_user_mode_types[(unsigned char)argv[1].data[i]]) {
-						case MODE_TYPE_NOARGS:
-							if (dir == '-' && argv[1].data[i] == 'o') {
-								if (oper_user(config->sid, user, STRING(""), source) != 0)
-									return -1;
-							}
-							break;
-						case MODE_TYPE_REPLACE:
-						case MODE_TYPE_MODE:
-							if (dir == '-')
-								break;
-						case MODE_TYPE_MULTIPLE:
-							arg_i++;
-							break;
-						case MODE_TYPE_USERS:
-							arg_i++;
-							break;
-						default:
-							WRITES(2, STRING("[InspIRCd v3] Invalid MODE received! (Unknown mode given)\r\n"));
-							return -1;
-					}
-			}
+				}
 		}
 	}
 
@@ -2108,14 +2172,15 @@ int inspircd3_protocol_handle_fmode(struct string source, size_t argc, struct st
 		return -1;
 	}
 
-	struct user_info *user = get_table_index(user_list, argv[0]);
-	if (!user) {
+	char exists;
+	struct user_info *user = get_table_index(user_list, argv[0], &exists).data;
+	if (!exists) {
 		if (has_table_index(server_list, argv[0]))
 			return 0; // TODO: Probably not actually valid
 
 		char found = 0;
 		for (size_t i = 0; i < user_list.len; i++) {
-			user = user_list.array[i].ptr;
+			user = user_list.array[i].ptr.data;
 			if (case_string_eq(user->nick, argv[0])) {
 				found = 1;
 				break;
@@ -2126,42 +2191,40 @@ int inspircd3_protocol_handle_fmode(struct string source, size_t argc, struct st
 			return 0;
 	}
 
-	if (user) {
-		size_t arg_i = 3;
-		char dir = '?';
-		for (size_t i = 0; i < argv[2].len; i++) {
-			switch(argv[2].data[i]) {
-				case '+':
-				case '-':
-					dir = argv[2].data[i];
-					break;
-				default:
-					if (dir == '?') {
-						WRITES(2, STRING("[InspIRCd v3] Invalid MODE received (Mode direction not set)\r\n"));
+	size_t arg_i = 3;
+	char dir = '?';
+	for (size_t i = 0; i < argv[2].len; i++) {
+		switch(argv[2].data[i]) {
+			case '+':
+			case '-':
+				dir = argv[2].data[i];
+				break;
+			default:
+				if (dir == '?') {
+					WRITES(2, STRING("[InspIRCd v3] Invalid MODE received (Mode direction not set)\r\n"));
+					return -1;
+				}
+				switch(inspircd3_protocol_user_mode_types[(unsigned char)argv[2].data[i]]) {
+					case MODE_TYPE_NOARGS:
+						if (dir == '-' && argv[2].data[i] == 'o') {
+							if (oper_user(config->sid, user, STRING(""), source) != 0)
+								return -1;
+						}
+						break;
+					case MODE_TYPE_REPLACE:
+					case MODE_TYPE_MODE:
+						if (dir == '-')
+							break;
+					case MODE_TYPE_MULTIPLE:
+						arg_i++;
+						break;
+					case MODE_TYPE_USERS:
+						arg_i++;
+						break;
+					default:
+						WRITES(2, STRING("[InspIRCd v3] Invalid MODE received! (Unknown mode given)\r\n"));
 						return -1;
-					}
-					switch(inspircd3_protocol_user_mode_types[(unsigned char)argv[2].data[i]]) {
-						case MODE_TYPE_NOARGS:
-							if (dir == '-' && argv[2].data[i] == 'o') {
-								if (oper_user(config->sid, user, STRING(""), source) != 0)
-									return -1;
-							}
-							break;
-						case MODE_TYPE_REPLACE:
-						case MODE_TYPE_MODE:
-							if (dir == '-')
-								break;
-						case MODE_TYPE_MULTIPLE:
-							arg_i++;
-							break;
-						case MODE_TYPE_USERS:
-							arg_i++;
-							break;
-						default:
-							WRITES(2, STRING("[InspIRCd v3] Invalid MODE received! (Unknown mode given)\r\n"));
-							return -1;
-					}
-			}
+				}
 		}
 	}
 
@@ -2177,8 +2240,9 @@ int inspircd3_protocol_handle_metadata(struct string source, size_t argc, struct
 
 	struct user_info *info;
 	do {
-		info = get_table_index(user_list, argv[0]);
-		if (info)
+		char exists;
+		info = get_table_index(user_list, argv[0], &exists).data;
+		if (exists)
 			break;
 
 		return 0;

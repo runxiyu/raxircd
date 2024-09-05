@@ -63,7 +63,8 @@ int services_pseudoclient_post_reload(void) {
 	if (!has_table_index(user_list, NICKSERV_UID)) {
 		if (add_user(SID, SID, NICKSERV_UID, NICKSERV_NICK, NICKSERV_FULLNAME, NICKSERV_IDENT, NICKSERV_VHOST, NICKSERV_HOST, NICKSERV_ADDRESS, now, now, 0, 0, 0, 1, SERVICES_PSEUDOCLIENT) != 0)
 			return 1;
-		struct user_info *user = get_table_index(user_list, NICKSERV_UID);
+		char exists;
+		struct user_info *user = get_table_index(user_list, NICKSERV_UID, &exists).data;
 		if (set_channel(SID, SERVICES_CHANNEL, now, 1, &user) != 0)
 			return 1;
 	}
@@ -147,8 +148,9 @@ int services_pseudoclient_allow_kick(struct string from, struct string source, s
 }
 
 void services_pseudoclient_handle_privmsg(struct string from, struct string source, struct string target, struct string msg) {
-	struct user_info *user = get_table_index(user_list, source);
-	if (!user)
+	char exists;
+	struct user_info *user = get_table_index(user_list, source, &exists).data;
+	if (!exists)
 		return;
 
 	if (STRING_EQ(target, NICKSERV_UID)) {
