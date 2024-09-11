@@ -532,6 +532,8 @@ int haxserv_pseudoclient_kill_command(struct string from, struct string sender, 
 		}
 	}
 
+	notice(SID, HAXSERV_UID, respond_to, STRING("Target is unknown."));
+
 	return 0;
 }
 struct command_def haxserv_pseudoclient_kill_command_def = {
