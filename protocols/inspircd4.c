@@ -1498,6 +1498,8 @@ int inspircd4_protocol_handle_rsquit(struct string source, size_t argc, struct s
 				networks[next->net].send(next->handle, STRING(":\n"));
 			}
 		}
+
+		break;
 	}
 
 	return 0;
