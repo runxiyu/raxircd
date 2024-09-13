@@ -35,6 +35,8 @@
 * Reasonably modern UNIX-like system with support for POSIX threads.
   We haven't tested on non-Linux systems yet.
 * If you want TLS support, GnuTLS, OpenSSL, or LibreSSL.
+* [hax_string](https://git.andrewyu.org/hax/hax_string.git)
+* [hax_table](https://git.andrewyu.org/hax/hax_table.git)
 
 ## Why
 
