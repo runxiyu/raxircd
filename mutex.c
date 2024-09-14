@@ -1,6 +1,6 @@
 // Just ensures the mutex functions get compiled in somewhere, and only once, for if it's not inlined somewhere
 //
-// Written by: Test_User <hax@andrewyu.org>
+// Written by: Test_User <hax@runxiyu.org>
 //
 // This is free and unencumbered software released into the public
 // domain.

@@ -1,6 +1,6 @@
 // InspIRCd v4 / InspIRCd 1206 protocol support
 //
-// Written by: Test_User <hax@andrewyu.org>
+// Written by: Test_User <hax@runxiyu.org>
 //
 // This is free and unencumbered software released into the public
 // domain.

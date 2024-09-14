@@ -1,6 +1,6 @@
 // Definitions for a few global things that don't fit anywhere more specific
 //
-// Written by: Test_User <hax@andrewyu.org>
+// Written by: Test_User <hax@runxiyu.org>
 //
 // This is free and unencumbered software released into the public
 // domain.
