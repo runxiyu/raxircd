@@ -527,6 +527,100 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			free(account_upper.data);
 			delcert_fail:
 			return;
+		} else if (msg.len >= 13 && case_string_eq((struct string){.data = msg.data, .len = 13}, STRING("DROP ACCOUNT "))) {
+			struct string required_account_name = {.data = msg.data + 13, .len = msg.len - 13};
+			if (user->account_name.len == 0 && !STRING_EQ(required_account_name, user->account_name)) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("You're must be logged into the account that you wish to drop."));
+				goto drop_fail;
+			}
+
+			struct string account_upper;
+			if (str_clone(&account_upper, user->account_name) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto drop_fail;
+			}
+
+			for (size_t i = 0; i < account_upper.len; i++)
+				account_upper.data[i] = CASEMAP(account_upper.data[i]);
+
+			MDB_txn *txn;
+			if (mdb_txn_begin(services_db_env, NULL, 0, &txn) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto drop_fail_free_account_upper;
+			}
+
+			MDB_val acc = {
+				.mv_data = account_upper.data,
+				.mv_size = account_upper.len,
+			};
+
+			MDB_val key;
+
+			MDB_cursor *cursor;
+			if (mdb_cursor_open(txn, services_account_to_nicks, &cursor) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto drop_fail_abort;
+			}
+
+			int ret = mdb_cursor_get(cursor, &acc, &key, MDB_SET);
+			if (ret != 0 && ret != MDB_NOTFOUND) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto drop_fail_close_cursor;
+			} else if (ret != MDB_NOTFOUND) {
+				do {
+					mdb_del(txn, services_nick_to_account, &key, NULL);
+				} while (mdb_cursor_get(cursor, &acc, &key, MDB_NEXT_DUP) == 0);
+			}
+			mdb_cursor_close(cursor);
+
+			mdb_del(txn, services_account_to_nicks, &acc, NULL);
+
+			if (mdb_cursor_open(txn, services_account_to_certs, &cursor) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto drop_fail_abort;
+			}
+
+			ret = mdb_cursor_get(cursor, &acc, &key, MDB_SET);
+			if (ret != 0 && ret != MDB_NOTFOUND) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto drop_fail_close_cursor;
+			} else if (ret != MDB_NOTFOUND) {
+				do {
+					mdb_del(txn, services_cert_to_account, &key, NULL);
+				} while (mdb_cursor_get(cursor, &acc, &key, MDB_NEXT_DUP) == 0);
+			}
+			mdb_cursor_close(cursor);
+
+			mdb_del(txn, services_account_to_certs, &acc, NULL);
+
+			mdb_del(txn, services_account_to_name, &acc, NULL);
+
+			if (mdb_txn_commit(txn) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				goto drop_fail_free_account_upper;
+			}
+			free(account_upper.data);
+
+			for (size_t i = 0; i < user_list.len; i++) {
+				struct user_info *user = user_list.array[i].ptr.data;
+				if (STRING_EQ(user->account_name, required_account_name)) {
+					if (set_account(SID, user, STRING(""), NICKSERV_UID) != 0) {
+						kill_user(SID, NICKSERV_UID, user, STRING("Killed: Internal error attempting to log out on account removal. Forcing logout the hard way.")); // TODO: Make it so this really can't happen
+					}
+				}
+			}
+
+			notice(SID, NICKSERV_UID, user->uid, STRING("Account removed."));
+			return;
+
+			drop_fail_close_cursor:
+			mdb_cursor_close(cursor);
+			drop_fail_abort:
+			mdb_txn_abort(txn);
+			drop_fail_free_account_upper:
+			free(account_upper.data);
+			drop_fail:
+			return;
 		} else if (case_string_eq(msg, STRING("FIX"))) {
 			if (user->account_name.len == 0) {
 				notice(SID, NICKSERV_UID, user->uid, STRING("You're not logged in, so there's no account to fix."));
@@ -621,6 +715,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			notice(SID, NICKSERV_UID, user->uid, STRING("        DELCERT  removes a specified cert from your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        LIST     lists nicks and certs associated with your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        FIX      fixes your account (temporary measure)."));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        DROP ACCOUNT <account name>. Deletes your account."));
 		}
 	}
 
