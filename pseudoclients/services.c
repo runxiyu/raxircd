@@ -529,7 +529,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			return;
 		} else if (msg.len >= 13 && case_string_eq((struct string){.data = msg.data, .len = 13}, STRING("DROP ACCOUNT "))) {
 			struct string required_account_name = {.data = msg.data + 13, .len = msg.len - 13};
-			if (user->account_name.len == 0 && !STRING_EQ(required_account_name, user->account_name)) {
+			if (user->account_name.len == 0 || !STRING_EQ(required_account_name, user->account_name)) {
 				notice(SID, NICKSERV_UID, user->uid, STRING("You're must be logged into the account that you wish to drop."));
 				goto drop_fail;
 			}
