@@ -621,6 +621,34 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			free(account_upper.data);
 			drop_fail:
 			return;
+		} else if (case_string_eq(msg, STRING("LOGIN"))) {
+			MDB_txn *txn;
+			if (mdb_txn_begin(services_db_env, NULL, MDB_RDONLY, &txn) != 0) {
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				return;
+			}
+
+			MDB_val key = {
+				.mv_data = user->cert.data,
+				.mv_size = user->cert.len,
+			};
+			MDB_val data;
+
+			if (mdb_get(txn, services_cert_to_account, &key, &data) != 0) {
+				mdb_txn_abort(txn);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Nothing to log you in to."));
+				return;
+			}
+			key = data;
+			if (mdb_get(txn, services_account_to_name, &key, &data) != 0) {
+				mdb_txn_abort(txn);
+				notice(SID, NICKSERV_UID, user->uid, STRING("Internal error."));
+				return;
+			}
+			struct string account = {.data = data.mv_data, .len = data.mv_size};
+			set_account(SID, user, account, NICKSERV_UID);
+			mdb_txn_abort(txn);
+			notice(SID, NICKSERV_UID, user->uid, STRING("Login successful."));
 		} else if (case_string_eq(msg, STRING("FIX"))) {
 			if (user->account_name.len == 0) {
 				notice(SID, NICKSERV_UID, user->uid, STRING("You're not logged in, so there's no account to fix."));
@@ -714,6 +742,7 @@ void services_pseudoclient_handle_privmsg(struct string from, struct string sour
 			notice(SID, NICKSERV_UID, user->uid, STRING("        ADDCERT  adds a specified cert to your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        DELCERT  removes a specified cert from your account."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        LIST     lists nicks and certs associated with your account."));
+			notice(SID, NICKSERV_UID, user->uid, STRING("        LOGIN    triggers automatic login behavior."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        FIX      fixes your account (temporary measure)."));
 			notice(SID, NICKSERV_UID, user->uid, STRING("        DROP ACCOUNT <account name>. Deletes your account."));
 		}
@@ -764,6 +793,7 @@ void services_pseudoclient_handle_post_rename_user(struct string from, struct us
 	struct string required_account_name = {.data = data.mv_data, .len = data.mv_size};
 	if (!STRING_EQ(required_account_name, user->account_name)) {
 		rename_user(SID, user, user->uid, 100, 1, 1);
+		notice(SID, NICKSERV_UID, user->uid, STRING("Nickname change forced due to attempting to use a nick registered to a different account."));
 	}
 
 	mdb_txn_abort(txn);
@@ -831,6 +861,7 @@ void services_pseudoclient_handle_set_cert(struct string from, struct user_info 
 		struct string required_account_name = {.data = data.mv_data, .len = data.mv_size};
 		if (!STRING_EQ(required_account_name, user->account_name)) {
 			rename_user(SID, user, user->uid, 100, 1, 1);
+			notice(SID, NICKSERV_UID, user->uid, STRING("Nickname change forced due to attempting to use a nick registered to a different account."));
 		}
 
 		mdb_txn_abort(txn);
