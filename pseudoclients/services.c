@@ -802,10 +802,11 @@ void services_pseudoclient_handle_post_rename_user(struct string from, struct us
 }
 
 void services_pseudoclient_handle_set_cert(struct string from, struct user_info *user, struct string cert, struct string source) {
-	if (cert.len != 0) {
+	if (cert.len != 0)
+	do {
 		MDB_txn *txn;
 		if (mdb_txn_begin(services_db_env, NULL, MDB_RDONLY, &txn) != 0) {
-			return;
+			break;
 		}
 
 		MDB_val key = {
@@ -816,56 +817,56 @@ void services_pseudoclient_handle_set_cert(struct string from, struct user_info 
 
 		if (mdb_get(txn, services_cert_to_account, &key, &data) != 0) {
 			mdb_txn_abort(txn);
-			return;
+			break;
 		}
 		key = data;
 		if (mdb_get(txn, services_account_to_name, &key, &data) != 0) {
 			mdb_txn_abort(txn);
-			return;
+			break;
 		}
 		struct string account = {.data = data.mv_data, .len = data.mv_size};
 		set_account(SID, user, account, NICKSERV_UID);
 		mdb_txn_abort(txn);
-	} else {
-		struct string nick_upper;
-		if (str_clone(&nick_upper, user->nick) != 0)
-			return;
-		for (size_t i = 0; i < nick_upper.len; i++)
-			nick_upper.data[i] = CASEMAP(nick_upper.data[i]);
+	} while (0);
 
-		MDB_val key = {
-			.mv_data = nick_upper.data,
-			.mv_size = nick_upper.len,
-		};
-		MDB_val data;
+	struct string nick_upper;
+	if (str_clone(&nick_upper, user->nick) != 0)
+		return;
+	for (size_t i = 0; i < nick_upper.len; i++)
+		nick_upper.data[i] = CASEMAP(nick_upper.data[i]);
 
-		MDB_txn *txn;
-		if (mdb_txn_begin(services_db_env, NULL, MDB_RDONLY, &txn) != 0) {
-			free(nick_upper.data);
-			return;
-		}
+	MDB_val key = {
+		.mv_data = nick_upper.data,
+		.mv_size = nick_upper.len,
+	};
+	MDB_val data;
 
-		if (mdb_get(txn, services_nick_to_account, &key, &data) != 0) {
-			free(nick_upper.data);
-			mdb_txn_abort(txn);
-			return;
-		}
+	MDB_txn *txn;
+	if (mdb_txn_begin(services_db_env, NULL, MDB_RDONLY, &txn) != 0) {
 		free(nick_upper.data);
-
-		key = data;
-		if (mdb_get(txn, services_account_to_name, &key, &data) != 0) {
-			mdb_txn_abort(txn);
-			return;
-		}
-
-		struct string required_account_name = {.data = data.mv_data, .len = data.mv_size};
-		if (!STRING_EQ(required_account_name, user->account_name)) {
-			rename_user(SID, user, user->uid, 100, 1, 1);
-			notice(SID, NICKSERV_UID, user->uid, STRING("Nickname change forced due to attempting to use a nick registered to a different account."));
-		}
-
-		mdb_txn_abort(txn);
+		return;
 	}
+
+	if (mdb_get(txn, services_nick_to_account, &key, &data) != 0) {
+		free(nick_upper.data);
+		mdb_txn_abort(txn);
+		return;
+	}
+	free(nick_upper.data);
+
+	key = data;
+	if (mdb_get(txn, services_account_to_name, &key, &data) != 0) {
+		mdb_txn_abort(txn);
+		return;
+	}
+
+	struct string required_account_name = {.data = data.mv_data, .len = data.mv_size};
+	if (!STRING_EQ(required_account_name, user->account_name)) {
+		rename_user(SID, user, user->uid, 100, 1, 1);
+		notice(SID, NICKSERV_UID, user->uid, STRING("Nickname change forced due to attempting to use a nick registered to a different account."));
+	}
+
+	mdb_txn_abort(txn);
 
 	return;
 }
