@@ -99,8 +99,10 @@ inline void mutex_lock(sem_t *mutex) {
 }
 
 inline void mutex_unlock(sem_t *mutex) {
-	while (sem_trywait(mutex) == -1 && errno == EINTR);
-	sem_post(mutex);
+	int available;
+	sem_getvalue(mutex, &available);
+	if (available <= 0)
+		sem_post(mutex);
 }
 
 inline void mutex_destroy(sem_t *mutex) {
