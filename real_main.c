@@ -146,7 +146,10 @@ int real_main(void) {
 		return 1;
 #endif
 
-	pthread_exit(0);
+	MUTEX_TYPE do_not_exit;
+	mutex_init(&do_not_exit);
+	mutex_lock(&do_not_exit);
+	mutex_lock(&do_not_exit); // Yay
 
 	return 0;
 }
